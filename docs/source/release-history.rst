@@ -2,5 +2,5 @@
 Release History
 ===============
 
-Initial Release (YYYY-MM-DD)
+Initial Release (2019-04-23)
 ----------------------------
