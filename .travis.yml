@@ -6,6 +6,11 @@ cache:
     - $HOME/.cache/pip
     - $HOME/.ccache  # https://github.com/travis-ci/travis-ci/issues/5853
 
+env:
+  global:
+    # Doctr deploy key for HallLab/clarite-python
+    - secure: "vD1a36LtFmB8YfEUzQUQ6QyGvRunVcnkXqjJ55c+l5AHqRp2Tz+5Nn8UGq+n7sjNQlqPjoLHhyLF957urGcAzKHnSY98AJCv7kh2TmI5m/N2ZKito049nkAcAEyBnXmrBq1gZJ8LFAP/qfMb+n22ytJpKoBjaSHWIx6k+NeS0SKOQNRBwOts18pLUZJnOI9a9pAVgkIfonp1uQRSHXbBADldgQqaj/I4hjcivY0XUyzGIEE8Y8eypKA+71+9NHtRvRQcj44KlkMxXUHV08jo0B08WiPYdkiwTXSz4EOvfSYh/bGr1Bstads2mt4ac/FHZHIdJfs88q3GILPbaMhluZKx4Lg5l129wt96Fit4g8y5bnsJYXh7Dgt/lRsFw+ynU1TCyPrcdebAdSwDXCpNPurKkVTtZwUcWrOQJTBv1wtgYxto4OZzRxKbIcmOxekMhn5hHR7RcPSNs3eWR04aimZT7xweZUWz68GJwQDQCBPo3FFYIqFwPfDXJK+lMNuVDEOagYTUz3bCWOzUHPe60oD55GJ6Q+LN+VF/2eKY41J0vCUoS99h7X8O5SFN2x2qf64eXMZxnSxGfNRIQEp23+OXnPrUt7x9C1rW5gti/+yA9SxUK/pdQTqp11j8gIxuCGdgzUOA0CmVSSMEbyDZRAZ+ZZLSMZP95Fia+/umkHY="
+
 install:
   # Install this package and the packages listed in requirements.txt.
   - pip install .
@@ -17,4 +22,8 @@ script:
   - coverage report -m  # Generate test coverage report.
   - codecov  # Upload the report to codecov.
   - flake8 --max-line-length=115  # Enforce code style (but relax line length limit a bit).
+  - set -e # If any of the following steps fail, just stop at that point.
   - make -C docs html  # Build the documentation.
+  - pip install doctr
+  - doctr deploy --built-docs docs/build/html .  # Publish the documentation.
+
