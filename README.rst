@@ -5,8 +5,8 @@ CLARITE
 .. image:: https://img.shields.io/travis/HallLab/clarite-python.svg
         :target: https://travis-ci.org/HallLab/clarite-python
 
-.. image:: https://img.shields.io/pypi/v/clarite-python.svg
-        :target: https://pypi.python.org/pypi/clarite-python
+.. image:: https://img.shields.io/pypi/v/clarite.svg
+        :target: https://pypi.python.org/pypi/clarite
 
 
 CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures
