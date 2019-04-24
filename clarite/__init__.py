@@ -3,6 +3,7 @@ from ._version import get_versions
 
 from .colfilters import ColFilterAccessor
 from .rowfilters import RowFilterAccessor
+from .clarite import ClariteDataframeAccessor
 from .io import load_data
 
 __version__ = get_versions()['version']
