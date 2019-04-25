@@ -9,7 +9,8 @@ from statsmodels.stats.multitest import multipletests
 from .utilities import make_bin, make_categorical, make_continuous
 
 
-result_columns = ['N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+result_columns = ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+corrected_pvalue_columns = ['pvalue_bonferroni', 'pvalue_fdr']
 
 
 def ewas(phenotype: str,
