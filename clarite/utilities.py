@@ -1,5 +1,7 @@
 from typing import Optional, List
 
+import pandas as pd
+
 
 def _validate_skip_only(columns, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
     """Validate use of the 'skip' and 'only' parameters, returning a valid list of columns to filter"""
@@ -20,3 +22,24 @@ def _validate_skip_only(columns, skip: Optional[List[str]] = None, only: Optiona
         raise ValueError("No columns available for filtering")
 
     return columns
+
+
+def make_bin(df: pd.DataFrame):
+    """Validate and type a DataFrame of binary variables"""
+    # TODO: add further validation
+    df = df.astype('category')
+    return df
+
+
+def make_categorical(df: pd.DataFrame):
+    """Validate and type a DataFrame of categorical variables"""
+    # TODO: add further validation
+    df = df.astype('category')
+    return df
+
+
+def make_continuous(df: pd.DataFrame):
+    """Validate and type a DataFrame of continuous variables"""
+    # TODO: add further validation
+    df = df.apply(pd.to_numeric)
+    return df
