@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -18,9 +18,26 @@ def ewas(phenotype: str,
          bin_df: Optional[pd.DataFrame],
          cat_df: Optional[pd.DataFrame],
          cont_df: Optional[pd.DataFrame],
-         groups: Optional[pd.Series],
-         weights: Optional[pd.DataFrame]):
-    """Run an EWAS"""
+         survey_df: Optional[pd.DataFrame] = None,
+         survey_ids: Optional[str] = None,
+         survey_strat: Optional[str] = None,
+         survey_nest: bool = False,
+         survey_weights: Union[str, Dict[str, str]] = dict()):
+    """Run an EWAS on a phenotype
+
+    phenotype = string name of the phenotype, found in one of the 3 possible input dataframes
+    covariates = list of covariate names, each found in one of the 3 possible input dataframes
+    bin_df = variable data for variables with two possible values
+    cat_df = variable data for categorical variables
+    cont_df = variable data for continuous variables
+
+    # Survey Design
+    survey_df = DataFrame with survey design variables
+    survey_ids = cluster IDs # set to "~1" if None, which means equal probability for all samples is assumed.
+    survey_strat = strata IDs # Strata ID
+    survey_nest = boolean, whether PSUs are nested within strata (re-using same IDs in each strata)
+    survey_weights = string for weights to always use, or a dict mapping variable names to weights
+    """
     # Process variable inputs
     rv_bin, rv_cat, rv_cont = list(), list(), list()
     if bin_df is not None:
@@ -54,6 +71,8 @@ def ewas(phenotype: str,
         raise ValueError(f"Couldn't find the phenotype ('{phenotype}') in the data.")
     print(f"Running EWAS on a {pheno_kind} variable")
 
+    # TODO: Process survey settings
+
     # Merge dfs if there are multiple
     dfs = [df for df in [bin_df, cat_df, cont_df] if df is not None]
     if len(dfs) == 1:
@@ -62,7 +81,8 @@ def ewas(phenotype: str,
         df = dfs[0].join(dfs[1:], how="outer")
 
     # Return Regression Results
-    return run_regression(phenotype, covariates, df, rv_bin, rv_cat, rv_cont, pheno_kind, groups, weights)
+    return run_regression(phenotype, covariates, df, rv_bin, rv_cat, rv_cont, pheno_kind,
+                          survey_df, survey_ids, survey_strat, survey_nest, survey_weights)
 
 
 def clean_covars(df, covariates, phenotype, regression_variable):
@@ -83,8 +103,11 @@ def run_regression(phenotype: str,
                    rv_cat: List[str],
                    rv_cont: List[str],
                    pheno_kind: str,
-                   groups: Optional[pd.Series],
-                   weights: Optional[pd.DataFrame]):
+                   survey_df: Optional[pd.DataFrame],
+                   survey_ids: Optional[str],
+                   survey_strat: Optional[str],
+                   survey_nest: bool,
+                   survey_weights: Union[str, Dict[str, str]]):
     """Run a regression on continuous variables"""
     result = []
 
