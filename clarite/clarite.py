@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .ewas import result_columns, corrected_pvalue_columns
+from .utilities import _validate_skip_only
 
 
 @pd.api.extensions.register_dataframe_accessor("clarite")
@@ -69,6 +70,69 @@ class ClariteDataframeAccessor(object):
 
         return bin_df, cat_df, cont_df, check_df
 
+    ##################
+    # Column Filters #
+    ##################
+
+    def colfilter_percent_zero(self, max_proportion: float = 0.9, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """Remove columns which have <max_proportion> or more values of zero (excluding NA)"""
+        df = self._obj
+        columns = _validate_skip_only(list(df), skip, only)
+        num_before = len(df.columns)
+
+        percent_value = df.apply(lambda col: sum(col == 0) / col.count())
+        kept = (percent_value < max_proportion) | ~df.columns.isin(columns)
+        num_removed = num_before - sum(kept)
+
+        print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) "
+              f"which were equal to zero in at least {max_proportion:.2%} of non-NA observations.")
+        return df.loc[:, kept]
+
+    def colfilter_min_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """Remove columns which have less than <n> values (excluding NA)"""
+        df = self._obj
+        columns = _validate_skip_only(list(df), skip, only)
+        num_before = len(df.columns)
+
+        counts = df.count()  # by default axis=0 (rows) so counts number of non-NA rows in each column
+        kept = (counts >= n) | ~df.columns.isin(columns)
+        num_removed = num_before - sum(kept)
+
+        print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) which had less than {n} values")
+        return df.loc[:, kept]
+
+    def colfilter_min_cat_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """Remove columns which have less than <n> observations in each category"""
+        df = self._obj
+        columns = _validate_skip_only(list(df), skip, only)
+        num_before = len(df.columns)
+
+        min_category_counts = df.apply(lambda col: col.value_counts().min())
+        kept = (min_category_counts >= n) | ~df.columns.isin(columns)
+        num_removed = num_before - sum(kept)
+
+        print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) which had a category with less than {n} values")
+        return df.loc[:, kept]
+
+    ###############
+    # Row Filters #
+    ###############
+
+    def rowfilter_incomplete_observations(self, columns):
+        """Remove observations(rows) if any of the passed columns is null"""
+        invalid_names = set(columns) - set(list(self._obj))
+        if len(invalid_names) > 0:
+            raise ValueError(f"Invalid column names were provided: {', '.join(invalid_names)}")
+
+        keep_IDs = self._obj[columns].isnull().sum(axis=1) == 0  # Number of NA in each row is 0
+        n_removed = len(self._obj) - sum(keep_IDs)
+
+        print(f"Removed {n_removed:,} of {len(self._obj):,} rows ({n_removed/len(self._obj):.2%}) due to NA values in the specified columns")
+        return self._obj[keep_IDs]
+
+    ############
+    # Plotting #
+    ############
     def plot_hist(self, column: str, figsize: Tuple[int, int] = (12, 5), title: Optional[str] = None, **kwargs):
         """Plot a histogram of the values in the given column.  Takes kwargs for seaborn's distplot."""
         df = self._obj

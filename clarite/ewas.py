@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 import scipy
+import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from statsmodels.stats.multitest import multipletests
 
@@ -63,8 +64,10 @@ def ewas(phenotype: str,
     # Figure out kind of phenotype
     if phenotype in list(bin_df):
         pheno_kind = 'binary'
+        raise ValueError("Binary Phenotypes are not yet supported")
     elif phenotype in list(cat_df):
         pheno_kind = 'categorical'
+        raise ValueError("Categorical Phenotypes are not yet supported")
     elif phenotype in list(cont_df):
         pheno_kind = 'continuous'
     else:
@@ -114,10 +117,18 @@ def run_regression(phenotype: str,
     # Must ensure phenotype is numerical for logistic regression
     if pheno_kind == "binary" or pheno_kind == "categorical":
         df[phenotype] = df[phenotype].cat.codes
-        regression_kind = "logit"
-    else:
-        regression_kind = "ols"
 
+    # Use the correct or specified family/link
+    if pheno_kind == "continuous" and survey_df is not None:
+        # TODO
+        raise NotImplementedError("Survey data is not yet supported")
+    elif pheno_kind == "continuous" and survey_df is None:
+        family = sm.families.Gaussian(link=sm.families.links.identity)
+    else:
+        # TODO
+        raise NotImplementedError("Only continuous phenotypes are currently supported")
+
+    # Continuous Variables
     for rv in rv_cont:
         # Create blank result
         var_result = {c: np.nan for c in result_columns}
@@ -131,10 +142,7 @@ def run_regression(phenotype: str,
         x_vals = varying_covariates + [rv]
         formula = f"{phenotype} ~ " + " + ".join([f"C({var_name})" if str(df.dtypes[var_name]) == 'category' else var_name for var_name in x_vals])
         try:
-            if regression_kind == "ols":
-                est = smf.ols(formula, data=subset).fit()
-            elif regression_kind == 'logit':
-                est = smf.logit(formula, data=subset).fit(disp=False)
+            est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
             result.append(var_result)
@@ -160,10 +168,7 @@ def run_regression(phenotype: str,
         x_vals = varying_covariates + [rv]
         formula = f"{phenotype} ~ " + " + ".join([f"C({var_name})" if str(df.dtypes[var_name]) == 'category' else var_name for var_name in x_vals])
         try:
-            if regression_kind == "ols":
-                est = smf.ols(formula, data=subset, missing='drop').fit()
-            elif regression_kind == 'logit':
-                est = smf.logit(formula, data=subset, missing='drop').fit(disp=False)
+            est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
             result.append(var_result)
@@ -196,28 +201,21 @@ def run_regression(phenotype: str,
         # Run the regression and compare the results to the restricted regression model using only observations that include the rv
 
         # "Reduced" model that only includes covariates
-        formula_restricted = f"{phenotype} ~ " + " + ".join([
-            f"C({var_name})"
-            if str(df.dtypes[var_name]) == 'category'
-            else var_name for var_name in varying_covariates])
+        formula_restricted = f"{phenotype} ~ " + " + ".join([f"C({var_name})"
+                                                             if str(df.dtypes[var_name]) == 'category'
+                                                             else var_name for var_name in varying_covariates])
         try:
-            if regression_kind == "ols":
-                est_restricted = smf.ols(formula_restricted, data=subset).fit()
-            elif regression_kind == 'logit':
-                est_restricted = smf.logit(formula_restricted, data=subset).fit(disp=False)
+            est_restricted = smf.glm(formula_restricted, data=subset, family=family).fit(use_t=True)
         except Exception as e:
-            print(f"{rv} = NULL due to error in runing the restricted model: {e}")
+            print(f"{rv} = NULL due to: {e}")
             result.append(var_result)
             continue
 
+        # Full Model
         x_vals = varying_covariates + [rv]
         formula = f"{phenotype} ~ " + " + ".join([f"C({var_name})" if str(df.dtypes[var_name]) == 'category' else var_name for var_name in x_vals])
-
         try:
-            if regression_kind == "ols":
-                est = smf.ols(formula, data=subset).fit()
-            elif regression_kind == 'logit':
-                est = smf.logit(formula, data=subset).fit(disp=False)
+            est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
             result.append(var_result)
