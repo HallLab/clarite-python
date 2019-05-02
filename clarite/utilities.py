@@ -25,21 +25,81 @@ def _validate_skip_only(columns, skip: Optional[List[str]] = None, only: Optiona
 
 
 def make_bin(df: pd.DataFrame):
-    """Validate and type a DataFrame of binary variables"""
+    """
+    Validate and type a dataframe of binary variables
+
+    Checks that each variable has at most 2 values and converts the type to pd.Categorical
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame to be processed
+
+    Returns
+    -------
+    df: pd.DataFrame
+        DataFrame with the same data but validated and converted to categorical types
+
+    Examples
+    --------
+    >>> df = clarite.make_bin(df)
+    Processed 32 binary variables with 4,321 observations
+    """
     # TODO: add further validation
     df = df.astype('category')
+    print(f"Processed {len(df.columns):,} binary variables with {len(df):,} observations")
     return df
 
 
 def make_categorical(df: pd.DataFrame):
-    """Validate and type a DataFrame of categorical variables"""
+    """
+    Validate and type a dataframe of categorical variables
+
+    Converts the type to pd.Categorical
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame to be processed
+
+    Returns
+    -------
+    df: pd.DataFrame
+        DataFrame with the same data but validated and converted to categorical types
+
+    Examples
+    --------
+    >>> df = clarite.make_categorical(df)
+    Processed 12 categorical variables with 4,321 observations
+    """
     # TODO: add further validation
     df = df.astype('category')
+    print(f"Processed {len(df.columns):,} categorical variables with {len(df):,} observations")
     return df
 
 
 def make_continuous(df: pd.DataFrame):
-    """Validate and type a DataFrame of continuous variables"""
+    """
+    Validate and type a dataframe of continuous variables
+
+    Converts the type to numeric
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame to be processed
+
+    Returns
+    -------
+    df: pd.DataFrame
+        DataFrame with the same data but validated and converted to numeric types
+
+    Examples
+    --------
+    >>> df = clarite.make_continuous(df)
+    Processed 128 continuous variables with 4,321 observations
+    """
     # TODO: add further validation
     df = df.apply(pd.to_numeric)
+    print(f"Processed {len(df.columns):,} continuous variables with {len(df):,} observations")
     return df

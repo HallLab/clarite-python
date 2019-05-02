@@ -24,20 +24,41 @@ def ewas(phenotype: str,
          survey_strat: Optional[str] = None,
          survey_nest: bool = False,
          survey_weights: Union[str, Dict[str, str]] = dict()):
-    """Run an EWAS on a phenotype
+    """
+    Run an EWAS on a phenotype
 
-    phenotype = string name of the phenotype, found in one of the 3 possible input dataframes
-    covariates = list of covariate names, each found in one of the 3 possible input dataframes
-    bin_df = variable data for variables with two possible values
-    cat_df = variable data for categorical variables
-    cont_df = variable data for continuous variables
+    Parameters
+    ----------
+    phenotype: string
+        The variable to be used as the output of the regressions
+    covariates: list (strings),
+        The variables to be used as covariates
+    bin_df: pd.DataFrame or None
+        A DataFrame containing binary variables
+    cat_df: pd.DataFrame or None
+        A DataFrame containing categorical variables
+    cont_df: pd.DataFrame or None
+        A DataFrame containing continuous variables
+    survey_df: pd.DataFrame or None
+        A DataFrame containing PSU IDs, Strata, and/or weights
+    survey_ids: string or None
+        The name of the PSU IDs variable in the survey_df.
+    survey_strat: string or None
+        The name of the strata variable in the survey_df
+    survey_nest: bool, default False
+        Whether or not the PSUs are nested in the strata (The same PSU IDs are repeated in different strata)
+    survey_weights: string or dictionary(string:string)
+        The name of a weight variable in the survey_df or a dictionary mapping variable names (in bin_df, cat_df, or cont_df) to weight names in survey_df
 
-    # Survey Design
-    survey_df = DataFrame with survey design variables
-    survey_ids = cluster IDs # set to "~1" if None, which means equal probability for all samples is assumed.
-    survey_strat = strata IDs # Strata ID
-    survey_nest = boolean, whether PSUs are nested within strata (re-using same IDs in each strata)
-    survey_weights = string for weights to always use, or a dict mapping variable names to weights
+    Returns
+    -------
+    df: pd.DataFrame
+        EWAS results DataFrame with these columns: ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+
+    Examples
+    --------
+    >>>ewas_discovery = clarite.ewas("logBMI", covariates, nhanes_discovery_bin, nhanes_discovery_cat, nhanes_discovery_cont)
+    Running EWAS on a continuous variable
     """
     # Process variable inputs
     rv_bin, rv_cat, rv_cont = list(), list(), list()
@@ -240,6 +261,21 @@ def run_regression(phenotype: str,
 
 
 def add_corrected_pvalues(ewas_result):
-    """Add bonferroni and FDR pvalues to an ewas result"""
+    """
+    Add bonferroni and FDR pvalues to an ewas result (in-place)
+
+    Parameters
+    ----------
+    ewas_result: pd.DataFrame
+        EWAS results DataFrame with these columns: ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>>clarite.add_corrected_pvalues(ewas_discovery)
+    """
     ewas_result['pvalue_bonferroni'] = multipletests(ewas_result['pvalue'], method="bonferroni", is_sorted=True)[1]
     ewas_result['pvalue_fdr'] = multipletests(ewas_result['pvalue'], method="fdr_bh", is_sorted=True)[1]

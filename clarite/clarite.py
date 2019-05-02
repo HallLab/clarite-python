@@ -22,7 +22,39 @@ class ClariteDataframeAccessor(object):
             raise AttributeError("")
 
     def categorize(self, cat_min: int = 3, cat_max: int = 6, cont_min: int = 15):
-        """Divide variables into binary, categorical, continuous, and ambiguous dataframes"""
+        """
+        Divide variables into binary, categorical, continuous, and ambiguous dataframes
+
+        Parameters
+        ----------
+        cat_min: int, default 3
+            Minimum number of unique, non-NA values for a categorical variable
+        cat_max: int, default 6
+            Maximum number of unique, non-NA values for a categorical variable
+        cont_min: int, default 15
+            Minimum number of unique, non-NA values for a continuous variable
+
+        Returns
+        -------
+        bin_df: pd.DataFrame
+            DataFrame with variables that were categorized as *binary*
+        cat_df: pd.DataFrame
+            DataFrame with variables that were categorized as *categorical*
+        bin_df: pd.DataFrame
+            DataFrame with variables that were categorized as *continuous*
+        other_df: pd.DataFrame
+            DataFrame with variables that were not categorized and should be examined manually
+
+        Examples
+        --------
+        >>> nhanes_bin, nhanes_cat, nhanes_cont, nhanes_other = nhanes.clarite.categorize()
+        10 of 945 variables (1.06%) had no non-NA values and are discarded.
+        33 of 945 variables (3.49%) had only one value and are discarded.
+        361 of 945 variables (38.20%) are classified as binary (2 values).
+        44 of 945 variables (4.66%) are classified as categorical (3 to 6 values).
+        461 of 945 variables (48.78%) are classified as continuous (>= 15 values).
+        36 of 945 variables (3.81%) are not classified (between 6 and 15 values).
+        """
         df = self._obj
 
         # Double-check parameters
@@ -62,34 +94,76 @@ class ClariteDataframeAccessor(object):
         print(f"{num_cont:,} of {num_before:,} variables ({num_cont/num_before:.2%}) are classified as continuous (>= {cont_min} values).")
         cont_df = df.loc[:, cont_filter]
 
-        # Check
-        check_filter = ~zero_filter & ~single_filter & ~binary_filter & ~cat_filter & ~cont_filter
-        num_check = sum(check_filter)
-        print(f"{num_check:,} of {num_before:,} variables ({num_check/num_before:.2%}) are not classified (between {cat_max} and {cont_min} values).")
-        check_df = df.loc[:, check_filter]
+        # Other
+        other_filter = ~zero_filter & ~single_filter & ~binary_filter & ~cat_filter & ~cont_filter
+        num_other = sum(other_filter)
+        print(f"{num_other:,} of {num_before:,} variables ({num_other/num_before:.2%}) are not classified (between {cat_max} and {cont_min} values).")
+        other_df = df.loc[:, other_filter]
 
-        return bin_df, cat_df, cont_df, check_df
+        return bin_df, cat_df, cont_df, other_df
 
     ##################
     # Column Filters #
     ##################
 
-    def colfilter_percent_zero(self, max_proportion: float = 0.9, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
-        """Remove columns which have <max_proportion> or more values of zero (excluding NA)"""
+    def colfilter_percent_zero(self, proportion: float = 0.9, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """
+        Remove columns which have <proportion> or more values of zero (excluding NA)
+
+        Parameters
+        ----------
+        proportion: float, default 0.9
+            If the proportion of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
+        skip: list or None, default None
+            List of variables that the filter should *not* be applied to
+        only: list or None, default None
+            List of variables that the filter should *only* be applied to
+
+        Returns
+        -------
+        df: pd.DataFrame
+            The filtered DataFrame
+
+        Examples
+        --------
+        >>> nhanes_discovery_cont = nhanes_discovery_cont.clarite.colfilter_percent_zero()
+        Removed 30 of 369 variables (8.13%) which were equal to zero in at least 90.00% of non-NA observations.
+        """
         df = self._obj
         columns = _validate_skip_only(list(df), skip, only)
         num_before = len(df.columns)
 
         percent_value = df.apply(lambda col: sum(col == 0) / col.count())
-        kept = (percent_value < max_proportion) | ~df.columns.isin(columns)
+        kept = (percent_value < proportion) | ~df.columns.isin(columns)
         num_removed = num_before - sum(kept)
 
         print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) "
-              f"which were equal to zero in at least {max_proportion:.2%} of non-NA observations.")
+              f"which were equal to zero in at least {proportion:.2%} of non-NA observations.")
         return df.loc[:, kept]
 
     def colfilter_min_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
-        """Remove columns which have less than <n> values (excluding NA)"""
+        """
+        Remove columns which have less than <n> unique values (excluding NA)
+
+        Parameters
+        ----------
+        n: int, default 200
+            The minimum number of unique values required in order for a variable not to be filtered
+        skip: list or None, default None
+            List of variables that the filter should *not* be applied to
+        only: list or None, default None
+            List of variables that the filter should *only* be applied to
+
+        Returns
+        -------
+        df: pd.DataFrame
+            The filtered DataFrame
+
+        Examples
+        --------
+        >>> nhanes_discovery_bin = nhanes_discovery_bin.clarite.colfilter_min_n()
+        Removed 129 of 361 variables (35.73%) which had less than 200 values
+        """
         df = self._obj
         columns = _validate_skip_only(list(df), skip, only)
         num_before = len(df.columns)
@@ -102,7 +176,28 @@ class ClariteDataframeAccessor(object):
         return df.loc[:, kept]
 
     def colfilter_min_cat_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
-        """Remove columns which have less than <n> observations in each category"""
+        """
+        Remove columns which have less than <n> unique values in each category
+
+        Parameters
+        ----------
+        n: int, default 200
+            The minimum number of unique values required in each category in order for a variable not to be filtered
+        skip: list or None, default None
+            List of variables that the filter should *not* be applied to
+        only: list or None, default None
+            List of variables that the filter should *only* be applied to
+
+        Returns
+        -------
+        df: pd.DataFrame
+            The filtered DataFrame
+
+        Examples
+        --------
+        >>> nhanes_discovery_bin = nhanes_discovery_bin.clarite.colfilter_min_cat_n()
+        Removed 159 of 232 variables (68.53%) which had a category with less than 200 values
+        """
         df = self._obj
         columns = _validate_skip_only(list(df), skip, only)
         num_before = len(df.columns)
@@ -119,7 +214,24 @@ class ClariteDataframeAccessor(object):
     ###############
 
     def rowfilter_incomplete_observations(self, columns):
-        """Remove observations(rows) if any of the passed columns is null"""
+        """
+        Remove rows when any of the passed columns has a null value
+
+        Parameters
+        ----------
+        columns: list
+            The columns that may not contain null values
+
+        Returns
+        -------
+        df: pd.DataFrame
+            The filtered DataFrame
+
+        Examples
+        --------
+        >>> nhanes = nhanes.clarite.rowfilter_incomplete_observations([phenotype] + covariates)
+        Removed 3,687 of 22,624 rows (16.30%) due to NA values in the specified columns
+        """
         invalid_names = set(columns) - set(list(self._obj))
         if len(invalid_names) > 0:
             raise ValueError(f"Invalid column names were provided: {', '.join(invalid_names)}")
@@ -134,7 +246,31 @@ class ClariteDataframeAccessor(object):
     # Plotting #
     ############
     def plot_hist(self, column: str, figsize: Tuple[int, int] = (12, 5), title: Optional[str] = None, **kwargs):
-        """Plot a histogram of the values in the given column.  Takes kwargs for seaborn's distplot."""
+        """
+        Plot a histogram of the values in the given column.  Takes kwargs for seaborn's distplot.
+
+        Parameters
+        ----------
+        column: string
+            The name of the column that will be plotted
+        figsize: tuple(int, int), default (12, 5)
+            The figure size of the resulting plot
+        title: string or None, default None
+            The title used for the plot
+        **kwargs:
+            Other keyword arguments to pass to the distplot function of Seaborn
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> title = f"Discovery: Skew of BMIMBX = {stats.skew(nhanes_discovery_cont['BMXBMI']):.6}"
+        >>> nhanes_discovery_cont.clarite.plot_hist(column="BMXBMI", title=title, bins=100)
+
+        .. image:: _static/plots/plot_hist.png
+        """
         df = self._obj
         if title is None:
             title = f"Histogram for {column}"
@@ -152,7 +288,34 @@ class ClariteDataframeAccessor(object):
                        title: Optional[str] = None,
                        colors: List[str] = ["#53868B", "#4D4D4D"],
                        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"]):
-        """Create a Manhattan-like plot for EWAS Results"""
+        """
+        Create a Manhattan-like plot for EWAS Results
+
+        Parameters
+        ----------
+        categories: dictionary (string: string)
+            A dictionary mapping each variable name to a category name
+        num_labeled: int, default 3
+            Label the top <num_labeled> results with the variable name
+        figsize: tuple(int, int), default (12, 5)
+            The figure size of the resulting plot
+        title: string or None, default None
+            The title used for the plot
+        colors: List(string, string), default ["#53868B", "#4D4D4D"]
+            A list of two colors to use for alternating categories
+        background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
+            A list of two background colors to use for alternating categories
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> ewas_replication.clarite.plot_manhattan(categories=data_categories, title="Replication")
+
+        .. image:: _static/plots/plot_manhattan.png
+        """
         df = self._obj
 
         if list(df) != result_columns + corrected_pvalue_columns:

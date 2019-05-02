@@ -11,10 +11,12 @@ def load_data(filepath: Union[str, Path], index_col: str, **kwargs):
 
     Parameters
     ----------
-    filepath : str or path object
+    filepath: str or path object
         File with data to be used in CLARITE
-    index_col : int or string
+    index_col: int or string
         Column to use as the row labels of the DataFrame.
+    **kwargs:
+        Other keword arguments to pass to pd.read_csv
 
     Returns
     -------
