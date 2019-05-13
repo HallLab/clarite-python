@@ -27,3 +27,6 @@ script:
   - pip install doctr
   - doctr deploy --built-docs docs/build/html .  # Publish the documentation.
 
+notifications:
+
+webhooks: https://outlook.office.com/webhook/62954b92-2890-412d-aa2e-fe96a8e1cded@7cf48d45-3ddb-4389-a9c1-c115526eb52e/TravisCI/bbe1f44a19ba4f7293a5a6df207e3e6d/6c589549-3410-4f7f-bee1-d793a04447a8
