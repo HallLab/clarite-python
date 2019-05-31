@@ -2,6 +2,10 @@
 Release History
 ===============
 
+v0.3.0 (2019-05-31)
+-------------------
+Add support for complex survey designs
+
 v0.2.1 (2019-05-02)
 -------------------
 Added documentation for existing functions
