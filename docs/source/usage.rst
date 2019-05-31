@@ -11,7 +11,7 @@ Start by importing CLARITE.
 Structure
 #########
 
-Clarite consists of several convenience functions and a Pandas DataFrame Accessor.  The DataFrame Accessor adds methods to DataFrame objects under a `clarite` namespace:
+Clarite consists of several functions and classes, including a Pandas DataFrame Accessor.  The DataFrame Accessor adds methods to DataFrame objects under a `clarite` namespace:
 
 .. code-block:: python
 
@@ -68,3 +68,8 @@ IO Functions
 ############
 
 .. autofunction:: clarite.io.load_data
+
+Classes
+#######
+
+.. autoclass:: clarite.SurveyDesignSpec
