@@ -15,7 +15,7 @@ A SurveyDesignSpec can be created, which is used to obtain survey design objects
                                             weights=weights_discovery,
                                             single_cluster='scaled')
 
-In the current version of Clarite, both strata and cluster must be provided.  'Weights' are optional, and are expected to be expansion weights.
+In the current version of CLARITE, both strata and cluster must be provided.  'Weights' are optional, and are expected to be expansion weights.
 
 There are a few different options for the 'single_cluster' parameter, which controls how strata with single clusters are handled in the linearized covariance calculation:
     

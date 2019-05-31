@@ -19,7 +19,7 @@ class SurveyDesignSpec:
         Whether or not the clusters are nested in the strata (The same cluster IDs are repeated in different strata)
     weights: string or dictionary(string:string)
         The name of the weights variable in the survey_df, or a dictionary mapping variable names to weight names
-    single_cluster : str
+    single_cluster: str
         Setting controlling variance calculation in single-cluster strata
         'error': default, throw an error
         'scaled': use the average value of other strata
@@ -29,7 +29,14 @@ class SurveyDesignSpec:
     Attributes
     ----------
 
-
+    Examples
+    --------
+    >>>clarite.SurveyDesignSpec(survey_df=survey_design_replication,
+                                          strata="SDMVSTRA",
+                                          cluster="SDMVPSU",
+                                          nest=True,
+                                          weights=weights_replication,
+                                          single_cluster='scaled')
     """
     def __init__(self,
                  survey_df: pd.DataFrame,
