@@ -1,29 +1,29 @@
-from typing import Dict, List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
+import patsy
 import scipy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from statsmodels.stats.multitest import multipletests
+from clarite.survey import SurveyDesignSpec, SurveyModel
 
-from .utilities import make_bin, make_categorical, make_continuous
+from .utilities import make_bin, make_categorical, make_continuous, regTermTest
 
 
 result_columns = ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
 corrected_pvalue_columns = ['pvalue_bonferroni', 'pvalue_fdr']
 
 
-def ewas(phenotype: str,
-         covariates: List[str],
-         bin_df: Optional[pd.DataFrame],
-         cat_df: Optional[pd.DataFrame],
-         cont_df: Optional[pd.DataFrame],
-         survey_df: Optional[pd.DataFrame] = None,
-         survey_ids: Optional[str] = None,
-         survey_strat: Optional[str] = None,
-         survey_nest: bool = False,
-         survey_weights: Union[str, Dict[str, str]] = dict()):
+def ewas(
+        phenotype: str,
+        covariates: List[str],
+        bin_df: Optional[pd.DataFrame],
+        cat_df: Optional[pd.DataFrame],
+        cont_df: Optional[pd.DataFrame],
+        survey_design_spec: Optional[SurveyDesignSpec] = None,
+        cov_method: Optional[str] = 'stata'):
     """
     Run an EWAS on a phenotype
 
@@ -32,23 +32,17 @@ def ewas(phenotype: str,
     phenotype: string
         The variable to be used as the output of the regressions
     covariates: list (strings),
-        The variables to be used as covariates
+        The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     bin_df: pd.DataFrame or None
         A DataFrame containing binary variables
     cat_df: pd.DataFrame or None
         A DataFrame containing categorical variables
     cont_df: pd.DataFrame or None
         A DataFrame containing continuous variables
-    survey_df: pd.DataFrame or None
-        A DataFrame containing PSU IDs, Strata, and/or weights
-    survey_ids: string or None
-        The name of the PSU IDs variable in the survey_df.
-    survey_strat: string or None
-        The name of the strata variable in the survey_df
-    survey_nest: bool, default False
-        Whether or not the PSUs are nested in the strata (The same PSU IDs are repeated in different strata)
-    survey_weights: string or dictionary(string:string)
-        The name of a weight variable in the survey_df or a dictionary mapping variable names (in bin_df, cat_df, or cont_df) to weight names in survey_df
+    survey_design_spec: SurveyDesignSpec or None
+        A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
+    cov_method: str or None
+        Covariance calculation method (if survey_design_spec is passed in).  'stata' or 'jackknife'
 
     Returns
     -------
@@ -85,17 +79,15 @@ def ewas(phenotype: str,
     # Figure out kind of phenotype
     if phenotype in list(bin_df):
         pheno_kind = 'binary'
-        raise ValueError("Binary Phenotypes are not yet supported")
+        raise NotImplementedError("Binary Phenotypes are not yet supported")
     elif phenotype in list(cat_df):
         pheno_kind = 'categorical'
-        raise ValueError("Categorical Phenotypes are not yet supported")
+        raise NotImplementedError("Categorical Phenotypes are not yet supported")
     elif phenotype in list(cont_df):
         pheno_kind = 'continuous'
     else:
         raise ValueError(f"Couldn't find the phenotype ('{phenotype}') in the data.")
     print(f"Running EWAS on a {pheno_kind} variable")
-
-    # TODO: Process survey settings
 
     # Merge dfs if there are multiple
     dfs = [df for df in [bin_df, cat_df, cont_df] if df is not None]
@@ -104,20 +96,19 @@ def ewas(phenotype: str,
     else:
         df = dfs[0].join(dfs[1:], how="outer")
 
-    # Return Regression Results
-    return run_regression(phenotype, covariates, df, rv_bin, rv_cat, rv_cont, pheno_kind,
-                          survey_df, survey_ids, survey_strat, survey_nest, survey_weights)
+    # Run Regressions
+    return run_regression(phenotype, covariates, df, rv_bin, rv_cat, rv_cont, pheno_kind, survey_design_spec, cov_method)
 
 
-def clean_covars(df, covariates, phenotype, regression_variable):
-    """Return a subset of the dataframe where regression_variable is not NA.  Also return a list of covariates that have >1 value in this subset"""
-    unique_values = df.loc[~df[regression_variable].isna(), covariates].nunique()
+def check_covars(subset_df, covariates, regression_variable):
+    """Return a list of covariates that have >1 value in the subset dataframe"""
+    unique_values = subset_df[covariates].nunique()
     varying_covars = list(unique_values[unique_values > 1].index.values)
     non_varying_covars = list(unique_values[unique_values <= 1].index.values)
 
     if len(non_varying_covars) > 0:
-        print(f"WARNING: {regression_variable} has non-varying covariates(s) after removing NA observations: {', '.join(non_varying_covars)}")
-    return df.loc[~df[regression_variable].isna(), varying_covars + [phenotype, regression_variable]], varying_covars
+        print(f"WARNING: {regression_variable} has non-varying covariates(s): {', '.join(non_varying_covars)}")
+    return varying_covars
 
 
 def run_regression(phenotype: str,
@@ -127,12 +118,9 @@ def run_regression(phenotype: str,
                    rv_cat: List[str],
                    rv_cont: List[str],
                    pheno_kind: str,
-                   survey_df: Optional[pd.DataFrame],
-                   survey_ids: Optional[str],
-                   survey_strat: Optional[str],
-                   survey_nest: bool,
-                   survey_weights: Union[str, Dict[str, str]]):
-    """Run a regression on continuous variables"""
+                   survey_design_spec: Optional[SurveyDesignSpec],
+                   cov_method: Optional[str]):
+    """Run a regressions on variables"""
     result = []
 
     # Must ensure phenotype is numerical for logistic regression
@@ -140,16 +128,15 @@ def run_regression(phenotype: str,
         df[phenotype] = df[phenotype].cat.codes
 
     # Use the correct or specified family/link
-    if pheno_kind == "continuous" and survey_df is not None:
-        # TODO
-        raise NotImplementedError("Survey data is not yet supported")
-    elif pheno_kind == "continuous" and survey_df is None:
+    if pheno_kind == "continuous":
         family = sm.families.Gaussian(link=sm.families.links.identity)
     else:
         # TODO
+        # Note: DoF might change
         raise NotImplementedError("Only continuous phenotypes are currently supported")
 
     # Continuous Variables
+    print(f"\n####### Regressing {len(rv_cont)} Continuous Variables #######\n")
     for rv in rv_cont:
         # Create blank result
         var_result = {c: np.nan for c in result_columns}
@@ -157,25 +144,70 @@ def run_regression(phenotype: str,
         var_result['variable_type'] = 'continuous'
 
         # Check covariates
-        subset, varying_covariates = clean_covars(df, covariates, phenotype, rv)
+        subset = df[~df[rv].isna()]
+        if len(subset) == 0:
+            print(f"{rv} = NULL due to: No non-null observations of {rv}")
+            result.append(var_result)
+            continue
+        varying_covariates = check_covars(subset, covariates, rv)
 
-        # Run the regression and get results directly
+        # Set up the formula
         x_vals = varying_covariates + [rv]
         formula = f"{phenotype} ~ " + " + ".join([f"C({var_name})" if str(df.dtypes[var_name]) == 'category' else var_name for var_name in x_vals])
+
+        # Run the regression
         try:
-            est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
+            if survey_design_spec is None:
+                # Regress
+                est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
+
+                # Get Results
+                N = est.nobs
+                beta = est.params[rv]
+                SE = est.bse[rv]
+                var_pvalue = est.pvalues[rv]
+            else:
+                # Regress
+                y, X = patsy.dmatrices(formula, subset, return_type='dataframe')
+                survey_design, index = survey_design_spec.get_survey_design(rv, X.index)
+                # Update y and X with the new index, which may be smaller due to missing weights
+                y = y.loc[index]
+                X = X.loc[index]
+                model = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=cov_method,
+                                    init_args=dict(family=family),
+                                    fit_args=dict(use_t=True))
+                model.fit(y=y, X=X)
+
+                # Get Results
+                rv_idx_list = [i for i, n in enumerate(X.columns) if rv in n]
+                if len(rv_idx_list) != 1:
+                    raise ValueError(f"Failed to find regression variable column in the results for {rv}")
+                else:
+                    rv_idx = rv_idx_list[0]
+                N = X.shape[0]
+                beta = model.params[rv_idx]
+                SE = model.stderr[rv_idx]
+                tval = np.abs(beta / SE)  # T statistic is the absolute value of beta / SE
+                # Get degrees of freedom
+                if model.design.has_clusters or model.design.has_strata:
+                    dof = survey_design.get_dof(X)
+                else:
+                    dof = model.result.df_model
+                var_pvalue = scipy.stats.t.sf(tval, df=dof)*2  # Two-sided t-test
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
             result.append(var_result)
             continue
 
-        var_result['N'] = est.nobs
-        var_result['beta'] = est.params[rv]
-        var_result['SE'] = est.bse[rv]
-        var_result['var_pvalue'] = est.pvalues[rv]
-        var_result['pvalue'] = est.pvalues[rv]
+        # Save and Return Results
+        var_result['N'] = N
+        var_result['beta'] = beta
+        var_result['SE'] = SE
+        var_result['var_pvalue'] = var_pvalue
+        var_result['pvalue'] = var_pvalue
         result.append(var_result)
 
+    print(f"\n####### Regressing {len(rv_bin)} Binary Variables #######\n")
     for rv in rv_bin:
         # Create blank result
         var_result = {c: np.nan for c in result_columns}
@@ -183,33 +215,80 @@ def run_regression(phenotype: str,
         var_result['variable_type'] = 'binary'
 
         # Check covariates
-        subset, varying_covariates = clean_covars(df, covariates, phenotype, rv)
+        subset = df[~df[rv].isna()]
+        if len(subset) == 0:
+            print(f"{rv} = NULL due to: No non-null observations of {rv}")
+            result.append(var_result)
+            continue
+        varying_covariates = check_covars(subset, covariates, rv)
 
-        # Run the regression, and get results for the one kept variable value
+        # Set up the formula
         x_vals = varying_covariates + [rv]
         formula = f"{phenotype} ~ " + " + ".join([f"C({var_name})" if str(df.dtypes[var_name]) == 'category' else var_name for var_name in x_vals])
+
+        # Run the regression
         try:
-            est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
+            if survey_design_spec is None:
+                # Regress
+                est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
+
+                # Get Results
+                # Categorical-type RVs get a different name in the results, and aren't always at the end (since categorical come before non-categorical)
+                rv_keys = [k for k in est.params.keys() if rv in k]
+                try:
+                    assert len(rv_keys) == 1
+                    rv_key = rv_keys[0]
+                except AssertionError:
+                    raise KeyError(f"Error extracting results for '{rv}', try renaming the variable")
+                N = est.nobs
+                beta = est.params[rv_key]
+                SE = est.bse[rv_key]
+                var_pvalue = est.pvalues[rv_key]
+            else:
+                # Regress
+                y, X = patsy.dmatrices(formula, subset, return_type='dataframe')
+                survey_design, index = survey_design_spec.get_survey_design(rv, X.index)
+                # Update y and X with the new index, which may be smaller due to missing weights
+                y = y.loc[index]
+                X = X.loc[index]
+                model = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=cov_method,
+                                    init_args=dict(family=family),
+                                    fit_args=dict(use_t=True))
+                model.fit(y=y, X=X)
+
+                # Get Results
+                # Categorical-type RVs get a different name in the results,
+                rv_idx_list = [i for i, n in enumerate(X.columns) if rv in n]
+                if len(rv_idx_list) != 1:
+                    raise ValueError(f"Failed to find regression variable column in the results for {rv}")
+                else:
+                    rv_idx = rv_idx_list[0]
+                N = X.shape[0]
+                beta = model.params[rv_idx]
+                SE = model.stderr[rv_idx]
+                tval = np.abs(beta / SE)  # T statistic is the absolute value of beta / SE
+                # Get degrees of freedom
+                if model.design.has_clusters or model.design.has_strata:
+                    dof = survey_design.get_dof(X)
+                else:
+                    dof = model.result.df_model
+                var_pvalue = scipy.stats.t.sf(tval, df=dof)*2  # Two-sided t-test
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
             result.append(var_result)
             continue
 
-        # Categorical RVs get a different name in the results, and aren't always at the end (since categorical come before non-categorical)
-        rv_keys = [k for k in est.params.keys() if rv in k]
-        try:
-            assert len(rv_keys) == 1
-            rv_key = rv_keys[0]
-        except AssertionError:
-            raise KeyError(f"Error extracting results for '{rv}', try renaming the variable")
-
-        var_result['N'] = est.nobs
-        var_result['beta'] = est.params[rv_key]
-        var_result['SE'] = est.bse[rv_key]
-        var_result['var_pvalue'] = est.pvalues[rv_key]
-        var_result['pvalue'] = est.pvalues[rv_key]
+        # Save and Return Results
+        var_result['N'] = N
+        var_result['beta'] = beta
+        var_result['SE'] = SE
+        var_result['var_pvalue'] = var_pvalue
+        var_result['pvalue'] = var_pvalue
         result.append(var_result)
 
+    print(f"\n####### Regressing {len(rv_cat)} Categorical Variables #######\n")
+    # The change in deviance between a model and a nested version (with n fewer predictors) follows a chi-square distribution with n DoF
+    # See https://en.wikipedia.org/wiki/Deviance_(statistics)
     for rv in rv_cat:
         # Create blank result
         var_result = {c: np.nan for c in result_columns}
@@ -217,7 +296,13 @@ def run_regression(phenotype: str,
         var_result['variable_type'] = 'categorical'
 
         # Check covariates
-        subset, varying_covariates = clean_covars(df, covariates, phenotype, rv)
+        # Note: Using a subset is required for categorical variables to ensure the restricted and full model use the same data
+        subset = df[~df[rv].isna()]
+        if len(subset) == 0:
+            print(f"{rv} = NULL due to: No non-null observations of {rv}")
+            result.append(var_result)
+            continue
+        varying_covariates = check_covars(subset, covariates, rv)
 
         # Run the regression and compare the results to the restricted regression model using only observations that include the rv
 
@@ -226,7 +311,18 @@ def run_regression(phenotype: str,
                                                              if str(df.dtypes[var_name]) == 'category'
                                                              else var_name for var_name in varying_covariates])
         try:
-            est_restricted = smf.glm(formula_restricted, data=subset, family=family).fit(use_t=True)
+            if survey_design_spec is None:
+                est_restricted = smf.glm(formula_restricted, data=subset, family=family).fit(use_t=True)
+            else:
+                y, X = patsy.dmatrices(formula_restricted, subset, return_type='dataframe')
+                survey_design, index = survey_design_spec.get_survey_design(rv, X.index)
+                # Update y and X with the new index, which may be smaller due to missing weights
+                y = y.loc[index]
+                X = X.loc[index]
+                model_restricted = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=cov_method,
+                                               init_args=dict(family=family),
+                                               fit_args=dict(use_t=True))
+                model_restricted.fit(y=y, X=X)
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
             result.append(var_result)
@@ -236,23 +332,53 @@ def run_regression(phenotype: str,
         x_vals = varying_covariates + [rv]
         formula = f"{phenotype} ~ " + " + ".join([f"C({var_name})" if str(df.dtypes[var_name]) == 'category' else var_name for var_name in x_vals])
         try:
-            est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
+            if survey_design_spec is None:
+                # Regress full model
+                est = smf.glm(formula, data=subset, family=family).fit(use_t=True)
+                # Calculate Results
+                lrdf = (est_restricted.df_resid - est.df_resid)
+                lrstat = -2*(est_restricted.llf - est.llf)
+                lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
+                # Gather Other Results
+                N = est.nobs
+                diff_AIC = est.aic - est_restricted.aic
+            else:
+                # Regress full model (Already have the survey_design object)
+                y, X = patsy.dmatrices(formula, subset, return_type='dataframe')
+                # Update y and X with the new index from the SurveyDesign, which may be smaller due to missing weights
+                y = y.loc[index]
+                X = X.loc[index]
+                model = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=cov_method,
+                                    init_args=dict(family=family),
+                                    fit_args=dict(use_t=True))
+                model.fit(y=y, X=X)
+                # Calculate Results
+                dof = survey_design.get_dof(X)
+                N = X.shape[0]
+                diff_AIC = model.result.aic - model_restricted.result.aic
+                if model.design.has_strata or model.design.has_clusters:
+                    # Calculate pvalue using vcov
+                    lr_pvalue = regTermTest(full_model=model, restricted_model=model_restricted, ddf=dof, X_names=X.columns, var_name=rv)
+                else:
+                    # Calculate using llf from model results
+                    lrdf = (model_restricted.result.df_resid - model.result.df_resid)
+                    lrstat = -2*(model_restricted.result.llf - model.result.llf)
+                    lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
+
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
             result.append(var_result)
             continue
 
-        lrdf = (est_restricted.df_resid - est.df_resid)
-        lrstat = -2*(est_restricted.llf - est.llf)
-        lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
-
-        var_result['N'] = est.nobs
+        # Save and Return Results
+        var_result['N'] = N
         var_result['LRT_pvalue'] = lr_pvalue
-        var_result['diff_AIC'] = est.aic - est_restricted.aic
+        var_result['diff_AIC'] = diff_AIC
         var_result['pvalue'] = lr_pvalue
+
         result.append(var_result)
 
-    # Gather Results
+    # Gather All Results
     result = pd.DataFrame(result)
     result['phenotype'] = phenotype  # Add phenotype
     result = result.sort_values('pvalue').set_index(['variable', 'phenotype'])  # Sort and set index
@@ -262,7 +388,7 @@ def run_regression(phenotype: str,
 
 def add_corrected_pvalues(ewas_result):
     """
-    Add bonferroni and FDR pvalues to an ewas result (in-place)
+    Add bonferroni and FDR pvalues to an ewas result and sort by increasing FDR (in-place)
 
     Parameters
     ----------
@@ -277,5 +403,9 @@ def add_corrected_pvalues(ewas_result):
     --------
     >>>clarite.add_corrected_pvalues(ewas_discovery)
     """
-    ewas_result['pvalue_bonferroni'] = multipletests(ewas_result['pvalue'], method="bonferroni", is_sorted=True)[1]
-    ewas_result['pvalue_fdr'] = multipletests(ewas_result['pvalue'], method="fdr_bh", is_sorted=True)[1]
+    # TODO: These are slightly off from values in R- is it due to rounding?
+    ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue_bonferroni'] = multipletests(ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue'],
+                                                                                        method="bonferroni")[1]
+    ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue_fdr'] = multipletests(ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue'],
+                                                                                 method="fdr_bh")[1]
+    ewas_result.sort_values(by='pvalue_fdr', inplace=True)
