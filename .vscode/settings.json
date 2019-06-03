@@ -1,7 +1,0 @@
-{
-    "python.pythonPath": "C:\\Users\\jrm5100\\AppData\\Local\\Continuum\\anaconda3\\envs\\clarite\\python.exe",
-    "python.linting.pylintEnabled": false,
-    "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true,
-    "restructuredtext.confPath": "${workspaceFolder}\\docs\\source"
-}
