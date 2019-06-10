@@ -406,4 +406,4 @@ def add_corrected_pvalues(ewas_result):
     # TODO: These are slightly off from values in R- is it due to rounding?
     ewas_result['pvalue_bonferroni'] = multipletests(ewas_result['pvalue'].fillna(1.0), method="bonferroni")[1]
     ewas_result['pvalue_fdr'] = multipletests(ewas_result['pvalue'].fillna(1.0), method="fdr_bh")[1]
-    ewas_result.sort_values(by='pvalue_fdr', inplace=True)
+    ewas_result.sort_values(by=['pvalue_fdr', 'pvalue'], inplace=True)
