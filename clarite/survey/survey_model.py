@@ -205,5 +205,5 @@ class SurveyModel(object):
     def _calc_params(self, y, X, init_args, fit_args):
         """Like _get_params, but doesn't modify self.  Jackknife calculates params many times, but must keep original values."""
         initialized_model = self.model(y, X, **init_args)
-        result = initialized_model.fit_regularized(**fit_args)
+        result = initialized_model.fit(**fit_args)
         return result.params
