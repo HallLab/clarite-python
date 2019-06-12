@@ -102,18 +102,6 @@ def ewas(
     # Run Regressions
     return run_regressions(phenotype, covariates, df, rv_bin, rv_cat, rv_cont, pheno_kind, survey_design_spec, cov_method)
 
-
-def check_covars(subset_df, covariates, regression_variable):
-    """Return a list of covariates that have >1 value in the subset dataframe"""
-    unique_values = subset_df[covariates].nunique()
-    varying_covars = list(unique_values[unique_values > 1].index.values)
-    non_varying_covars = list(unique_values[unique_values <= 1].index.values)
-
-    if len(non_varying_covars) > 0:
-        print(f"WARNING: {regression_variable} has non-varying covariates(s): {', '.join(non_varying_covars)}")
-    return varying_covars
-
-
 def run_regressions(phenotype: str,
                     covariates: List[str],
                     df: pd.DataFrame,

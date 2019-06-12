@@ -65,9 +65,9 @@ class Regression(object):
     def run(self):
         """Run the regression and update self with the results"""
         # Get subset of the data
-        self.data = self.data[~self.data[self.variable].isna()]
+        self.data = self.data[~self.data[self.variable].isna() & ~self.data[self.phenotype].isna()]
         if len(self.data) == 0:
-            print(f"{self.variable} = NULL due to: No non-null observations of {self.variable}")
+            print(f"{self.variable} = NULL due to: No non-null observations of {self.variable} and/or {self.phenotype}")
         self.varying_covariates = self.check_covars()
 
         # Make formulas
