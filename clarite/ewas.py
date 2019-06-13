@@ -202,6 +202,10 @@ def add_corrected_pvalues(ewas_result):
     >>>clarite.add_corrected_pvalues(ewas_discovery)
     """
     # TODO: These are slightly off from values in R- is it due to rounding?
-    ewas_result['pvalue_bonferroni'] = multipletests(ewas_result['pvalue'].fillna(1.0), method="bonferroni")[1]
-    ewas_result['pvalue_fdr'] = multipletests(ewas_result['pvalue'].fillna(1.0), method="fdr_bh")[1]
-    ewas_result.sort_values(by=['pvalue_fdr', 'pvalue'], inplace=True)
+    # NA by default
+    ewas_result['pvalue_bonferroni'] = nan
+    ewas_result['pvalue_fdr'] = nan
+    # Calculate values, ignoring NA pvalues
+    ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue_bonferroni'] = multipletests(ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue'], method="bonferroni")[1]
+    ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue_fdr'] = multipletests(ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue'], method="fdr_bh")[1]
+    ewas_result.sort_values(by=['pvalue_fdr', 'pvalue', 'converged'], inplace=True)
