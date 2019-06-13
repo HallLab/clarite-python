@@ -79,6 +79,7 @@ class Regression(object):
         # Check for a minimum amount of data
         if len(self.data) < min_n:
             print(f"{self.variable} = NULL due to: too few complete obervations ({len(self.data)} < {min_n})")
+            return
         self.varying_covariates = self.check_covars()
 
         # Make formulas
