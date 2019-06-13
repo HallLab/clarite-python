@@ -12,15 +12,6 @@ from .regression import Regression
 result_columns = ['variable_type', 'converged', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
 corrected_pvalue_columns = ['pvalue_bonferroni', 'pvalue_fdr']
 
-#    NOTE: WARNING: Loglikelihood and deviance are not valid in models where
-#    scale is equal to 1 (i.e., ``Binomial``, ``NegativeBinomial``, and
-#    ``Poisson``). If variance weights are specified, then results such as
-#    ``loglike`` and ``deviance`` are based on a quasi-likelihood
-#    interpretation. The loglikelihood is not correctly specified in this case,
-#    and statistics based on it, such AIC or likelihood ratio tests, are not
-#    appropriate.
-
-
 def ewas(
         phenotype: str,
         covariates: List[str],
