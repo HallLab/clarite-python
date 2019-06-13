@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 import pandas as pd
+from numpy import nan
 from statsmodels.stats.multitest import multipletests
 from clarite.survey import SurveyDesignSpec
 
@@ -27,7 +28,8 @@ def ewas(
         cat_df: Optional[pd.DataFrame],
         cont_df: Optional[pd.DataFrame],
         survey_design_spec: Optional[SurveyDesignSpec] = None,
-        cov_method: Optional[str] = 'stata'):
+        cov_method: Optional[str] = 'stata',
+        min_n: Optional[int] = 200):
     """
     Run an EWAS on a phenotype
 
@@ -47,6 +49,9 @@ def ewas(
         A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
     cov_method: str or None
         Covariance calculation method (if survey_design_spec is passed in).  'stata' or 'jackknife'
+    min_n: int or None
+        Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
+        Defaults to 200
 
     Returns
     -------
@@ -100,7 +105,7 @@ def ewas(
         df = dfs[0].join(dfs[1:], how="outer")
 
     # Run Regressions
-    return run_regressions(phenotype, covariates, df, rv_bin, rv_cat, rv_cont, pheno_kind, survey_design_spec, cov_method)
+    return run_regressions(phenotype, covariates, df, rv_bin, rv_cat, rv_cont, pheno_kind, min_n, survey_design_spec, cov_method)
 
 def run_regressions(phenotype: str,
                     covariates: List[str],
@@ -109,6 +114,7 @@ def run_regressions(phenotype: str,
                     rv_cat: List[str],
                     rv_cont: List[str],
                     pheno_kind: str,
+                    min_n: int,
                     survey_design_spec: Optional[SurveyDesignSpec],
                     cov_method: Optional[str]):
     """Run a regressions on variables"""
@@ -132,7 +138,7 @@ def run_regressions(phenotype: str,
                                 cov_method=cov_method)
         # Run the regression
         try:
-            regression.run()
+            regression.run(min_n=min_n)
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
         # Save results
@@ -151,7 +157,7 @@ def run_regressions(phenotype: str,
                                 cov_method=cov_method)
         # Run the regression
         try:
-            regression.run()
+            regression.run(min_n=min_n)
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
         # Save results
@@ -170,7 +176,7 @@ def run_regressions(phenotype: str,
                                 cov_method=cov_method)
         # Run the regression
         try:
-            regression.run()
+            regression.run(min_n=min_n)
         except Exception as e:
             print(f"{rv} = NULL due to: {e}")
         # Save results
