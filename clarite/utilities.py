@@ -104,3 +104,17 @@ def make_continuous(df: pd.DataFrame):
     df = df.apply(pd.to_numeric)
     print(f"Processed {len(df.columns):,} continuous variables with {len(df):,} observations")
     return df
+
+def merge_variables(dataframes: List[pd.DataFrame]):
+    """
+    Merge dataframes with different variables side-by-side
+    
+    Parameters
+    ----------
+    dataframes: list of pd.Dataframe
+        Dataframes to be merged.  Only observations present in all rows will be kept.
+    """
+    df = dataframes[0]
+    for other in dataframes[1:]:
+        df = df.merge(other, left_index=True, right_index=True)
+    return df
