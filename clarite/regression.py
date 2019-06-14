@@ -8,7 +8,7 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
 from .survey import SurveyDesignSpec, SurveyModel
-from .utilities import regTermTest
+from .calculations import regTermTest
 
 
 class Regression(object):
