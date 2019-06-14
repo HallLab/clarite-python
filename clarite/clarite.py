@@ -309,6 +309,16 @@ class ClariteDataframeAccessor(object):
             Which variables to plot.  If None, all variables are plotted.
         sort: Boolean (default=True)
             Whether or not to sort variable names
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> df.clarite.plot_distributions(filename='dist_plots', nrows=3, ncols=2, sort=False)
+
+        .. image:: _static/plots/plot_distributions.png
         """
         df = self._obj
 

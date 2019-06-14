@@ -113,6 +113,10 @@ def merge_variables(dataframes: List[pd.DataFrame]):
     ----------
     dataframes: list of pd.Dataframe
         Dataframes to be merged.  Only observations present in all rows will be kept.
+
+    Examples
+    --------
+    >>> df = clarite.merge_variables([df_bin, df_cat])
     """
     df = dataframes[0]
     for other in dataframes[1:]:
