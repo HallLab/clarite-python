@@ -488,3 +488,36 @@ class ClariteDataframeAccessor(object):
             ax.text(index+1, row['-log10(p_value)'], str(row['variable']),
                     rotation=0, ha='left', va='center',
                     )
+
+    ################
+    # Calculations #
+    ################
+    def get_correlations(self, threshold: float = 0.75):
+        """
+        Return variables with pearson correlation above the threshold
+
+        Parameters
+        ----------
+        threshold: float, between 0 and 1
+            Return a dataframe listing pairs of variables whose absolute value of correlation is above this threshold
+
+        Returns
+        -------
+        result: pd.DataFrame
+            DataFrame listing pairs of correlated variables and their correlation value
+
+        Examples
+        --------
+        >>> correlations = df.clarite.correlations(threshold=0.9)
+        """
+        df = self._obj
+        # Get correlaton matrix
+        correlation = df.corr()
+        # Keep only the upper triangle to avoid listing both a-b and b-a correlations
+        correlation = correlation.where(np.triu(np.ones(correlation.shape), k=1).astype(np.bool))
+        # Stack and rename into the desired format
+        correlation = correlation.stack().rename('correlation').rename_axis(['var1', 'var2']).reset_index()
+        # Remove those with correlation below threshold
+        correlation = correlation.loc[correlation['correlation'].abs() >= threshold, ]
+        # Sort by absolute value and return
+        return correlation.reindex(correlation['correlation'].abs().sort_values(ascending=False).index)
