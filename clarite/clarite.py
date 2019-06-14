@@ -1,13 +1,17 @@
 from typing import Dict, List, Optional, Tuple
+import datetime
 
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
 import numpy as np
 import pandas as pd
 
 from .ewas import result_columns, corrected_pvalue_columns
 from .utilities import _validate_skip_only
+from ._version import get_versions
 
+clarite_version = get_versions()
 
 @pd.api.extensions.register_dataframe_accessor("clarite")
 class ClariteDataframeAccessor(object):
@@ -277,9 +281,111 @@ class ClariteDataframeAccessor(object):
         if column not in df.columns:
             raise ValueError("'column' must be an existing column in the DataFrame")
 
-        fig, ax = plt.subplots(figsize=figsize)
+        _, ax = plt.subplots(figsize=figsize)
         ax.set_title(title)
         sns.distplot(df[column], ax=ax, **kwargs)
+
+    def plot_distributions(self,
+                           filename: str,
+                           nrows: int = 4,
+                           ncols: int = 3,
+                           quality: str = "medium",
+                           variables: Optional[List[str]] = None,
+                           sort: bool = True):
+        """
+        Create a pdf containing histograms for each variable in a dataframe
+
+        Parameters
+        ----------
+        filename: string
+            Name of the saved pdf file.  The extension will be added automatically if it was not included.
+        nrows: int (default=4)
+            Number of rows per page
+        ncols: int (default=3)
+            Number of columns per page
+        quality: 'low', 'medium', or 'high'
+            Adjusts the DPI of the plots (150, 300, or 1200)
+        variables: List[str] or None
+            Which variables to plot.  If None, all variables are plotted.
+        sort: Boolean (default=True)
+            Whether or not to sort variable names
+        """
+        df = self._obj
+
+        # Limit variables
+        if variables is not None:
+            df = df[variables]
+
+        # Check filename
+        if not filename.endswith(".pdf"):
+            filename += ".pdf"
+
+        # Set DPI
+        dpi_dict = {'low':150, 'medium':300, 'high':1200}
+        dpi = dpi_dict.get(quality, None)
+        if dpi is None:
+            raise ValueError(f"quality was set to '{quality}' which is not a valid value")
+
+        # Make sure file is writeable
+        try:
+            with PdfPages(filename) as pdf:
+                pass
+        except OSError:
+            raise OSError(f"Unable to write to '{filename}'")
+
+        with PdfPages(filename) as pdf:
+            # Determine the number of pages
+            plots_per_page = nrows * ncols
+            total_pages = (len(df.columns) + (plots_per_page - 1))//plots_per_page
+            print(f"Generating a {total_pages} page PDF for {len(df.columns):,} variables")
+            # Starting plot space
+            page_num = 1
+            row_idx = 0
+            col_idx = 0
+            # Loop through all variables
+            if sort:
+                variables = sorted(list(df))
+            else:
+                variables = list(df)
+            for variable in variables:
+                if row_idx == 0 and col_idx == 0:
+                    # New Page
+                    _ = plt.subplots(squeeze=False, figsize=(8.5, 11), dpi=dpi)
+                    plt.suptitle(f"Page {page_num}")
+                # Plot non-NA values and record the number of those separately (otherwise they can cause issues with generating a KDE)
+                ax = plt.subplot2grid((nrows, ncols), (row_idx, col_idx))
+                if str(df.dtypes[variable]) == 'category':
+                    sns.countplot(df.loc[~df[variable].isna(), variable], ax=ax)
+                else:
+                    sns.distplot(df.loc[~df[variable].isna(), variable], kde=False, norm_hist=False, hist_kws={'alpha':1}, ax=ax)
+                # Update xlabel with NA information
+                na_count = df[variable].isna().sum()
+                ax.set_xlabel(f"{variable}\n{na_count:,} of {len(df[variable]):,} are NA ({na_count/len(df[variable]):.2%})")
+                # Move to next plot space
+                col_idx += 1
+                if col_idx == ncols:  # Wrap to next row
+                    col_idx = 0
+                    row_idx += 1
+                if row_idx == nrows:  # Wrap to next page
+                    row_idx = 0
+                    page_num += 1
+                    # Save the current page
+                    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                    pdf.savefig()
+                    plt.close()
+            # Save final page, unless a full page was finished and the page_num is now more than total_pages
+            if page_num == total_pages:
+                plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                pdf.savefig()
+                plt.close()
+            # Add metadata
+            d = pdf.infodict()
+            d['Title'] = 'Multipage PDF Example'
+            d['Author'] = f"CLARITE {clarite_version}"
+            d['Subject'] = 'Distribution plots'
+            d['CreationDate'] = datetime.datetime.today()
+            d['ModDate'] = datetime.datetime.today()
+    
 
     def plot_manhattan(self,
                        categories: Dict[str, str] = dict(),
@@ -328,7 +434,7 @@ class ClariteDataframeAccessor(object):
         df = df.sort_values(['category', 'variable']).reset_index(drop=True).reset_index()
 
         # Plot
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        _, ax = plt.subplots(1, 1, figsize=figsize)
 
         x_labels = []
         x_labels_pos = []
