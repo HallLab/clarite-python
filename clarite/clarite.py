@@ -287,6 +287,7 @@ class ClariteDataframeAccessor(object):
 
     def plot_distributions(self,
                            filename: str,
+                           continuous_kind: str = 'count',
                            nrows: int = 4,
                            ncols: int = 3,
                            quality: str = "medium",
@@ -299,6 +300,9 @@ class ClariteDataframeAccessor(object):
         ----------
         filename: string
             Name of the saved pdf file.  The extension will be added automatically if it was not included.
+        continuous_kind: string
+            What kind of plots to use for continuous data.  Binary and Categorical will always show count plots.
+            One of {'count', 'box', 'violin'}
         nrows: int (default=4)
             Number of rows per page
         ncols: int (default=3)
@@ -367,7 +371,14 @@ class ClariteDataframeAccessor(object):
                 if str(df.dtypes[variable]) == 'category':
                     sns.countplot(df.loc[~df[variable].isna(), variable], ax=ax)
                 else:
-                    sns.distplot(df.loc[~df[variable].isna(), variable], kde=False, norm_hist=False, hist_kws={'alpha':1}, ax=ax)
+                    if continuous_kind == 'count':
+                        sns.distplot(df.loc[~df[variable].isna(), variable], kde=False, norm_hist=False, hist_kws={'alpha':1}, ax=ax)
+                    elif continuous_kind == 'box':
+                        sns.boxplot(df.loc[~df[variable].isna(), variable], ax=ax)
+                    elif continuous_kind == 'violin':
+                        sns.violinplot(df.loc[~df[variable].isna(), variable], ax=ax)
+                    else:
+                        raise ValueError("Unknown value for 'continuous_kind': must be one of {'count', 'box', 'violin'}")
                 # Update xlabel with NA information
                 na_count = df[variable].isna().sum()
                 ax.set_xlabel(f"{variable}\n{na_count:,} of {len(df[variable]):,} are NA ({na_count/len(df[variable]):.2%})")
