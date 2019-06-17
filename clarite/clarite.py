@@ -489,9 +489,9 @@ class ClariteDataframeAccessor(object):
                     rotation=0, ha='left', va='center',
                     )
 
-    ################
-    # Calculations #
-    ################
+    ######################################
+    # Exploratory Stats and Calculations #
+    ######################################
     def get_correlations(self, threshold: float = 0.75):
         """
         Return variables with pearson correlation above the threshold
@@ -528,3 +528,65 @@ class ClariteDataframeAccessor(object):
         correlation = correlation.loc[correlation['correlation'].abs() >= threshold, ]
         # Sort by absolute value and return
         return correlation.reindex(correlation['correlation'].abs().sort_values(ascending=False).index)
+
+
+    def get_freq_table(self):
+        """
+        Return the count of each unique value for all categorical variables.  Non-categorical typed variables
+        will return a single row with a value of '<Non-Categorical Values>' and the number of non-NA values.
+
+        Returns
+        -------
+        result: pd.DataFrame
+            DataFrame listing variable, value, and count for each categorical variable
+
+        Examples
+        --------
+        >>> df.clarite.get_freq_table().head(n=10)
+           variable value  count
+        0                 SDDSRVYR                         2   4872
+        1                 SDDSRVYR                         1   4191
+        2                   female                         1   4724
+        3                   female                         0   4339
+        4  how_many_years_in_house                         5   2961
+        5  how_many_years_in_house                         3   1713
+        6  how_many_years_in_house                         2   1502
+        7  how_many_years_in_house                         1   1451
+        8  how_many_years_in_house                         4   1419
+        9                  LBXPFDO  <Non-Categorical Values>   1032
+        """
+        df = self._obj
+
+        # Define a function to be applied to each categorical variable
+        def formatted_value_counts(var_name: str, df: pd.DataFrame):
+            if str(df[var_name].dtype)=='category':
+                df = df[var_name].value_counts().reset_index().rename({'index':'value', var_name:'count'}, axis='columns')
+                df['variable'] = var_name
+                return df[['variable', 'value', 'count']]  # reorder columns
+            else:
+                return pd.DataFrame.from_dict({'variable':[var_name],
+                                               'value':['<Non-Categorical Values>'],
+                                               'count':[df[var_name].count()]})
+
+        return pd.concat([formatted_value_counts(var_name, df) for var_name in list(df)]).reset_index(drop=True)
+
+
+    def get_percent_na(self):
+        """
+        Return the percent of observations that are NA for each variable
+
+        Returns
+        -------
+        result: pd.Series
+            Series listing percent NA for each variable
+
+        Examples
+        --------
+        >>> df.clarite.get_percent_na()
+        SDDSRVYR                 0.000000
+        female                   0.000000
+        LBXHBC                   0.049321
+        LBXHBS                   0.049873
+        """
+        df = self._obj
+        return 1 - (df.count() / df.apply(len))
