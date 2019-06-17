@@ -508,7 +508,14 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> correlations = df.clarite.correlations(threshold=0.9)
+        >>> correlations = df.clarite.get_correlations(threshold=0.9)
+        >>> correlations.head()
+                           var1      var2  correlation
+        36704  supplement_count  DSDCOUNT     1.000000
+        32807          DR1TM181  DR1TMFAT     0.997900
+        33509          DR1TP182  DR1TPFAT     0.996172
+        39575          DRD370FQ  DRD370UQ     0.987974
+        35290          DR1TS160  DR1TSFAT     0.984733
         """
         df = self._obj
         # Get correlaton matrix
