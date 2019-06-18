@@ -2,6 +2,7 @@ import numpy as np
 from scipy import stats
 from scipy.optimize import brentq as root
 
+
 def regTermTest(full_model, restricted_model, ddf, X_names, var_name):
     """
     Performs a LRT for two weighted regression models- one full and one restricted (which nests inside the larger model).
