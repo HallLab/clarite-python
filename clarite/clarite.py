@@ -6,6 +6,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
 import numpy as np
 import pandas as pd
+from statsmodels.api import qqplot
 
 from .ewas import result_columns, corrected_pvalue_columns
 from .utilities import _validate_skip_only
@@ -294,15 +295,15 @@ class ClariteDataframeAccessor(object):
                            variables: Optional[List[str]] = None,
                            sort: bool = True):
         """
-        Create a pdf containing histograms for each variable in a dataframe
+        Create a pdf containing histograms for each binary or categorical variable, and one of several types of plots for each continuous variable.
 
         Parameters
         ----------
         filename: string
             Name of the saved pdf file.  The extension will be added automatically if it was not included.
         continuous_kind: string
-            What kind of plots to use for continuous data.  Binary and Categorical will always show count plots.
-            One of {'count', 'box', 'violin'}
+            What kind of plots to use for continuous data.  Binary and Categorical variables will always be shown with histograms.
+            One of {'count', 'box', 'violin', 'qq'}
         nrows: int (default=4)
             Number of rows per page
         ncols: int (default=3)
@@ -320,9 +321,22 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> df.clarite.plot_distributions(filename='dist_plots', nrows=3, ncols=2, sort=False)
+        >>> df[['female', 'occupation', 'LBX074']].clarite.plot_distributions(filename="test")
 
-        .. image:: _static/plots/plot_distributions.png
+        .. image:: _static/plots/plot_distributions_count.png
+
+        >>> df[['female', 'occupation', 'LBX074']].clarite.plot_distributions(filename="test", continuous_kind='box')
+
+        .. image:: _static/plots/plot_distributions_box.png
+
+        >>> df[['female', 'occupation', 'LBX074']].clarite.plot_distributions(filename="test", continuous_kind='violin')
+
+        .. image:: _static/plots/plot_distributions_violin.png
+
+        >>> df[['female', 'occupation', 'LBX074']].clarite.plot_distributions(filename="test", continuous_kind='qq')
+
+        .. image:: _static/plots/plot_distributions_qq.png
+
         """
         df = self._obj
 
@@ -377,8 +391,14 @@ class ClariteDataframeAccessor(object):
                         sns.boxplot(df.loc[~df[variable].isna(), variable], ax=ax)
                     elif continuous_kind == 'violin':
                         sns.violinplot(df.loc[~df[variable].isna(), variable], ax=ax)
+                    elif continuous_kind == 'qq':
+                        # QQ plots have to be sub-sampled otherwise there are too many points and the pdf is blank
+                        d = df.loc[~df[variable].isna(), variable]
+                        if len(d) > 400:
+                            d = d.sample(n=400, random_state=1)
+                        qqplot(d, line='s', fit=True, ax=ax, color='steelblue', alpha=0.7)
                     else:
-                        raise ValueError("Unknown value for 'continuous_kind': must be one of {'count', 'box', 'violin'}")
+                        raise ValueError("Unknown value for 'continuous_kind': must be one of {'count', 'box', 'violin', 'qq'}")
                 # Update xlabel with NA information
                 na_count = df[variable].isna().sum()
                 ax.set_xlabel(f"{variable}\n{na_count:,} of {len(df[variable]):,} are NA ({na_count/len(df[variable]):.2%})")
