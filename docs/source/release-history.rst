@@ -2,6 +2,13 @@
 Release History
 ===============
 
+v0.4.0 (2019-06-18)
+-------------------
+Support EWAS with binary outcomes.
+Additional handling of NA values in covariates and the phenotype.
+Add a 'min_n' parameter to the ewas function to require a minimum number of observations after removing incomplete cases.
+Add additional functions including 'plot_distributions', 'merge_variables', 'get_correlations', 'get_freq_table', and 'get_percent_na'
+
 v0.3.0 (2019-05-31)
 -------------------
 Add support for complex survey designs
