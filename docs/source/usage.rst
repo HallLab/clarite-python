@@ -43,6 +43,18 @@ Plotting
 
 .. automethod:: clarite.ClariteDataframeAccessor.plot_manhattan
 
+.. automethod:: clarite.ClariteDataframeAccessor.plot_distributions
+
+Exploratory Stats and Calculations
+**********************************
+
+.. automethod:: clarite.ClariteDataframeAccessor.get_correlations
+
+.. automethod:: clarite.ClariteDataframeAccessor.get_freq_table
+
+.. automethod:: clarite.ClariteDataframeAccessor.get_percent_na
+
+
 Other DataFrame Accessor Functions
 **********************************
 
@@ -63,6 +75,8 @@ Utilities
 .. autofunction:: clarite.make_categorical
 
 .. autofunction:: clarite.make_continuous
+
+.. autofunction:: clarite.merge_variables
 
 IO Functions
 ############
