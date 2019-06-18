@@ -14,6 +14,7 @@ from ._version import get_versions
 
 clarite_version = get_versions()
 
+
 @pd.api.extensions.register_dataframe_accessor("clarite")
 class ClariteDataframeAccessor(object):
     def __init__(self, pandas_obj):
@@ -349,7 +350,7 @@ class ClariteDataframeAccessor(object):
             filename += ".pdf"
 
         # Set DPI
-        dpi_dict = {'low':150, 'medium':300, 'high':1200}
+        dpi_dict = {'low': 150, 'medium': 300, 'high': 1200}
         dpi = dpi_dict.get(quality, None)
         if dpi is None:
             raise ValueError(f"quality was set to '{quality}' which is not a valid value")
@@ -386,7 +387,7 @@ class ClariteDataframeAccessor(object):
                     sns.countplot(df.loc[~df[variable].isna(), variable], ax=ax)
                 else:
                     if continuous_kind == 'count':
-                        sns.distplot(df.loc[~df[variable].isna(), variable], kde=False, norm_hist=False, hist_kws={'alpha':1}, ax=ax)
+                        sns.distplot(df.loc[~df[variable].isna(), variable], kde=False, norm_hist=False, hist_kws={'alpha': 1}, ax=ax)
                     elif continuous_kind == 'box':
                         sns.boxplot(df.loc[~df[variable].isna(), variable], ax=ax)
                     elif continuous_kind == 'violin':
@@ -426,7 +427,6 @@ class ClariteDataframeAccessor(object):
             d['Subject'] = 'Distribution plots'
             d['CreationDate'] = datetime.datetime.today()
             d['ModDate'] = datetime.datetime.today()
-    
 
     def plot_manhattan(self,
                        categories: Dict[str, str] = dict(),
@@ -549,7 +549,6 @@ class ClariteDataframeAccessor(object):
         # Sort by absolute value and return
         return correlation.reindex(correlation['correlation'].abs().sort_values(ascending=False).index)
 
-
     def get_freq_table(self):
         """
         Return the count of each unique value for all categorical variables.  Non-categorical typed variables
@@ -579,17 +578,16 @@ class ClariteDataframeAccessor(object):
 
         # Define a function to be applied to each categorical variable
         def formatted_value_counts(var_name: str, df: pd.DataFrame):
-            if str(df[var_name].dtype)=='category':
-                df = df[var_name].value_counts().reset_index().rename({'index':'value', var_name:'count'}, axis='columns')
+            if str(df[var_name].dtype) == 'category':
+                df = df[var_name].value_counts().reset_index().rename({'index': 'value', var_name: 'count'}, axis='columns')
                 df['variable'] = var_name
                 return df[['variable', 'value', 'count']]  # reorder columns
             else:
-                return pd.DataFrame.from_dict({'variable':[var_name],
-                                               'value':['<Non-Categorical Values>'],
-                                               'count':[df[var_name].count()]})
+                return pd.DataFrame.from_dict({'variable': [var_name],
+                                               'value': ['<Non-Categorical Values>'],
+                                               'count': [df[var_name].count()]})
 
         return pd.concat([formatted_value_counts(var_name, df) for var_name in list(df)]).reset_index(drop=True)
-
 
     def get_percent_na(self):
         """

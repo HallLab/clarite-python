@@ -1,7 +1,6 @@
 from typing import Optional, List
 
 import pandas as pd
-from scipy import stats
 
 
 def _validate_skip_only(columns, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
@@ -105,10 +104,11 @@ def make_continuous(df: pd.DataFrame):
     print(f"Processed {len(df.columns):,} continuous variables with {len(df):,} observations")
     return df
 
+
 def merge_variables(dataframes: List[pd.DataFrame]):
     """
     Merge dataframes with different variables side-by-side
-    
+
     Parameters
     ----------
     dataframes: list of pd.Dataframe
