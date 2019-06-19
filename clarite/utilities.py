@@ -24,7 +24,7 @@ def _validate_skip_only(columns, skip: Optional[List[str]] = None, only: Optiona
     return columns
 
 
-def make_bin(df: pd.DataFrame):
+def make_binary(df: pd.DataFrame):
     """
     Validate and type a dataframe of binary variables
 
@@ -42,10 +42,15 @@ def make_bin(df: pd.DataFrame):
 
     Examples
     --------
-    >>> df = clarite.make_bin(df)
+    >>> df = clarite.make_binary(df)
     Processed 32 binary variables with 4,321 observations
     """
-    # TODO: add further validation
+    # Check the number of unique values
+    unique_values = df.nunique()
+    non_binary = unique_values[unique_values != 2]
+    if len(non_binary) > 0:
+        raise ValueError(f"{len(non_binary)} of {len(unique_values)} variables did not have 2 unique values and couldn't be processed as a binary type")
+    # TODO: possibly add further validation to make sure values are 1 and 0
     df = df.astype('category')
     print(f"Processed {len(df.columns):,} binary variables with {len(df):,} observations")
     return df

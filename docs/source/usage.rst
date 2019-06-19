@@ -16,7 +16,7 @@ Clarite consists of several functions and classes, including a Pandas DataFrame 
 .. code-block:: python
 
     df = clarite.io.load_data('nhanes_binary.txt', index_col="ID", sep="\t")
-    df = df.clarite.make_bin()
+    df = df.clarite.make_binary()
 
 
 DataFrame Accessor functions
@@ -70,7 +70,7 @@ EWAS Functions
 Utilities
 #########
 
-.. autofunction:: clarite.make_bin
+.. autofunction:: clarite.make_binary
 
 .. autofunction:: clarite.make_categorical
 

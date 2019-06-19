@@ -5,7 +5,7 @@ from numpy import nan
 from statsmodels.stats.multitest import multipletests
 from clarite.survey import SurveyDesignSpec
 
-from .utilities import make_bin, make_categorical, make_continuous
+from .utilities import make_binary, make_categorical, make_continuous
 from .regression import Regression
 
 
@@ -58,7 +58,7 @@ def ewas(
     # Process variable inputs
     rv_bin, rv_cat, rv_cont = list(), list(), list()
     if bin_df is not None:
-        bin_df = make_bin(bin_df)
+        bin_df = make_binary(bin_df)
         rv_bin = [v for v in list(bin_df) if v not in covariates and v != phenotype]
     if cat_df is not None:
         cat_df = make_categorical(cat_df)
