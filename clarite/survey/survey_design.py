@@ -56,8 +56,6 @@ class SurveyDesignSpec:
         self.validate_params()
 
     def validate_params(self):
-        if self.survey_df.index.name != "ID":
-            raise ValueError(f"The survey_df should be indexed by 'ID'")
         if self.strata is not None:
             if self.strata not in self.survey_df:
                 raise KeyError(f"strata key ('{self.strata}') was not found in the survey_df")
