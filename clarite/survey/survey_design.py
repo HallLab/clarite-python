@@ -104,7 +104,7 @@ class SurveyDesignSpec:
             if regression_variable is None:
                 raise ValueError("This SurveyDesignSpec uses variable-specific weights- a variable name is required to create a SurveyDesign object.")
             elif regression_variable not in self.weights:
-                raise KeyError("The regression variable was not found in the SurveyDesignSpec")
+                raise KeyError(f"The regression variable ({regression_variable}) was not found in the SurveyDesignSpec")
             else:
                 weights = self.survey_df[self.weights[regression_variable]]
                 weights = weights.loc[index]
