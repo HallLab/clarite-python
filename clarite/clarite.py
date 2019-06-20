@@ -248,6 +248,69 @@ class ClariteDataframeAccessor(object):
         print(f"Removed {n_removed:,} of {len(self._obj):,} rows ({n_removed/len(self._obj):.2%}) due to NA values in the specified columns")
         return self._obj[keep_IDs]
 
+    #######################
+    # Other modifications #
+    #######################
+
+    def recode_values(self, to_replace, value, inplace=False, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """
+        Convert one value to another.  By default, occurs in all columns but this may be modified with 'skip' or 'only'.
+        A simpler, more verbose, less-powerful version of the Pandas 'df.replace' method.
+
+        Parameters
+        ----------
+        to_replace: str, int, float, or dict
+            The value to be replaced.  A dict may be used to make multiple replacements.
+        value: str, int, float, or None.
+            The value used to replace the original.  Must be None when 'to_replace' is a dict.
+        inplace: boolean (default = False)
+            If True, modify the dataframe in-place and return nothing.  If False, copy the dataframe and return the new copy.
+        skip: list or None, default None
+            List of variables that the replacement should *not* be applied to
+        only: list or None, default None
+            List of variables that the replacement should *only* be applied to
+
+        Examples
+        --------
+        >>> df.clarite.recode_values(7, np.nan, only=['SMQ077', 'DBD100'], inplace=True)
+        Replacing '7' with 'nan' in 2 columns.
+            Replaced 1 of 18,937 rows of SMQ077
+        >>> df.clarite.recode_values(7, np.nan, only=['SMQ077', 'DBD100'], inplace=True)
+        Replacing '7' with 'nan' in 2 columns.
+            No occurences of '7' were found, so nothing was replaced.
+        """
+        # Validate
+        if type(to_replace) == dict and value is not None:
+            raise ValueError(f"When 'to_replace' is a dictionary, 'value' must be None.")
+
+        # In place or not
+        if inplace:
+            df = self._obj
+        else:
+            df = self._obj.copy(deep=True)
+
+        if type(to_replace) == dict:
+            # Recursively replace
+            for k, v in to_replace.items():
+                df.clarite.recode_values(k, v, skip=skip, only=only, inplace=True)
+            return df
+        else:
+            unchanged = True
+            columns = _validate_skip_only(list(df), skip, only)
+            print(f"Replacing '{to_replace}' with '{value}' in {len(columns)} columns.")
+            for c in columns:
+                replaced = (df[c] == to_replace)
+                df.loc[replaced, c] = value
+                if sum(replaced) > 0:
+                    unchanged = False
+                    print(f"\tReplaced {sum(replaced):,} of {len(df):,} rows of {c}")
+            if unchanged:
+                print(f"\tNo occurences of '{to_replace}' were found, so nothing was replaced.")
+
+        # Return the dataframe if not modified in place
+        if not inplace:
+            return df
+
     ############
     # Plotting #
     ############
