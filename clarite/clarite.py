@@ -259,7 +259,7 @@ class ClariteDataframeAccessor(object):
 
         Parameters
         ----------
-        to_replace: str, int, float, or dict 
+        to_replace: str, int, float, or dict
             The value to be replaced.  A dict may be used to make multiple replacements.
         value: str, int, float, or None.
             The value used to replace the original.  Must be None when 'to_replace' is a dict.
