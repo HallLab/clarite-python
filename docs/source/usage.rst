@@ -36,6 +36,11 @@ Row (Observation) Filters
 
 .. automethod:: clarite.ClariteDataframeAccessor.rowfilter_incomplete_observations
 
+Other methods for modifying the DataFrame
+*****************************************
+
+.. automethod:: clarite.ClariteDataframeAccessor.recode_values
+
 Plotting
 ******************
 
