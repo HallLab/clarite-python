@@ -337,7 +337,7 @@ class ClariteDataframeAccessor(object):
             430 of 22,624 rows of URXP07 were outliers
             730 of 22,624 rows of DR1TVB1 were outliers
             Skipped filtering 'SMQ077' because it is a categorical variable
-        >>> df.clarite.remove_outliers(only=['DR1TVB1', 'URXP07'], inplace=True)
+        >>> df2.clarite.remove_outliers(only=['DR1TVB1', 'URXP07'], inplace=True)
         Removing outliers with values more than 3 standard deviations from the mean in 2 columns
             42 of 22,624 rows of URXP07 were outliers
             301 of 22,624 rows of DR1TVB1 were outliers
