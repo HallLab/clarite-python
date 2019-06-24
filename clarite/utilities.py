@@ -45,6 +45,10 @@ def make_binary(df: pd.DataFrame):
     >>> df = clarite.make_binary(df)
     Processed 32 binary variables with 4,321 observations
     """
+    # Validate index
+    if isinstance(df.index, pd.core.index.MultiIndex):
+        raise ValueError("bin_df: DataFrames passed to the ewas function must not have a multiindex")
+    df.index.name = "ID"
     # Check the number of unique values
     unique_values = df.nunique()
     non_binary = unique_values[unique_values != 2]
@@ -77,6 +81,10 @@ def make_categorical(df: pd.DataFrame):
     >>> df = clarite.make_categorical(df)
     Processed 12 categorical variables with 4,321 observations
     """
+    # Validate index
+    if isinstance(df.index, pd.core.index.MultiIndex):
+        raise ValueError("cat_df: DataFrames passed to the ewas function must not have a multiindex")
+    df.index.name = "ID"
     # TODO: add further validation
     df = df.astype('category')
     print(f"Processed {len(df.columns):,} categorical variables with {len(df):,} observations")
@@ -104,6 +112,10 @@ def make_continuous(df: pd.DataFrame):
     >>> df = clarite.make_continuous(df)
     Processed 128 continuous variables with 4,321 observations
     """
+    # Validate index
+    if isinstance(df.index, pd.core.index.MultiIndex):
+        raise ValueError("cont_df: DataFrames passed to the ewas function must not have a multiindex")
+    df.index.name = "ID"
     # TODO: add further validation
     df = df.apply(pd.to_numeric)
     print(f"Processed {len(df.columns):,} continuous variables with {len(df):,} observations")

@@ -45,6 +45,12 @@ class SurveyDesignSpec:
                  nest: bool = False,
                  weights: Union[str, Dict[str, str]] = None,
                  single_cluster: Optional[str] = 'error'):
+
+        # Validate index
+        if isinstance(survey_df.index, pd.core.index.MultiIndex):
+            raise ValueError("survey_df: DataFrame must not have a multiindex")
+        survey_df.index.name = "ID"
+
         # Store parameters
         self.survey_df = survey_df
         self.strata = strata
