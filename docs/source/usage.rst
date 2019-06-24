@@ -41,7 +41,7 @@ Other methods for modifying the DataFrame
 
 .. automethod:: clarite.ClariteDataframeAccessor.recode_values
 
-.. automethod:: clarite.ClariteDataframeAccessor.remove_outlier
+.. automethod:: clarite.ClariteDataframeAccessor.remove_outliers
 
 Plotting
 ******************
