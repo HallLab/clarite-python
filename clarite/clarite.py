@@ -311,6 +311,80 @@ class ClariteDataframeAccessor(object):
         if not inplace:
             return df
 
+    def remove_outliers(self, method: str = 'gaussian', cutoff=3, inplace=False,
+                        skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """
+        Remove outliers from the dataframe by replacing them with np.nan
+
+        Parameters
+        ----------
+        method: string, 'gaussian' (default) or 'iqr'
+            Define outliers using a gaussian approach (standard deviations from the mean) or inter-quartile range
+        cutoff: positive numeric, default of 3
+            Either the number of standard deviations from the mean (method='gaussian') or the multiple of the IQR (method='iqr')
+            Any values equal to or more extreme will be replaced with np.nan
+        inplace: boolean (default = False)
+            If True, modify the dataframe in-place and return nothing.  If False, copy the dataframe and return the new copy.
+        skip: list or None, default None
+            List of variables that the replacement should *not* be applied to
+        only: list or None, default None
+            List of variables that the replacement should *only* be applied to
+
+        Examples
+        --------
+        >>> df.clarite.remove_outliers(method='iqr', cutoff=1.5, only=['DR1TVB1', 'URXP07', 'SMQ077'], inplace=True)
+        Removing outliers with values < 1st Quartile - (1.5 * IQR) or > 3rd quartile + (1.5 * IQR) in 3 columns
+            430 of 22,624 rows of URXP07 were outliers
+            730 of 22,624 rows of DR1TVB1 were outliers
+            Skipped filtering 'SMQ077' because it is a categorical variable
+        >>> df.clarite.remove_outliers(only=['DR1TVB1', 'URXP07'], inplace=True)
+        Removing outliers with values more than 3 standard deviations from the mean in 2 columns
+            42 of 22,624 rows of URXP07 were outliers
+            301 of 22,624 rows of DR1TVB1 were outliers
+        """
+        # In place or not
+        if inplace:
+            df = self._obj
+        else:
+            df = self._obj.copy(deep=True)
+
+        # Which columns
+        columns = _validate_skip_only(list(df), skip, only)
+
+        # Check cutoff and method, printing what is being done
+        if cutoff <= 0:
+            raise ValueError("'cutoff' must be >= 0")
+        if method == 'iqr':
+            print(f"Removing outliers with values < 1st Quartile - ({cutoff} * IQR) or > 3rd quartile + ({cutoff} * IQR) in {len(columns):,} columns")
+        elif method == 'gaussian':
+            print(f"Removing outliers with values more than {cutoff} standard deviations from the mean in {len(columns):,} columns")
+        else:
+            raise ValueError(f"'{method}' is not a supported method for outlier removal - only 'gaussian' and 'iqr'.")
+
+        # Process each column
+        for c in columns:
+            if str(df.dtypes[c]) == 'category':
+                print(f"\tSkipped filtering '{c}' because it is a categorical variable")
+                continue
+            # Calculate outliers
+            if method == 'iqr':
+                q1 = df[c].quantile(0.25)
+                q3 = df[c].quantile(0.75)
+                iqr = abs(q3 - q1)
+                bottom = q1 - (iqr * cutoff)
+                top = q3 + (iqr * cutoff)
+                outliers = (df[c] < bottom) | (df[c] > top)
+            elif method == 'gaussian':
+                outliers = (df[c]-df[c].mean()).abs() > cutoff*df[c].std()
+            # If there are any, log a message and replace them with np.nan
+            if sum(outliers) > 0:
+                print(f"\t{sum(outliers):,} of {len(df):,} rows of {c} were outliers")
+                df.loc[outliers, c] = np.nan
+
+        # Return the dataframe if not modified in place
+        if not inplace:
+            return df
+
     ############
     # Plotting #
     ############
