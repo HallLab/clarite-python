@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.api import qqplot
 
-from .ewas import result_columns, corrected_pvalue_columns
+from .plotting import plot_manhattan
 from .utilities import _validate_skip_only
 from ._version import get_versions
 
@@ -602,49 +602,8 @@ class ClariteDataframeAccessor(object):
         """
         df = self._obj
 
-        if list(df) != result_columns + corrected_pvalue_columns:
-            raise ValueError(f"This plot may only be created for EWAS results with corrected p-values added.")
-
-        # Format results
-        df = df['pvalue'].to_frame().reset_index()
-        df['category'] = df['variable'].apply(lambda v: categories.get(v, "Unknown")).astype('category')
-        df['-log10(p_value)'] = -1 * df['pvalue'].apply(np.log10)
-        df = df.sort_values(['category', 'variable']).reset_index(drop=True).reset_index()
-
-        # Plot
-        _, ax = plt.subplots(1, 1, figsize=figsize)
-
-        x_labels = []
-        x_labels_pos = []
-        for num, (name, group) in enumerate(df.groupby('category')):
-            # background bars
-            ax.axvspan(group['index'].min()-0.5, group['index'].max()+0.5, facecolor=background_colors[num % len(colors)], alpha=0.5)
-            # plotted points
-            group.plot(kind='scatter', x='index', y='-log10(p_value)', color=colors[num % len(colors)], zorder=2, s=10000/len(df), ax=ax)
-            # Record centered position and name of xticks
-            x_labels.append(name)
-            x_labels_pos.append((group['index'].iloc[-1] - (group['index'].iloc[-1] - group['index'].iloc[0]) / 2))
-
-        # Format plot
-        ax.set_xticks(x_labels_pos)
-        ax.set_xticklabels(x_labels)
-        ax.set_xlim([0, len(df)])
-        ax.set_ylim([0, df['-log10(p_value)'].max() + 10])
-        ax.set_xlabel('')  # Hide x-axis label since it is obvious
-        ax.set_title(title, fontsize=20)
-        ax.yaxis.label.set_size(16)
-
-        # Significance line
-        significance = -np.log10(0.05/len(df))
-        ax.axhline(y=significance, color='red', linestyle='-', zorder=3)
-        ax.tick_params(labelrotation=90)
-        plt.yticks(fontsize=8)
-
-        # Label top points
-        for index, row in df.sort_values('-log10(p_value)', ascending=False).head(n=num_labeled).iterrows():
-            ax.text(index+1, row['-log10(p_value)'], str(row['variable']),
-                    rotation=0, ha='left', va='center',
-                    )
+        # This is a wrapper around a plotting function which handles plotting multiple datasets
+        plot_manhattan({"": df}, categories, num_labeled, figsize, title, colors, background_colors)
 
     ######################################
     # Exploratory Stats and Calculations #
