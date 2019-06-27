@@ -90,6 +90,11 @@ IO Functions
 
 .. autofunction:: clarite.io.load_data
 
+Plotting Functions
+##################
+
+.. autofunction:: clarite.plotting.plot_manhattan
+
 Classes
 #######
 
