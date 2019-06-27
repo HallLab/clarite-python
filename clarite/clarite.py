@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.api import qqplot
 
-from .ewas import result_columns, corrected_pvalue_columns
+from .plotting import plot_manhattan
 from .utilities import _validate_skip_only
 from ._version import get_versions
 
@@ -568,10 +568,13 @@ class ClariteDataframeAccessor(object):
     def plot_manhattan(self,
                        categories: Dict[str, str] = dict(),
                        num_labeled: int = 3,
-                       figsize: Tuple[int, int] = (18, 7),
+                       label_vars: List[str] = list(),
+                       figsize: Tuple[int, int] = (10, 4),
+                       dpi: int = 300,
                        title: Optional[str] = None,
                        colors: List[str] = ["#53868B", "#4D4D4D"],
-                       background_colors: List[str] = ["#EBEBEB", "#FFFFFF"]):
+                       background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+                       filename: Optional[str] = None):
         """
         Create a Manhattan-like plot for EWAS Results
 
@@ -581,14 +584,20 @@ class ClariteDataframeAccessor(object):
             A dictionary mapping each variable name to a category name
         num_labeled: int, default 3
             Label the top <num_labeled> results with the variable name
-        figsize: tuple(int, int), default (12, 5)
-            The figure size of the resulting plot
+        label_vars: list of strings, default empty list
+            Label the named variables
+        figsize: tuple(int, int), default (10, 4)
+            The figure size of the resulting plot in inches
+        dpi: int, default 300
+            The figure dots-per-inch
         title: string or None, default None
             The title used for the plot
         colors: List(string, string), default ["#53868B", "#4D4D4D"]
             A list of two colors to use for alternating categories
         background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
             A list of two background colors to use for alternating categories
+        filename: Optional str
+            If provided, a copy of the plot will be saved to the specified file
 
         Returns
         -------
@@ -596,55 +605,16 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> ewas_replication.clarite.plot_manhattan(categories=data_categories, title="Replication")
+        >>> ewas_discovery.clarite.plot_manhattan(categories=data_categories, title="Discovery", filename="discovery.png")
 
-        .. image:: _static/plots/plot_manhattan.png
+        .. image:: _static/plots/plot_manhattan_single.png
         """
         df = self._obj
 
-        if list(df) != result_columns + corrected_pvalue_columns:
-            raise ValueError(f"This plot may only be created for EWAS results with corrected p-values added.")
-
-        # Format results
-        df = df['pvalue'].to_frame().reset_index()
-        df['category'] = df['variable'].apply(lambda v: categories.get(v, "Unknown")).astype('category')
-        df['-log10(p_value)'] = -1 * df['pvalue'].apply(np.log10)
-        df = df.sort_values(['category', 'variable']).reset_index(drop=True).reset_index()
-
-        # Plot
-        _, ax = plt.subplots(1, 1, figsize=figsize)
-
-        x_labels = []
-        x_labels_pos = []
-        for num, (name, group) in enumerate(df.groupby('category')):
-            # background bars
-            ax.axvspan(group['index'].min()-0.5, group['index'].max()+0.5, facecolor=background_colors[num % len(colors)], alpha=0.5)
-            # plotted points
-            group.plot(kind='scatter', x='index', y='-log10(p_value)', color=colors[num % len(colors)], zorder=2, s=10000/len(df), ax=ax)
-            # Record centered position and name of xticks
-            x_labels.append(name)
-            x_labels_pos.append((group['index'].iloc[-1] - (group['index'].iloc[-1] - group['index'].iloc[0]) / 2))
-
-        # Format plot
-        ax.set_xticks(x_labels_pos)
-        ax.set_xticklabels(x_labels)
-        ax.set_xlim([0, len(df)])
-        ax.set_ylim([0, df['-log10(p_value)'].max() + 10])
-        ax.set_xlabel('')  # Hide x-axis label since it is obvious
-        ax.set_title(title, fontsize=20)
-        ax.yaxis.label.set_size(16)
-
-        # Significance line
-        significance = -np.log10(0.05/len(df))
-        ax.axhline(y=significance, color='red', linestyle='-', zorder=3)
-        ax.tick_params(labelrotation=90)
-        plt.yticks(fontsize=8)
-
-        # Label top points
-        for index, row in df.sort_values('-log10(p_value)', ascending=False).head(n=num_labeled).iterrows():
-            ax.text(index+1, row['-log10(p_value)'], str(row['variable']),
-                    rotation=0, ha='left', va='center',
-                    )
+        # This is a wrapper around a plotting function which handles plotting multiple datasets
+        plot_manhattan(dfs={"": df}, categories=categories, num_labeled=num_labeled, label_vars=label_vars,
+                       figsize=figsize, dpi=dpi, title=title, colors=colors, background_colors=background_colors,
+                       filename=filename)
 
     ######################################
     # Exploratory Stats and Calculations #
