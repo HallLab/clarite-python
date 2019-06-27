@@ -568,10 +568,12 @@ class ClariteDataframeAccessor(object):
     def plot_manhattan(self,
                        categories: Dict[str, str] = dict(),
                        num_labeled: int = 3,
+                       label_vars: List[str] = list(),
                        figsize: Tuple[int, int] = (18, 7),
                        title: Optional[str] = None,
                        colors: List[str] = ["#53868B", "#4D4D4D"],
-                       background_colors: List[str] = ["#EBEBEB", "#FFFFFF"]):
+                       background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+                       filename: Optional[str] = None):
         """
         Create a Manhattan-like plot for EWAS Results
 
@@ -581,6 +583,8 @@ class ClariteDataframeAccessor(object):
             A dictionary mapping each variable name to a category name
         num_labeled: int, default 3
             Label the top <num_labeled> results with the variable name
+        label_vars: list of strings, default empty list
+            Label the named variables
         figsize: tuple(int, int), default (12, 5)
             The figure size of the resulting plot
         title: string or None, default None
@@ -589,6 +593,8 @@ class ClariteDataframeAccessor(object):
             A list of two colors to use for alternating categories
         background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
             A list of two background colors to use for alternating categories
+        filename: Optional str
+            If provided, a copy of the plot will be saved to the specified file
 
         Returns
         -------
@@ -596,14 +602,16 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> ewas_replication.clarite.plot_manhattan(categories=data_categories, title="Replication")
+        >>> ewas_discovery.clarite.plot_manhattan(categories=data_categories, title="Discovery", filename="discovery.png")
 
-        .. image:: _static/plots/plot_manhattan.png
+        .. image:: _static/plots/plot_manhattan_single.png
         """
         df = self._obj
 
         # This is a wrapper around a plotting function which handles plotting multiple datasets
-        plot_manhattan({"": df}, categories, num_labeled, figsize, title, colors, background_colors)
+        plot_manhattan(dfs={"": df}, categories=categories, num_labeled=num_labeled, label_vars=label_vars,
+                       figsize=figsize, title=title, colors=colors, background_colors=background_colors,
+                       filename=filename)
 
     ######################################
     # Exploratory Stats and Calculations #
