@@ -14,7 +14,8 @@ def plot_manhattan(dfs: Dict[str, pd.DataFrame],
                    categories: Dict[str, str] = dict(),
                    num_labeled: int = 3,
                    label_vars: List[str] = list(),
-                   figsize: Tuple[int, int] = (18, 7),
+                   figsize: Tuple[int, int] = (10, 4),
+                   dpi: int = 300,
                    title: Optional[str] = None,
                    colors: List[str] = ["#53868B", "#4D4D4D"],
                    background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
@@ -32,8 +33,10 @@ def plot_manhattan(dfs: Dict[str, pd.DataFrame],
         Label the top <num_labeled> results with the variable name
     label_vars: list of strings, default empty list
         Label the named variables
-    figsize: tuple(int, int), default (12, 5)
-        The figure size of the resulting plot
+    figsize: tuple(int, int), default (10, 4)
+        The figure size of the resulting plot in inches
+    dpi: int, default 300
+        The figure dots-per-inch
     title: string or None, default None
         The title used for the plot
     colors: List(string, string), default ["#53868B", "#4D4D4D"]
@@ -81,7 +84,7 @@ def plot_manhattan(dfs: Dict[str, pd.DataFrame],
     df['xpos'] = df.groupby(['category', 'variable']).ngroup() + df['category_x_offset']  # sorted category/variable number plus category offset
 
     # Create Plot and structures to hold category info
-    fig, axes = plt.subplots(len(dfs), 1, figsize=figsize, sharex=True, sharey=True)
+    fig, axes = plt.subplots(len(dfs), 1, figsize=figsize, dpi=dpi, sharex=True, sharey=True)
     x_labels = []
     x_labels_pos = []
     foreground_rectangles = [list() for c in colors]
