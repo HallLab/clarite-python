@@ -46,7 +46,7 @@ setup(
     packages=find_packages(exclude=['docs', 'tests']),
     entry_points={
         'console_scripts': [
-            'clarite-cli=clarite.cli:cli',
+            'clarite-cli=clarite.cli:entry_point',
             ],
         },
     include_package_data=True,
