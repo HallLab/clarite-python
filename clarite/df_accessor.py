@@ -8,8 +8,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.api import qqplot
 
-from .plotting import plot_manhattan
-from .utilities import _validate_skip_only
+from .modules import modify
 from ._version import get_versions
 
 clarite_version = get_versions()
@@ -108,11 +107,11 @@ class ClariteDataframeAccessor(object):
 
         return bin_df, cat_df, cont_df, other_df
 
-    ##################
-    # Column Filters #
-    ##################
+    ##########
+    # Modify #
+    ##########
 
-    def colfilter_percent_zero(self, proportion: float = 0.9, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def modify_colfilter_percent_zero(self, proportion: float = 0.9, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
         """
         Remove columns which have <proportion> or more values of zero (excluding NA)
 
@@ -132,22 +131,13 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> nhanes_discovery_cont = nhanes_discovery_cont.clarite.colfilter_percent_zero()
+        >>> nhanes_discovery_cont = nhanes_discovery_cont.clarite.modify_colfilter_percent_zero()
         Removed 30 of 369 variables (8.13%) which were equal to zero in at least 90.00% of non-NA observations.
         """
         df = self._obj
-        columns = _validate_skip_only(list(df), skip, only)
-        num_before = len(df.columns)
+        return modify.colfilter_percent_zero(df, proportion=proportion, skip=skip, only=only)
 
-        percent_value = df.apply(lambda col: sum(col == 0) / col.count())
-        kept = (percent_value < proportion) | ~df.columns.isin(columns)
-        num_removed = num_before - sum(kept)
-
-        print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) "
-              f"which were equal to zero in at least {proportion:.2%} of non-NA observations.")
-        return df.loc[:, kept]
-
-    def colfilter_min_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def modify_colfilter_min_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
         """
         Remove columns which have less than <n> unique values (excluding NA)
 
@@ -171,24 +161,16 @@ class ClariteDataframeAccessor(object):
         Removed 129 of 361 variables (35.73%) which had less than 200 values
         """
         df = self._obj
-        columns = _validate_skip_only(list(df), skip, only)
-        num_before = len(df.columns)
+        return modify.colfilter_min_n(df, n=n, skip=skip, only=only)
 
-        counts = df.count()  # by default axis=0 (rows) so counts number of non-NA rows in each column
-        kept = (counts >= n) | ~df.columns.isin(columns)
-        num_removed = num_before - sum(kept)
-
-        print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) which had less than {n} values")
-        return df.loc[:, kept]
-
-    def colfilter_min_cat_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def modify_colfilter_min_cat_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
         """
-        Remove columns which have less than <n> unique values in each category
+        Remove columns which have less than <n> occurences of each unique value
 
         Parameters
         ----------
         n: int, default 200
-            The minimum number of unique values required in each category in order for a variable not to be filtered
+            The minimum number of occurences of each unique value required in order for a variable not to be filtered
         skip: list or None, default None
             List of variables that the filter should *not* be applied to
         only: list or None, default None
@@ -201,32 +183,26 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> nhanes_discovery_bin = nhanes_discovery_bin.clarite.colfilter_min_cat_n()
+        >>> nhanes_discovery_bin = nhanes_discovery_bin.clarite.modify_colfilter_min_cat_n()
         Removed 159 of 232 variables (68.53%) which had a category with less than 200 values
         """
         df = self._obj
-        columns = _validate_skip_only(list(df), skip, only)
-        num_before = len(df.columns)
-
-        min_category_counts = df.apply(lambda col: col.value_counts().min())
-        kept = (min_category_counts >= n) | ~df.columns.isin(columns)
-        num_removed = num_before - sum(kept)
-
-        print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) which had a category with less than {n} values")
-        return df.loc[:, kept]
+        return modify.colfilter_min_cat_n(df, n=n, skip=skip, only=only)
 
     ###############
     # Row Filters #
     ###############
 
-    def rowfilter_incomplete_observations(self, columns):
+    def modify_rowfilter_incomplete_observations(self, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
         """
-        Remove rows when any of the passed columns has a null value
+        Remove rows containing null values
 
         Parameters
         ----------
-        columns: list
-            The columns that may not contain null values
+        skip: list or None, default None
+            List of columns that are not checked for null values
+        only: list or None, default None
+            List of columns that are the only ones to be checked for null values
 
         Returns
         -------
@@ -235,18 +211,11 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> nhanes = nhanes.clarite.rowfilter_incomplete_observations([phenotype] + covariates)
+        >>> nhanes = nhanes.clarite.modify_rowfilter_incomplete_observations(only=[phenotype] + covariates)
         Removed 3,687 of 22,624 rows (16.30%) due to NA values in the specified columns
         """
-        invalid_names = set(columns) - set(list(self._obj))
-        if len(invalid_names) > 0:
-            raise ValueError(f"Invalid column names were provided: {', '.join(invalid_names)}")
-
-        keep_IDs = self._obj[columns].isnull().sum(axis=1) == 0  # Number of NA in each row is 0
-        n_removed = len(self._obj) - sum(keep_IDs)
-
-        print(f"Removed {n_removed:,} of {len(self._obj):,} rows ({n_removed/len(self._obj):.2%}) due to NA values in the specified columns")
-        return self._obj[keep_IDs]
+        df = self._obj
+        return modify.rowfilter_incomplete_observations(df, skip=skip, only=only)
 
     #######################
     # Other modifications #

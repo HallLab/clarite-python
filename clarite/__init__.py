@@ -1,7 +1,9 @@
 # flake8: noqa
 from ._version import get_versions
 
-from .clarite import ClariteDataframeAccessor
+from .df_accessor import ClariteDataframeAccessor
+
+from .other import io, plotting, survey
 
 from .ewas import SurveyDesignSpec, ewas, add_corrected_pvalues
 from .utilities import make_binary, make_categorical, make_continuous, merge_variables
