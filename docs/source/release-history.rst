@@ -2,6 +2,23 @@
 Release History
 ===============
 
+v0.5.0 (2019-06-28)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Added a function to recode values - https://github.com/HallLab/clarite-python/issues/4
+* Added a function to filter outlier values - https://github.com/HallLab/clarite-python/issues/5
+* Added a function to generate manhattan plots for multiple datasets together - https://github.com/HallLab/clarite-python/issues/9
+
+Fixes
+^^^^^
+* Add some validation of input DataFrames to prevent some errors in calculations
+
+Tests
+^^^^^
+* Added an initial batch of tests
+
 v0.4.0 (2019-06-18)
 -------------------
 Support EWAS with binary outcomes.
