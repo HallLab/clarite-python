@@ -5,7 +5,7 @@ from typing import Optional, List
 import numpy as np
 import pandas as pd
 
-from ..other.utilities import _validate_skip_only
+from ..internal.utilities import _validate_skip_only
 
 
 def colfilter_percent_zero(data: pd.DataFrame, proportion: float = 0.9,

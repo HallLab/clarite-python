@@ -20,37 +20,37 @@ Documentation for the Code
 
 Analyze
 ===================
-.. automodule:: analyze
+.. automodule:: clarite.analyze
    :members:
 
 Describe
 =====================
-.. automodule:: describe
+.. automodule:: clarite.describe
    :members:
 
 IO
 ===================
-.. automodule:: io
+.. automodule:: clarite.io
    :members:
 
 Modify
 =================
-.. automodule:: modify
+.. automodule:: clarite.modify
    :members:
 
 Plot
 ===================
-.. automodule:: plot
+.. automodule:: clarite.plot
    :members:
 
 Process
 ===================
-.. automodule:: process
+.. automodule:: clarite.process
    :members:
 
 Survey
 ===================
-.. automodule:: survey
+.. automodule:: clarite.survey
    :members:
 
 Indices and tables
