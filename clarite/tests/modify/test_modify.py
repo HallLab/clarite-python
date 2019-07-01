@@ -41,3 +41,33 @@ def test_merge(plantTraits):
     df3 = plantTraits.loc[:, list(plantTraits)[6:]]
     df = modify.merge_variables(df1, df2).clarite_modify.merge_variables(df3)
     assert all(df == plantTraits)
+
+
+def test_colfilter_percent_zero(plantTraits):
+    # TODO
+    return
+
+
+def test_colfilter_min_n(plantTraits):
+    # TODO
+    return
+
+
+def test_colfilter_min_cat_n(plantTraits):
+    # TODO
+    return
+
+
+def test_rowfilter_incomplete_observations(plantTraits):
+    # TODO
+    return
+
+
+def test_recode_values(plantTraits):
+    # TODO
+    return
+
+
+def test_remove_outliers(plantTraits):
+    # TODO
+    return
