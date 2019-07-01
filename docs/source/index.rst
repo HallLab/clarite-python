@@ -10,52 +10,24 @@ CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures
    installation
    usage
    complex_surveys
-   release-history
 
-Documentation for the Code
-**************************
+API Reference
+-------------
+
+If you are looking for information on a specific function, class or
+method, this part of the documentation is for you.
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-Analyze
-===================
-.. automodule:: clarite.analyze
-   :members:
+   api
 
-Describe
-=====================
-.. automodule:: clarite.describe
-   :members:
+Additional Notes
+----------------
 
-IO
-===================
-.. automodule:: clarite.io
-   :members:
+Release History, etc
 
-Modify
-=================
-.. automodule:: clarite.modify
-   :members:
+.. toctree::
+   :maxdepth: 2
 
-Plot
-===================
-.. automodule:: clarite.plot
-   :members:
-
-Process
-===================
-.. automodule:: clarite.process
-   :members:
-
-Survey
-===================
-.. automodule:: clarite.survey
-   :members:
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   release-history

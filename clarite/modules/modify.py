@@ -1,4 +1,14 @@
-# Modify - functions that are used to modify data and return it in the same form
+"""
+Modify
+========
+
+Functions used to filter and/or change some data
+
+  **DataFrame Accessor**: ``clarite_modify``
+
+  **CLI Command**: ``modify``
+
+"""
 
 from typing import Optional, List
 

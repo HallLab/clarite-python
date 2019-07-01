@@ -1,4 +1,13 @@
-# Process - functions used to process data into a different form
+"""
+Process
+========
+
+Functions used to process data from one form into another, such as categorizing variables and placing them in separate DataFrames
+
+  **DataFrame Accessor**: ``clarite_process``
+
+  **CLI Command**: ``process``
+"""
 
 
 def categorize(data, cat_min: int = 3, cat_max: int = 6, cont_min: int = 15):

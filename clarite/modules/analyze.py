@@ -1,4 +1,15 @@
-# Analyze: Functions relevant to calculating final results
+"""
+Analyze
+========
+
+EWAS and associated calculations
+
+  **DataFrame Accessor**: ``None``
+
+  **CLI Command**: ``analyze``
+
+
+"""
 
 from typing import List, Optional
 
@@ -54,7 +65,7 @@ def ewas(
 
     Examples
     --------
-    >>>ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery_bin, nhanes_discovery_cat, nhanes_discovery_cont)
+    >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery_bin, nhanes_discovery_cat, nhanes_discovery_cont)
     Running EWAS on a continuous variable
     """
     # Process variable inputs
@@ -200,7 +211,7 @@ def add_corrected_pvalues(ewas_result):
 
     Examples
     --------
-    >>>clarite.analyze.add_corrected_pvalues(ewas_discovery)
+    >>> clarite.analyze.add_corrected_pvalues(ewas_discovery)
     """
     # NA by default
     ewas_result['pvalue_bonferroni'] = nan

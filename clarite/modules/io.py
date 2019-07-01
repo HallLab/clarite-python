@@ -1,3 +1,14 @@
+"""
+IO
+========
+
+Input/Output of data in different formats
+
+  **DataFrame Accessor**: ``None``
+
+  **CLI Command**: ``io``
+"""
+
 from pathlib import Path
 from typing import Union
 import pandas as pd

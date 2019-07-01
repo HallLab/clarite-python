@@ -1,4 +1,14 @@
-# Plot: Functions that generate plots
+"""
+Plot
+========
+
+Functions that generate plots
+
+  **DataFrame Accessor**: ``clarite_plot``
+
+  **CLI Command**: ``plot``
+"""
+
 
 from copy import copy
 import datetime

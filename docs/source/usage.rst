@@ -8,8 +8,8 @@ Start by importing CLARITE.
 
     import clarite
 
-Structure
----------
+Organization of Functions
+-------------------------
 
 Most of the functions in CLARITE take a DataFrame as the first parameter which is assumed to have a different variable in each column and a different observation in each row (using a consistent index).  These are largely organized into 4 modules:
 
@@ -56,6 +56,8 @@ Inspired by `PyJanitor <https://pyjanitor.readthedocs.io>`_, there are three pri
 
 Other modules
 -------------
+
+Some functions do not take a single DataFrame as the first parameter- these are not available in DataFrame Accessors, but are available as functions in these modules:
 
 Survey
     Complex survey design
