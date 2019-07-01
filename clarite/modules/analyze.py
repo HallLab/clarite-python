@@ -8,6 +8,12 @@ EWAS and associated calculations
 
   **CLI Command**: ``analyze``
 
+  .. autosummary::
+     :toctree: modules/analyze
+
+     ewas
+     add_corrected_pvalues
+
 
 """
 

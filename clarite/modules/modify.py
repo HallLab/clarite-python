@@ -8,6 +8,20 @@ Functions used to filter and/or change some data
 
   **CLI Command**: ``modify``
 
+  .. autosummary::
+     :toctree: modules/modify
+
+     colfilter_percent_zero
+     colfilter_min_n
+     colfilter_min_cat_n
+     rowfilter_incomplete_observations
+     recode_values
+     remove_outliers
+     make_binary
+     make_categorical
+     make_continuous
+     merge_variables
+
 """
 
 from typing import Optional, List

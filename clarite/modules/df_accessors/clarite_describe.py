@@ -5,7 +5,9 @@ from .. import describe
 
 @pd.api.extensions.register_dataframe_accessor("clarite_describe")
 class ClariteDescribeDFAccessor(object):
-    """Available as 'clarite_describe'"""
+    """
+    Available as 'clarite_describe'
+    """
     def __init__(self, pandas_obj):
         self._validate(pandas_obj)
         self._obj = pandas_obj
