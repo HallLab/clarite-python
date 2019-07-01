@@ -5,10 +5,10 @@ from typing import List, Optional
 import pandas as pd
 from numpy import nan
 from statsmodels.stats.multitest import multipletests
-from ..other.survey import SurveyDesignSpec
+from .survey import SurveyDesignSpec
 
-from ..other.utilities import make_binary, make_categorical, make_continuous
-from ..other.regression import Regression
+from .modify import make_binary, make_categorical, make_continuous
+from ..internal.regression import Regression
 
 
 result_columns = ['variable_type', 'converged', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']

@@ -272,3 +272,125 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
             data.loc[outliers, c] = np.nan
 
     return data
+
+
+def make_binary(df: pd.DataFrame):
+    """
+    Validate and type a dataframe of binary variables
+
+    Checks that each variable has at most 2 values and converts the type to pd.Categorical
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame to be processed
+
+    Returns
+    -------
+    df: pd.DataFrame
+        DataFrame with the same data but validated and converted to categorical types
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df = clarite.modify.make_binary(df)
+    Processed 32 binary variables with 4,321 observations
+    """
+    # Validate index
+    if isinstance(df.index, pd.core.index.MultiIndex):
+        raise ValueError("bin_df: DataFrames passed to the ewas function must not have a multiindex")
+    df.index.name = "ID"
+    # Check the number of unique values
+    unique_values = df.nunique()
+    non_binary = unique_values[unique_values != 2]
+    if len(non_binary) > 0:
+        raise ValueError(f"{len(non_binary)} of {len(unique_values)} variables did not have 2 unique values and couldn't be processed as a binary type")
+    # TODO: possibly add further validation to make sure values are 1 and 0
+    df = df.astype('category')
+    print(f"Processed {len(df.columns):,} binary variables with {len(df):,} observations")
+    return df
+
+
+def make_categorical(df: pd.DataFrame):
+    """
+    Validate and type a dataframe of categorical variables
+
+    Converts the type to pd.Categorical
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame to be processed
+
+    Returns
+    -------
+    df: pd.DataFrame
+        DataFrame with the same data but validated and converted to categorical types
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df = clarite.modify.make_categorical(df)
+    Processed 12 categorical variables with 4,321 observations
+    """
+    # Validate index
+    if isinstance(df.index, pd.core.index.MultiIndex):
+        raise ValueError("cat_df: DataFrames passed to the ewas function must not have a multiindex")
+    df.index.name = "ID"
+    # TODO: add further validation
+    df = df.astype('category')
+    print(f"Processed {len(df.columns):,} categorical variables with {len(df):,} observations")
+    return df
+
+
+def make_continuous(df: pd.DataFrame):
+    """
+    Validate and type a dataframe of continuous variables
+
+    Converts the type to numeric
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame to be processed
+
+    Returns
+    -------
+    df: pd.DataFrame
+        DataFrame with the same data but validated and converted to numeric types
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df = clarite.modify.make_continuous(df)
+    Processed 128 continuous variables with 4,321 observations
+    """
+    # Validate index
+    if isinstance(df.index, pd.core.index.MultiIndex):
+        raise ValueError("cont_df: DataFrames passed to the ewas function must not have a multiindex")
+    df.index.name = "ID"
+    # TODO: add further validation
+    df = df.apply(pd.to_numeric)
+    print(f"Processed {len(df.columns):,} continuous variables with {len(df):,} observations")
+    return df
+
+
+def merge_variables(data: pd.DataFrame, other: pd.DataFrame, how: str = 'outer'):
+    """
+    Merge a list of dataframes with different variables side-by-side.  Keep all observations ('outer' merge) by default.
+
+    Parameters
+    ----------
+    data: pd.Dataframe
+        "left" DataFrame
+    other: pd.DataFrame
+        "right" DataFrame which uses the same index
+    how: merge method, one of {'left', 'right', 'inner', 'outer'}
+        Keep only rows present in the left data, the right data, both datasets, or either dataset.
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df = clarite.modify.merge_variables(df_bin, df_cat, how='outer')
+    """
+    return data.merge(other, left_index=True, right_index=True, how=how)

@@ -69,6 +69,25 @@ class ClariteModifyDFAccessor(object):
         if False:
             raise AttributeError("")
 
+    def merge_variables(self, other: pd.DataFrame, how: str = 'outer'):
+        """
+        Merge a list of dataframes with different variables side-by-side.  Keep all observations ('outer' merge) by default.
+
+        Parameters
+        ----------
+        other: pd.DataFrame
+            "right" DataFrame which uses the same index
+        how: merge method, one of {'left', 'right', 'inner', 'outer'}
+            Keep only rows present in the original data, the merging data, both datasets, or either dataset.
+
+        Examples
+        --------
+        >>> import clarite
+        >>> df = df_bin.clarite_modify.merge_variables(df_cat)
+        """
+        df = self._obj
+        return df.merge(other, left_index=True, right_index=True, how=how)
+
     def colfilter_percent_zero(
         self,
         proportion: float = 0.9,
