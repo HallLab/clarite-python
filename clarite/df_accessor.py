@@ -1,21 +1,12 @@
 from typing import Dict, List, Optional, Tuple
-import datetime
 
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-import seaborn as sns
-import numpy as np
 import pandas as pd
-from statsmodels.api import qqplot
 
-from .modules import modify
-from ._version import get_versions
-
-clarite_version = get_versions()
+from .modules import modify, process, plot, describe
 
 
-@pd.api.extensions.register_dataframe_accessor("clarite")
-class ClariteDataframeAccessor(object):
+@pd.api.extensions.register_dataframe_accessor("clarite_process")
+class ClariteProcessDFAccessor(object):
     def __init__(self, pandas_obj):
         self._validate(pandas_obj)
         self._obj = pandas_obj
@@ -52,7 +43,7 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> nhanes_bin, nhanes_cat, nhanes_cont, nhanes_other = nhanes.clarite.categorize()
+        >>> nhanes_bin, nhanes_cat, nhanes_cont, nhanes_other = nhanes.clarite_process.categorize()
         10 of 945 variables (1.06%) had no non-NA values and are discarded.
         33 of 945 variables (3.49%) had only one value and are discarded.
         361 of 945 variables (38.20%) are classified as binary (2 values).
@@ -61,57 +52,29 @@ class ClariteDataframeAccessor(object):
         36 of 945 variables (3.81%) are not classified (between 6 and 15 values).
         """
         df = self._obj
+        return process.categorize(
+            df, cat_min=cat_min, cat_max=cat_max, cont_min=cont_min
+        )
 
-        # Double-check parameters
-        assert cat_min > 2
-        assert cat_min <= cat_max
-        assert cont_min > cat_max
 
-        # Create filter series
-        num_before = len(df.columns)
-        unique_count = df.nunique()
+@pd.api.extensions.register_dataframe_accessor("clarite_modify")
+class ClariteModifyDFAccessor(object):
+    def __init__(self, pandas_obj):
+        self._validate(pandas_obj)
+        self._obj = pandas_obj
 
-        # No values (All NA)
-        zero_filter = unique_count == 0
-        num_zero = sum(zero_filter)
-        print(f"{num_zero:,} of {num_before:,} variables ({num_zero/num_before:.2%}) had no non-NA values and are discarded.")
+    @staticmethod
+    def _validate(obj):
+        # TODO: Perform any required validation
+        if False:
+            raise AttributeError("")
 
-        # Single value variables (useless for regression)
-        single_filter = unique_count == 1
-        num_single = sum(single_filter)
-        print(f"{num_single:,} of {num_before:,} variables ({num_single/num_before:.2%}) had only one value and are discarded.")
-
-        # Binary
-        binary_filter = unique_count == 2
-        num_binary = sum(binary_filter)
-        print(f"{num_binary:,} of {num_before:,} variables ({num_binary/num_before:.2%}) are classified as binary (2 values).")
-        bin_df = df.loc[:, binary_filter]
-
-        # Categorical
-        cat_filter = (unique_count >= cat_min) & (unique_count <= cat_max)
-        num_cat = sum(cat_filter)
-        print(f"{num_cat:,} of {num_before:,} variables ({num_cat/num_before:.2%}) are classified as categorical ({cat_min} to {cat_max} values).")
-        cat_df = df.loc[:, cat_filter]
-
-        # Continuous
-        cont_filter = unique_count >= cont_min
-        num_cont = sum(cont_filter)
-        print(f"{num_cont:,} of {num_before:,} variables ({num_cont/num_before:.2%}) are classified as continuous (>= {cont_min} values).")
-        cont_df = df.loc[:, cont_filter]
-
-        # Other
-        other_filter = ~zero_filter & ~single_filter & ~binary_filter & ~cat_filter & ~cont_filter
-        num_other = sum(other_filter)
-        print(f"{num_other:,} of {num_before:,} variables ({num_other/num_before:.2%}) are not classified (between {cat_max} and {cont_min} values).")
-        other_df = df.loc[:, other_filter]
-
-        return bin_df, cat_df, cont_df, other_df
-
-    ##########
-    # Modify #
-    ##########
-
-    def modify_colfilter_percent_zero(self, proportion: float = 0.9, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def colfilter_percent_zero(
+        self,
+        proportion: float = 0.9,
+        skip: Optional[List[str]] = None,
+        only: Optional[List[str]] = None,
+    ):
         """
         Remove columns which have <proportion> or more values of zero (excluding NA)
 
@@ -131,13 +94,20 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> nhanes_discovery_cont = nhanes_discovery_cont.clarite.modify_colfilter_percent_zero()
+        >>> nhanes_discovery_cont = nhanes_discovery_cont.clarite_modify.colfilter_percent_zero()
         Removed 30 of 369 variables (8.13%) which were equal to zero in at least 90.00% of non-NA observations.
         """
         df = self._obj
-        return modify.colfilter_percent_zero(df, proportion=proportion, skip=skip, only=only)
+        return modify.colfilter_percent_zero(
+            df, proportion=proportion, skip=skip, only=only
+        )
 
-    def modify_colfilter_min_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def colfilter_min_n(
+        self,
+        n: int = 200,
+        skip: Optional[List[str]] = None,
+        only: Optional[List[str]] = None,
+    ):
         """
         Remove columns which have less than <n> unique values (excluding NA)
 
@@ -157,13 +127,18 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> nhanes_discovery_bin = nhanes_discovery_bin.clarite.colfilter_min_n()
+        >>> nhanes_discovery_bin = nhanes_discovery_bin.clarite_modify.colfilter_min_n()
         Removed 129 of 361 variables (35.73%) which had less than 200 values
         """
         df = self._obj
         return modify.colfilter_min_n(df, n=n, skip=skip, only=only)
 
-    def modify_colfilter_min_cat_n(self, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def colfilter_min_cat_n(
+        self,
+        n: int = 200,
+        skip: Optional[List[str]] = None,
+        only: Optional[List[str]] = None,
+    ):
         """
         Remove columns which have less than <n> occurences of each unique value
 
@@ -183,17 +158,15 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> nhanes_discovery_bin = nhanes_discovery_bin.clarite.modify_colfilter_min_cat_n()
+        >>> nhanes_discovery_bin = nhanes_discovery_bin.clarite_modify.colfilter_min_cat_n()
         Removed 159 of 232 variables (68.53%) which had a category with less than 200 values
         """
         df = self._obj
         return modify.colfilter_min_cat_n(df, n=n, skip=skip, only=only)
 
-    ###############
-    # Row Filters #
-    ###############
-
-    def modify_rowfilter_incomplete_observations(self, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def rowfilter_incomplete_observations(
+        self, skip: Optional[List[str]] = None, only: Optional[List[str]] = None
+    ):
         """
         Remove rows containing null values
 
@@ -211,29 +184,26 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> nhanes = nhanes.clarite.modify_rowfilter_incomplete_observations(only=[phenotype] + covariates)
+        >>> nhanes = nhanes.clarite_modify.rowfilter_incomplete_observations(only=[phenotype] + covariates)
         Removed 3,687 of 22,624 rows (16.30%) due to NA values in the specified columns
         """
         df = self._obj
         return modify.rowfilter_incomplete_observations(df, skip=skip, only=only)
 
-    #######################
-    # Other modifications #
-    #######################
-
-    def recode_values(self, to_replace, value, inplace=False, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def recode_values(
+        self,
+        replacement_dict,
+        skip: Optional[List[str]] = None,
+        only: Optional[List[str]] = None,
+    ):
         """
-        Convert one value to another.  By default, occurs in all columns but this may be modified with 'skip' or 'only'.
-        A simpler, more verbose, less-powerful version of the Pandas 'df.replace' method.
+        Convert values in a dataframe.  By default, replacement occurs in all columns but this may be modified with 'skip' or 'only'.
+        Pandas has more powerful 'replace' methods for more complicated scenarios.
 
         Parameters
         ----------
-        to_replace: str, int, float, or dict
-            The value to be replaced.  A dict may be used to make multiple replacements.
-        value: str, int, float, or None.
-            The value used to replace the original.  Must be None when 'to_replace' is a dict.
-        inplace: boolean (default = False)
-            If True, modify the dataframe in-place and return nothing.  If False, copy the dataframe and return the new copy.
+        replacement_dict: dictionary
+            A dictionary mapping the value being replaced to the value being inserted
         skip: list or None, default None
             List of variables that the replacement should *not* be applied to
         only: list or None, default None
@@ -241,47 +211,23 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> df.clarite.recode_values(7, np.nan, only=['SMQ077', 'DBD100'], inplace=True)
-        Replacing '7' with 'nan' in 2 columns.
-            Replaced 1 of 18,937 rows of SMQ077
-        >>> df.clarite.recode_values(7, np.nan, only=['SMQ077', 'DBD100'], inplace=True)
-        Replacing '7' with 'nan' in 2 columns.
-            No occurences of '7' were found, so nothing was replaced.
+        >>> nhanes = nhanes.clarite_modify.recode_values({7: np.nan, 9: np.nan}, only=['SMQ077', 'DBD100'])
+        Replaced 17 values from 22,624 rows in 2 columns
+        >>> nhanes = nhanes.clarite_modify.recode_values({10: 12}, only=['SMQ077', 'DBD100'])
+        No occurences of replaceable values were found, so nothing was replaced.
         """
-        # Validate
-        if type(to_replace) == dict and value is not None:
-            raise ValueError(f"When 'to_replace' is a dictionary, 'value' must be None.")
+        df = self._obj
+        return modify.recode_values(
+            df, replacement_dict=replacement_dict, skip=skip, only=only
+        )
 
-        # In place or not
-        if inplace:
-            df = self._obj
-        else:
-            df = self._obj.copy(deep=True)
-
-        if type(to_replace) == dict:
-            # Recursively replace
-            for k, v in to_replace.items():
-                df.clarite.recode_values(k, v, skip=skip, only=only, inplace=True)
-            return df
-        else:
-            unchanged = True
-            columns = _validate_skip_only(list(df), skip, only)
-            print(f"Replacing '{to_replace}' with '{value}' in {len(columns)} columns.")
-            for c in columns:
-                replaced = (df[c] == to_replace)
-                df.loc[replaced, c] = value
-                if sum(replaced) > 0:
-                    unchanged = False
-                    print(f"\tReplaced {sum(replaced):,} of {len(df):,} rows of {c}")
-            if unchanged:
-                print(f"\tNo occurences of '{to_replace}' were found, so nothing was replaced.")
-
-        # Return the dataframe if not modified in place
-        if not inplace:
-            return df
-
-    def remove_outliers(self, method: str = 'gaussian', cutoff=3, inplace=False,
-                        skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    def remove_outliers(
+        self,
+        method: str = "gaussian",
+        cutoff=3,
+        skip: Optional[List[str]] = None,
+        only: Optional[List[str]] = None,
+    ):
         """
         Remove outliers from the dataframe by replacing them with np.nan
 
@@ -292,8 +238,6 @@ class ClariteDataframeAccessor(object):
         cutoff: positive numeric, default of 3
             Either the number of standard deviations from the mean (method='gaussian') or the multiple of the IQR (method='iqr')
             Any values equal to or more extreme will be replaced with np.nan
-        inplace: boolean (default = False)
-            If True, modify the dataframe in-place and return nothing.  If False, copy the dataframe and return the new copy.
         skip: list or None, default None
             List of variables that the replacement should *not* be applied to
         only: list or None, default None
@@ -301,63 +245,42 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> df.clarite.remove_outliers(method='iqr', cutoff=1.5, only=['DR1TVB1', 'URXP07', 'SMQ077'], inplace=True)
+        >>> import clarite
+        >>> df.clarite_modify.remove_outliers(method='iqr', cutoff=1.5, only=['DR1TVB1', 'URXP07', 'SMQ077'])
         Removing outliers with values < 1st Quartile - (1.5 * IQR) or > 3rd quartile + (1.5 * IQR) in 3 columns
             430 of 22,624 rows of URXP07 were outliers
             730 of 22,624 rows of DR1TVB1 were outliers
             Skipped filtering 'SMQ077' because it is a categorical variable
-        >>> df2.clarite.remove_outliers(only=['DR1TVB1', 'URXP07'], inplace=True)
+        >>> df2.clarite_modify.remove_outliers(only=['DR1TVB1', 'URXP07'])
         Removing outliers with values more than 3 standard deviations from the mean in 2 columns
             42 of 22,624 rows of URXP07 were outliers
             301 of 22,624 rows of DR1TVB1 were outliers
         """
-        # In place or not
-        if inplace:
-            df = self._obj
-        else:
-            df = self._obj.copy(deep=True)
+        df = self._obj
+        return modify.remove_outliers(
+            df, method=method, cutoff=cutoff, skip=skip, only=only
+        )
 
-        # Which columns
-        columns = _validate_skip_only(list(df), skip, only)
 
-        # Check cutoff and method, printing what is being done
-        if cutoff <= 0:
-            raise ValueError("'cutoff' must be >= 0")
-        if method == 'iqr':
-            print(f"Removing outliers with values < 1st Quartile - ({cutoff} * IQR) or > 3rd quartile + ({cutoff} * IQR) in {len(columns):,} columns")
-        elif method == 'gaussian':
-            print(f"Removing outliers with values more than {cutoff} standard deviations from the mean in {len(columns):,} columns")
-        else:
-            raise ValueError(f"'{method}' is not a supported method for outlier removal - only 'gaussian' and 'iqr'.")
+@pd.api.extensions.register_dataframe_accessor("clarite_plot")
+class ClaritePlotDFAccessor(object):
+    def __init__(self, pandas_obj):
+        self._validate(pandas_obj)
+        self._obj = pandas_obj
 
-        # Process each column
-        for c in columns:
-            if str(df.dtypes[c]) == 'category':
-                print(f"\tSkipped filtering '{c}' because it is a categorical variable")
-                continue
-            # Calculate outliers
-            if method == 'iqr':
-                q1 = df[c].quantile(0.25)
-                q3 = df[c].quantile(0.75)
-                iqr = abs(q3 - q1)
-                bottom = q1 - (iqr * cutoff)
-                top = q3 + (iqr * cutoff)
-                outliers = (df[c] < bottom) | (df[c] > top)
-            elif method == 'gaussian':
-                outliers = (df[c]-df[c].mean()).abs() > cutoff*df[c].std()
-            # If there are any, log a message and replace them with np.nan
-            if sum(outliers) > 0:
-                print(f"\t{sum(outliers):,} of {len(df):,} rows of {c} were outliers")
-                df.loc[outliers, c] = np.nan
+    @staticmethod
+    def _validate(obj):
+        # TODO: Perform any required validation
+        if False:
+            raise AttributeError("")
 
-        # Return the dataframe if not modified in place
-        if not inplace:
-            return df
-
-    ############
-    # Plotting #
-    ############
-    def plot_hist(self, column: str, figsize: Tuple[int, int] = (12, 5), title: Optional[str] = None, **kwargs):
+    def histogram(
+        self,
+        column: str,
+        figsize: Tuple[int, int] = (12, 5),
+        title: Optional[str] = None,
+        **kwargs,
+    ):
         """
         Plot a histogram of the values in the given column.  Takes kwargs for seaborn's distplot.
 
@@ -378,29 +301,25 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
+        >>> import clarite
         >>> title = f"Discovery: Skew of BMIMBX = {stats.skew(nhanes_discovery_cont['BMXBMI']):.6}"
-        >>> nhanes_discovery_cont.clarite.plot_hist(column="BMXBMI", title=title, bins=100)
+        >>> nhanes_discovery_cont.clarite_plot.histogram(column="BMXBMI", title=title, bins=100)
 
-        .. image:: _static/plots/plot_hist.png
+        .. image:: _static/plots/histogram.png
         """
         df = self._obj
-        if title is None:
-            title = f"Histogram for {column}"
-        if column not in df.columns:
-            raise ValueError("'column' must be an existing column in the DataFrame")
+        plot.histogram(df, column=column, figsize=figsize, **kwargs)
 
-        _, ax = plt.subplots(figsize=figsize)
-        ax.set_title(title)
-        sns.distplot(df[column], ax=ax, **kwargs)
-
-    def plot_distributions(self,
-                           filename: str,
-                           continuous_kind: str = 'count',
-                           nrows: int = 4,
-                           ncols: int = 3,
-                           quality: str = "medium",
-                           variables: Optional[List[str]] = None,
-                           sort: bool = True):
+    def distributions(
+        self,
+        filename: str,
+        continuous_kind: str = "count",
+        nrows: int = 4,
+        ncols: int = 3,
+        quality: str = "medium",
+        variables: Optional[List[str]] = None,
+        sort: bool = True,
+    ):
         """
         Create a pdf containing histograms for each binary or categorical variable, and one of several types of plots for each continuous variable.
 
@@ -428,122 +347,40 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> df[['female', 'occupation', 'LBX074']].clarite.plot_distributions(filename="test")
+        >>> import clarite
+        >>> df[['female', 'occupation', 'LBX074']].clarite_plot.distributions(filename="test")
 
-        .. image:: _static/plots/plot_distributions_count.png
+        .. image:: _static/plots/distributions_count.png
 
-        >>> df[['female', 'occupation', 'LBX074']].clarite.plot_distributions(filename="test", continuous_kind='box')
+        >>> df[['female', 'occupation', 'LBX074']].clarite_plot.distributions(filename="test", continuous_kind='box')
 
-        .. image:: _static/plots/plot_distributions_box.png
+        .. image:: _static/plots/distributions_box.png
 
-        >>> df[['female', 'occupation', 'LBX074']].clarite.plot_distributions(filename="test", continuous_kind='violin')
+        >>> df[['female', 'occupation', 'LBX074']].clarite_plot.distributions(filename="test", continuous_kind='violin')
 
-        .. image:: _static/plots/plot_distributions_violin.png
+        .. image:: _static/plots/distributions_violin.png
 
-        >>> df[['female', 'occupation', 'LBX074']].clarite.plot_distributions(filename="test", continuous_kind='qq')
+        >>> df[['female', 'occupation', 'LBX074']].clarite_plot.distributions(filename="test", continuous_kind='qq')
 
-        .. image:: _static/plots/plot_distributions_qq.png
+        .. image:: _static/plots/distributions_qq.png
 
         """
         df = self._obj
+        plot.distributions(df, filename=filename, continuous_kind=continuous_kind,
+                           nrows=nrows, ncols=ncols, quality=quality, variables=variables, sort=sort)
 
-        # Limit variables
-        if variables is not None:
-            df = df[variables]
-
-        # Check filename
-        if not filename.endswith(".pdf"):
-            filename += ".pdf"
-
-        # Set DPI
-        dpi_dict = {'low': 150, 'medium': 300, 'high': 1200}
-        dpi = dpi_dict.get(quality, None)
-        if dpi is None:
-            raise ValueError(f"quality was set to '{quality}' which is not a valid value")
-
-        # Make sure file is writeable
-        try:
-            with PdfPages(filename) as pdf:
-                pass
-        except OSError:
-            raise OSError(f"Unable to write to '{filename}'")
-
-        with PdfPages(filename) as pdf:
-            # Determine the number of pages
-            plots_per_page = nrows * ncols
-            total_pages = (len(df.columns) + (plots_per_page - 1))//plots_per_page
-            print(f"Generating a {total_pages} page PDF for {len(df.columns):,} variables")
-            # Starting plot space
-            page_num = 1
-            row_idx = 0
-            col_idx = 0
-            # Loop through all variables
-            if sort:
-                variables = sorted(list(df))
-            else:
-                variables = list(df)
-            for variable in variables:
-                if row_idx == 0 and col_idx == 0:
-                    # New Page
-                    _ = plt.subplots(squeeze=False, figsize=(8.5, 11), dpi=dpi)
-                    plt.suptitle(f"Page {page_num}")
-                # Plot non-NA values and record the number of those separately (otherwise they can cause issues with generating a KDE)
-                ax = plt.subplot2grid((nrows, ncols), (row_idx, col_idx))
-                if str(df.dtypes[variable]) == 'category':
-                    sns.countplot(df.loc[~df[variable].isna(), variable], ax=ax)
-                else:
-                    if continuous_kind == 'count':
-                        sns.distplot(df.loc[~df[variable].isna(), variable], kde=False, norm_hist=False, hist_kws={'alpha': 1}, ax=ax)
-                    elif continuous_kind == 'box':
-                        sns.boxplot(df.loc[~df[variable].isna(), variable], ax=ax)
-                    elif continuous_kind == 'violin':
-                        sns.violinplot(df.loc[~df[variable].isna(), variable], ax=ax)
-                    elif continuous_kind == 'qq':
-                        # QQ plots have to be sub-sampled otherwise there are too many points and the pdf is blank
-                        d = df.loc[~df[variable].isna(), variable]
-                        if len(d) > 400:
-                            d = d.sample(n=400, random_state=1)
-                        qqplot(d, line='s', fit=True, ax=ax, color='steelblue', alpha=0.7)
-                    else:
-                        raise ValueError("Unknown value for 'continuous_kind': must be one of {'count', 'box', 'violin', 'qq'}")
-                # Update xlabel with NA information
-                na_count = df[variable].isna().sum()
-                ax.set_xlabel(f"{variable}\n{na_count:,} of {len(df[variable]):,} are NA ({na_count/len(df[variable]):.2%})")
-                # Move to next plot space
-                col_idx += 1
-                if col_idx == ncols:  # Wrap to next row
-                    col_idx = 0
-                    row_idx += 1
-                if row_idx == nrows:  # Wrap to next page
-                    row_idx = 0
-                    page_num += 1
-                    # Save the current page
-                    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-                    pdf.savefig()
-                    plt.close()
-            # Save final page, unless a full page was finished and the page_num is now more than total_pages
-            if page_num == total_pages:
-                plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-                pdf.savefig()
-                plt.close()
-            # Add metadata
-            d = pdf.infodict()
-            d['Title'] = 'Multipage PDF Example'
-            d['Author'] = f"CLARITE {clarite_version}"
-            d['Subject'] = 'Distribution plots'
-            d['CreationDate'] = datetime.datetime.today()
-            d['ModDate'] = datetime.datetime.today()
-
-    def plot_manhattan(self,
-                       categories: Dict[str, str] = dict(),
-                       num_labeled: int = 3,
-                       label_vars: List[str] = list(),
-                       figsize: Tuple[int, int] = (10, 4),
-                       dpi: int = 300,
-                       title: Optional[str] = None,
-                       colors: List[str] = ["#53868B", "#4D4D4D"],
-                       background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
-                       filename: Optional[str] = None):
+    def manhattan(
+        self,
+        categories: Dict[str, str] = dict(),
+        num_labeled: int = 3,
+        label_vars: List[str] = list(),
+        figsize: Tuple[int, int] = (10, 4),
+        dpi: int = 300,
+        title: Optional[str] = None,
+        colors: List[str] = ["#53868B", "#4D4D4D"],
+        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+        filename: Optional[str] = None,
+    ):
         """
         Create a Manhattan-like plot for EWAS Results
 
@@ -574,21 +411,40 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> ewas_discovery.clarite.plot_manhattan(categories=data_categories, title="Discovery", filename="discovery.png")
+        >>> ewas_discovery.clarite_plot.manhattan(categories=data_categories, title="Discovery", filename="discovery.png")
 
-        .. image:: _static/plots/plot_manhattan_single.png
+        .. image:: _static/plots/manhattan_single.png
         """
         df = self._obj
 
         # This is a wrapper around a plotting function which handles plotting multiple datasets
-        plot_manhattan(dfs={"": df}, categories=categories, num_labeled=num_labeled, label_vars=label_vars,
-                       figsize=figsize, dpi=dpi, title=title, colors=colors, background_colors=background_colors,
-                       filename=filename)
+        plot.manhattan(
+            dfs={"": df},
+            categories=categories,
+            num_labeled=num_labeled,
+            label_vars=label_vars,
+            figsize=figsize,
+            dpi=dpi,
+            title=title,
+            colors=colors,
+            background_colors=background_colors,
+            filename=filename,
+        )
 
-    ######################################
-    # Exploratory Stats and Calculations #
-    ######################################
-    def get_correlations(self, threshold: float = 0.75):
+
+@pd.api.extensions.register_dataframe_accessor("clarite_describe")
+class ClariteDescribeDFAccessor(object):
+    def __init__(self, pandas_obj):
+        self._validate(pandas_obj)
+        self._obj = pandas_obj
+
+    @staticmethod
+    def _validate(obj):
+        # TODO: Perform any required validation
+        if False:
+            raise AttributeError("")
+
+    def correlations(self, threshold: float = 0.75):
         """
         Return variables with pearson correlation above the threshold
 
@@ -604,7 +460,7 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> correlations = df.clarite.get_correlations(threshold=0.9)
+        >>> correlations = df.clarite_describe.correlations(threshold=0.9)
         >>> correlations.head()
                            var1      var2  correlation
         36704  supplement_count  DSDCOUNT     1.000000
@@ -614,18 +470,9 @@ class ClariteDataframeAccessor(object):
         35290          DR1TS160  DR1TSFAT     0.984733
         """
         df = self._obj
-        # Get correlaton matrix
-        correlation = df.corr()
-        # Keep only the upper triangle to avoid listing both a-b and b-a correlations
-        correlation = correlation.where(np.triu(np.ones(correlation.shape), k=1).astype(np.bool))
-        # Stack and rename into the desired format
-        correlation = correlation.stack().rename('correlation').rename_axis(['var1', 'var2']).reset_index()
-        # Remove those with correlation below threshold
-        correlation = correlation.loc[correlation['correlation'].abs() >= threshold, ]
-        # Sort by absolute value and return
-        return correlation.reindex(correlation['correlation'].abs().sort_values(ascending=False).index)
+        return describe.correlations(df, threshold=threshold)
 
-    def get_freq_table(self):
+    def freq_table(self):
         """
         Return the count of each unique value for all categorical variables.  Non-categorical typed variables
         will return a single row with a value of '<Non-Categorical Values>' and the number of non-NA values.
@@ -637,7 +484,7 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> df.clarite.get_freq_table().head(n=10)
+        >>> df.clarite_describe.freq_table().head(n=10)
            variable value  count
         0                 SDDSRVYR                         2   4872
         1                 SDDSRVYR                         1   4191
@@ -651,21 +498,9 @@ class ClariteDataframeAccessor(object):
         9                  LBXPFDO  <Non-Categorical Values>   1032
         """
         df = self._obj
+        return describe.freq_table(df)
 
-        # Define a function to be applied to each categorical variable
-        def formatted_value_counts(var_name: str, df: pd.DataFrame):
-            if str(df[var_name].dtype) == 'category':
-                df = df[var_name].value_counts().reset_index().rename({'index': 'value', var_name: 'count'}, axis='columns')
-                df['variable'] = var_name
-                return df[['variable', 'value', 'count']]  # reorder columns
-            else:
-                return pd.DataFrame.from_dict({'variable': [var_name],
-                                               'value': ['<Non-Categorical Values>'],
-                                               'count': [df[var_name].count()]})
-
-        return pd.concat([formatted_value_counts(var_name, df) for var_name in list(df)]).reset_index(drop=True)
-
-    def get_percent_na(self):
+    def percent_na(self):
         """
         Return the percent of observations that are NA for each variable
 
@@ -676,11 +511,11 @@ class ClariteDataframeAccessor(object):
 
         Examples
         --------
-        >>> df.clarite.get_percent_na()
+        >>> df.clarite_describe.percent_na()
         SDDSRVYR                 0.000000
         female                   0.000000
         LBXHBC                   0.049321
         LBXHBS                   0.049873
         """
         df = self._obj
-        return 1 - (df.count() / df.apply(len))
+        return describe.percent_na(df)

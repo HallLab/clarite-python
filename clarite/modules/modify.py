@@ -2,6 +2,7 @@
 
 from typing import Optional, List
 
+import numpy as np
 import pandas as pd
 
 from ..other.utilities import _validate_skip_only
@@ -30,7 +31,7 @@ def colfilter_percent_zero(data: pd.DataFrame, proportion: float = 0.9,
 
     Examples
     --------
-    import clarite
+    >>> import clarite
     >>> nhanes_discovery_cont = clarite.modify.colfilter_percent_zero(nhanes_discovery_cont)
     Removed 30 of 369 variables (8.13%) which were equal to zero in at least 90.00% of non-NA observations.
     """
@@ -69,7 +70,7 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
 
     Examples
     --------
-    import clarite
+    >>> import clarite
     >>> nhanes_discovery_bin = clarite.modify.colfilter_min_n(nhanes_discovery_bin)
     Removed 129 of 361 variables (35.73%) which had less than 200 values
     """
@@ -106,7 +107,7 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[List[str]] = None, on
 
     Examples
     --------
-    import clarite
+    >>> import clarite
     >>> nhanes_discovery_bin = clarite.modify.colfilter_min_cat_n(nhanes_discovery_bin)
     Removed 159 of 232 variables (68.53%) which had a category with less than 200 values
     """
@@ -141,6 +142,7 @@ def rowfilter_incomplete_observations(data, skip, only):
 
     Examples
     --------
+    >>> import clarite
     >>> nhanes = clarite.modify.rowfilter_incomplete_observations(only=[phenotype] + covariates)
     Removed 3,687 of 22,624 rows (16.30%) due to NA values in the specified columns
     """
@@ -153,62 +155,120 @@ def rowfilter_incomplete_observations(data, skip, only):
     return data[keep_IDs]
 
 
-def recode_values(self, to_replace, value, inplace=False, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
-        # TODO: Rewrite this
-        """
-        Convert one value to another.  By default, occurs in all columns but this may be modified with 'skip' or 'only'.
-        A simpler, more verbose, less-powerful version of the Pandas 'df.replace' method.
+def recode_values(data, replacement_dict,
+                  skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    """
+    Convert values in a dataframe.  By default, replacement occurs in all columns but this may be modified with 'skip' or 'only'.
+    Pandas has more powerful 'replace' methods for more complicated scenarios.
 
-        Parameters
-        ----------
-        to_replace: str, int, float, or dict
-            The value to be replaced.  A dict may be used to make multiple replacements.
-        value: str, int, float, or None.
-            The value used to replace the original.  Must be None when 'to_replace' is a dict.
-        inplace: boolean (default = False)
-            If True, modify the dataframe in-place and return nothing.  If False, copy the dataframe and return the new copy.
-        skip: list or None, default None
-            List of variables that the replacement should *not* be applied to
-        only: list or None, default None
-            List of variables that the replacement should *only* be applied to
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be processed and returned
+    replacement_dict: dictionary
+        A dictionary mapping the value being replaced to the value being inserted
+    skip: list or None, default None
+        List of variables that the replacement should *not* be applied to
+    only: list or None, default None
+        List of variables that the replacement should *only* be applied to
 
-        Examples
-        --------
-        >>> df.clarite.recode_values(7, np.nan, only=['SMQ077', 'DBD100'], inplace=True)
-        Replacing '7' with 'nan' in 2 columns.
-            Replaced 1 of 18,937 rows of SMQ077
-        >>> df.clarite.recode_values(7, np.nan, only=['SMQ077', 'DBD100'], inplace=True)
-        Replacing '7' with 'nan' in 2 columns.
-            No occurences of '7' were found, so nothing was replaced.
-        """
-        # Validate
-        if type(to_replace) == dict and value is not None:
-            raise ValueError(f"When 'to_replace' is a dictionary, 'value' must be None.")
+    Examples
+    --------
+    >>> import clarite
+    >>> clarite.recode_values(df, {7: np.nan, 9: np.nan}, only=['SMQ077', 'DBD100'])
+    Replaced 17 values from 22,624 rows in 2 columns
+    >>> clarite.recode_values(df, {10: 12}, only=['SMQ077', 'DBD100'])
+    No occurences of replaceable values were found, so nothing was replaced.
+    """
+    # Limit columns if needed
+    if skip is not None or only is not None:
+        columns = _validate_skip_only(list(data), skip, only)
+        replacement_dict = {c: replacement_dict for c in columns}
 
-        # In place or not
-        if inplace:
-            df = self._obj
-        else:
-            df = self._obj.copy(deep=True)
+    # Replace
+    result = data.replace(to_replace=replacement_dict, value=None, inplace=False)
 
-        if type(to_replace) == dict:
-            # Recursively replace
-            for k, v in to_replace.items():
-                df.clarite.recode_values(k, v, skip=skip, only=only, inplace=True)
-            return df
-        else:
-            unchanged = True
-            columns = _validate_skip_only(list(df), skip, only)
-            print(f"Replacing '{to_replace}' with '{value}' in {len(columns)} columns.")
-            for c in columns:
-                replaced = (df[c] == to_replace)
-                df.loc[replaced, c] = value
-                if sum(replaced) > 0:
-                    unchanged = False
-                    print(f"\tReplaced {sum(replaced):,} of {len(df):,} rows of {c}")
-            if unchanged:
-                print(f"\tNo occurences of '{to_replace}' were found, so nothing was replaced.")
+    # Log
+    diff = result.eq(data)
+    diff[pd.isnull(result) == pd.isnull(data)] = True  # NAs are not equal by default
+    diff = ~diff  # not True where a value was replaced
+    cols_with_changes = (diff.sum() > 0).sum()
+    cells_with_changes = diff.sum().sum()
+    if cells_with_changes > 0:
+        print(f"\tReplaced {cells_with_changes:,} values from {len(data):,} rows in {cols_with_changes:,} columns")
+    else:
+        print(f"\tNo occurences of replaceable values were found, so nothing was replaced.")
 
-        # Return the dataframe if not modified in place
-        if not inplace:
-            return df
+    # Return
+    return result
+
+
+def remove_outliers(data, method: str = 'gaussian', cutoff=3,
+                    skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    """
+    Remove outliers from the dataframe by replacing them with np.nan
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be processed and returned
+    method: string, 'gaussian' (default) or 'iqr'
+        Define outliers using a gaussian approach (standard deviations from the mean) or inter-quartile range
+    cutoff: positive numeric, default of 3
+        Either the number of standard deviations from the mean (method='gaussian') or the multiple of the IQR (method='iqr')
+        Any values equal to or more extreme will be replaced with np.nan
+    skip: list or None, default None
+        List of variables that the replacement should *not* be applied to
+    only: list or None, default None
+        List of variables that the replacement should *only* be applied to
+
+    Examples
+    --------
+    >>> import clarite
+    >>> nhanes_rm_outliers = clarite.remove_outliers(nhanes, method='iqr', cutoff=1.5, only=['DR1TVB1', 'URXP07', 'SMQ077'])
+    Removing outliers with values < 1st Quartile - (1.5 * IQR) or > 3rd quartile + (1.5 * IQR) in 3 columns
+        430 of 22,624 rows of URXP07 were outliers
+        730 of 22,624 rows of DR1TVB1 were outliers
+        Skipped filtering 'SMQ077' because it is a categorical variable
+    >>> nhanes_rm_outliers = clarite.remove_outliers(only=['DR1TVB1', 'URXP07'])
+    Removing outliers with values more than 3 standard deviations from the mean in 2 columns
+        42 of 22,624 rows of URXP07 were outliers
+        301 of 22,624 rows of DR1TVB1 were outliers
+    """
+    # Copy to avoid replacing in-place
+    data = data.copy(deep=True)
+
+    # Which columns
+    columns = _validate_skip_only(list(data), skip, only)
+
+    # Check cutoff and method, printing what is being done
+    if cutoff <= 0:
+        raise ValueError("'cutoff' must be >= 0")
+    if method == 'iqr':
+        print(f"Removing outliers with values < 1st Quartile - ({cutoff} * IQR) or > 3rd quartile + ({cutoff} * IQR) in {len(columns):,} columns")
+    elif method == 'gaussian':
+        print(f"Removing outliers with values more than {cutoff} standard deviations from the mean in {len(columns):,} columns")
+    else:
+        raise ValueError(f"'{method}' is not a supported method for outlier removal - only 'gaussian' and 'iqr'.")
+
+    # Process each column
+    for c in columns:
+        if str(data.dtypes[c]) == 'category':
+            print(f"\tSkipped filtering '{c}' because it is a categorical variable")
+            continue
+        # Calculate outliers
+        if method == 'iqr':
+            q1 = data[c].quantile(0.25)
+            q3 = data[c].quantile(0.75)
+            iqr = abs(q3 - q1)
+            bottom = q1 - (iqr * cutoff)
+            top = q3 + (iqr * cutoff)
+            outliers = (data[c] < bottom) | (data[c] > top)
+        elif method == 'gaussian':
+            outliers = (data[c]-data[c].mean()).abs() > cutoff*data[c].std()
+        # If there are any, log a message and replace them with np.nan
+        if sum(outliers) > 0:
+            print(f"\t{sum(outliers):,} of {len(data):,} rows of {c} were outliers")
+            data.loc[outliers, c] = np.nan
+
+    return data
