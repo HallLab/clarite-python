@@ -30,8 +30,3 @@ Modules
 -----
 
 .. automodule:: clarite.survey
-
-DataFrame Accessors
--------------------
-
-.. automodule:: clarite.df_accessors

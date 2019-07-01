@@ -1,12 +1,26 @@
 # flake8: noqa
 """
-DataFrame Accessors
-===================
 
-These provide a different way to access many CLARITE functions from within the DataFrame namespace
+What is a DataFrame Accessor?
+=============================
 
-.. autosummary::
-     :toctree: modules/dataframe_accessors
+Pandas DataFrame Accessors attach methods to the DataFrame namespace, providing a different way to access many CLARITE functions
+
+.. code-block:: python
+    
+    clarite.modify.colfilter_min_n(df, n=250)
+
+can be written as:
+
+.. code-block:: python
+    
+    df.clarite_modify.colfilter_min_n(n=250)
+
+Available DataFrame Accessors
+=============================
+
+  .. autosummary::
+     :toctree: modules/df_accessors
 
      ClariteDescribeDFAccessor
      ClariteModifyDFAccessor
