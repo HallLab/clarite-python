@@ -24,7 +24,7 @@ Functions used to filter and/or change some data
 
 """
 
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import numpy as np
 import pandas as pd
@@ -298,21 +298,20 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     return data
 
 
-def make_binary(df: pd.DataFrame):
+def make_binary(data: Union[pd.DataFrame, pd.Series]):
     """
-    # TODO: Support series
     Validate and type a dataframe of binary variables
 
     Checks that each variable has at most 2 values and converts the type to pd.Categorical
 
     Parameters
     ----------
-    df: pd.DataFrame
-        DataFrame to be processed
+    data: pd.DataFrame or pd.Series
+        Data to be processed
 
     Returns
     -------
-    df: pd.DataFrame
+    data: same type as input data
         DataFrame with the same data but validated and converted to categorical types
 
     Examples
@@ -321,22 +320,27 @@ def make_binary(df: pd.DataFrame):
     >>> df = clarite.modify.make_binary(df)
     Processed 32 binary variables with 4,321 observations
     """
-    # Validate index
-    if isinstance(df.index, pd.core.index.MultiIndex):
-        raise ValueError("bin_df: DataFrames passed to the ewas function must not have a multiindex")
-    df.index.name = "ID"
     # Check the number of unique values
-    unique_values = df.nunique()
-    non_binary = unique_values[unique_values != 2]
-    if len(non_binary) > 0:
-        raise ValueError(f"{len(non_binary)} of {len(unique_values)} variables did not have 2 unique values and couldn't be processed as a binary type")
+    unique_values = data.nunique()
+    if type(data) == pd.DataFrame:
+        num_non_binary = (unique_values != 2).sum()
+        if num_non_binary > 0:
+            raise ValueError(f"{num_non_binary} of {len(unique_values)} variables did not have 2 unique values and couldn't be processed as a binary type")
+    elif type(data) == pd.Series:
+        if unique_values != 2:
+            ValueError(f"The provided variable ('{data.name}') did not have 2 unique values and couldn't be processed as a binary type")
+
     # TODO: possibly add further validation to make sure values are 1 and 0
-    df = df.astype('category')
-    print(f"Processed {len(df.columns):,} binary variables with {len(df):,} observations")
-    return df
+    data = data.astype('category')
+    if type(data) == pd.DataFrame:
+        print(f"Processed {len(data.columns):,} binary variables with {len(data):,} observations")
+    elif type(data) == pd.Series:
+        print(f"Processed a binary variable ('{data.name}') with {len(data):,} observations")
+
+    return data
 
 
-def make_categorical(df: pd.DataFrame):
+def make_categorical(data: Union[pd.DataFrame, pd.Series]):
     """
     Validate and type a dataframe of categorical variables
 
@@ -344,12 +348,12 @@ def make_categorical(df: pd.DataFrame):
 
     Parameters
     ----------
-    df: pd.DataFrame
-        DataFrame to be processed
+    data: pd.DataFrame or ps.Series
+        Data to be processed
 
     Returns
     -------
-    df: pd.DataFrame
+    data: same type as input data
         DataFrame with the same data but validated and converted to categorical types
 
     Examples
@@ -358,17 +362,16 @@ def make_categorical(df: pd.DataFrame):
     >>> df = clarite.modify.make_categorical(df)
     Processed 12 categorical variables with 4,321 observations
     """
-    # Validate index
-    if isinstance(df.index, pd.core.index.MultiIndex):
-        raise ValueError("cat_df: DataFrames passed to the ewas function must not have a multiindex")
-    df.index.name = "ID"
     # TODO: add further validation
-    df = df.astype('category')
-    print(f"Processed {len(df.columns):,} categorical variables with {len(df):,} observations")
-    return df
+    data = data.astype('category')
+    if type(data) == pd.DataFrame:
+        print(f"Processed {len(data.columns):,} categorical variables with {len(data):,} observations")
+    elif type(data) == pd.Series:
+        print(f"Processed a categorical variable ('{data.name}') with {len(data):,} observations")
+    return data
 
 
-def make_continuous(df: pd.DataFrame):
+def make_continuous(data: Union[pd.DataFrame, pd.Series]):
     """
     Validate and type a dataframe of continuous variables
 
@@ -376,12 +379,12 @@ def make_continuous(df: pd.DataFrame):
 
     Parameters
     ----------
-    df: pd.DataFrame
-        DataFrame to be processed
+    data: pd.DataFrame or ps.Series
+        Data to be processed
 
     Returns
     -------
-    df: pd.DataFrame
+    data: same type as input data
         DataFrame with the same data but validated and converted to numeric types
 
     Examples
@@ -390,14 +393,13 @@ def make_continuous(df: pd.DataFrame):
     >>> df = clarite.modify.make_continuous(df)
     Processed 128 continuous variables with 4,321 observations
     """
-    # Validate index
-    if isinstance(df.index, pd.core.index.MultiIndex):
-        raise ValueError("cont_df: DataFrames passed to the ewas function must not have a multiindex")
-    df.index.name = "ID"
     # TODO: add further validation
-    df = df.apply(pd.to_numeric)
-    print(f"Processed {len(df.columns):,} continuous variables with {len(df):,} observations")
-    return df
+    data = data.apply(pd.to_numeric)
+    if type(data) == pd.DataFrame:
+        print(f"Processed {len(data.columns):,} continuous variables with {len(data):,} observations")
+    elif type(data) == pd.Series:
+        print(f"Processed a continuous variable ('{data.name}') with {len(data):,} observations")
+    return data
 
 
 def merge_variables(data: pd.DataFrame, other: pd.DataFrame, how: str = 'outer'):
