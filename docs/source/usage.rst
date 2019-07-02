@@ -8,94 +8,60 @@ Start by importing CLARITE.
 
     import clarite
 
-Structure
-#########
+Organization of Functions
+-------------------------
 
-Clarite consists of several functions and classes, including a Pandas DataFrame Accessor.  The DataFrame Accessor adds methods to DataFrame objects under a `clarite` namespace:
+Most of the functions in CLARITE take a DataFrame as the first parameter which is assumed to have a different variable in each column and a different observation in each row (using a consistent index).  These are largely organized into 4 modules:
+
+Describe
+  Functions used to gather information about some data
+
+Modify
+  Functions used to filter and/or change some data
+
+Process 
+  Functions used to process data from one form into another, such as categorizing variables and placing them in separate DataFrames 
+
+Plot 
+  Functions that generate plots
+
+Coding Style
+------------
+Inspired by `PyJanitor <https://pyjanitor.readthedocs.io>`_, there are three primary ways of using these functions in the CLARITE package:
+
+1. Using the DataFrame Accessors
 
 .. code-block:: python
 
-    df = clarite.io.load_data('nhanes_binary.txt', index_col="ID", sep="\t")
-    df = df.clarite.make_binary()
+   df.clarite_modify.colfilter_min_n(n=250)\
+     .clarite_modify.rowfilter_incomplete_observations()\
+     .clarite_plot.distributions(filename='plots.pdf')
+
+2. Using the functional API
+
+.. code-block:: python
+
+   df_filtered = clarite.modify.colfilter_min_n(df, n=250)
+   df_filtered_complete = clarite.modify.rowfilter_incomplete_observations(df_filtered)
+   clarite.plot.distributions(df_filtered_complete, filename='plots.pdf')
+
+3. Using a Pandas *pipe*
+
+.. code-block:: python
+
+   clarite.plot.distributions(df.pipe(clarite.modify.colfilter_min_n, n=250)\
+                                .pipe(clarite.modify.rowfilter_incomplete_observations),
+                              filename='plots.pdf')
 
 
-DataFrame Accessor functions
-############################
+Other modules
+-------------
 
-Column (Variable) Filters
-*************************
+Some functions do not take a single DataFrame as the first parameter- these are not available in DataFrame Accessors, but are available as functions in these modules:
 
-.. automethod:: clarite.ClariteDataframeAccessor.colfilter_percent_zero
-
-.. automethod:: clarite.ClariteDataframeAccessor.colfilter_min_n
-
-.. automethod:: clarite.ClariteDataframeAccessor.colfilter_min_cat_n
-
-Row (Observation) Filters
-*************************
-
-.. automethod:: clarite.ClariteDataframeAccessor.rowfilter_incomplete_observations
-
-Other methods for modifying the DataFrame
-*****************************************
-
-.. automethod:: clarite.ClariteDataframeAccessor.recode_values
-
-.. automethod:: clarite.ClariteDataframeAccessor.remove_outliers
-
-Plotting
-******************
-
-.. automethod:: clarite.ClariteDataframeAccessor.plot_hist
-
-.. automethod:: clarite.ClariteDataframeAccessor.plot_manhattan
-
-.. automethod:: clarite.ClariteDataframeAccessor.plot_distributions
-
-Exploratory Stats and Calculations
-**********************************
-
-.. automethod:: clarite.ClariteDataframeAccessor.get_correlations
-
-.. automethod:: clarite.ClariteDataframeAccessor.get_freq_table
-
-.. automethod:: clarite.ClariteDataframeAccessor.get_percent_na
-
-
-Other DataFrame Accessor Functions
-**********************************
-
-.. automethod:: clarite.ClariteDataframeAccessor.categorize
-
-EWAS Functions
-##############
-
-.. autofunction:: clarite.ewas
-
-.. autofunction:: clarite.add_corrected_pvalues
-
-Utilities
-#########
-
-.. autofunction:: clarite.make_binary
-
-.. autofunction:: clarite.make_categorical
-
-.. autofunction:: clarite.make_continuous
-
-.. autofunction:: clarite.merge_variables
-
-IO Functions
-############
-
-.. autofunction:: clarite.io.load_data
-
-Plotting Functions
-##################
-
-.. autofunction:: clarite.plotting.plot_manhattan
-
-Classes
-#######
-
-.. autoclass:: clarite.SurveyDesignSpec
+Survey
+    Complex survey design
+IO
+    Input/Output of data in different formats
+Analyze
+    EWAS and associated calculations

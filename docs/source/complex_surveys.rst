@@ -8,12 +8,12 @@ A SurveyDesignSpec can be created, which is used to obtain survey design objects
 
 .. code-block:: python
 
-    sd_discovery = clarite.SurveyDesignSpec(survey_df=survey_design_discovery,
-                                            strata="SDMVSTRA",
-                                            cluster="SDMVPSU",
-                                            nest=True,
-                                            weights=weights_discovery,
-                                            single_cluster='scaled')
+    sd_discovery = clarite.survey.SurveyDesignSpec(survey_df=survey_design_discovery,
+                                                   strata="SDMVSTRA",
+                                                   cluster="SDMVPSU",
+                                                   nest=True,
+                                                   weights=weights_discovery,
+                                                   single_cluster='scaled')
 
 In the current version of CLARITE, both strata and cluster must be provided.  'Weights' are optional, and are expected to be expansion weights.
 
@@ -30,5 +30,5 @@ After a SurveyDesignSpec is created, it can be passed into the ewas function to 
 
 .. code-block:: python
 
-    ewas_discovery = clarite.ewas("logBMI", covariates, nhanes_discovery_bin, nhanes_discovery_cat, nhanes_discovery_cont, sd_discovery, cov_method='stata')
+    ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery_bin, nhanes_discovery_cat, nhanes_discovery_cont, sd_discovery, cov_method='stata')
 
