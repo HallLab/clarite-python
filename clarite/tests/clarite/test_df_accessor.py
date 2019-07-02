@@ -2,7 +2,7 @@ import clarite
 
 
 def test_categorize(plantTraits, capfd):
-    df_bin, df_cat, df_cont, df_ambiguous = plantTraits.clarite.categorize()
+    df_bin, df_cat, df_cont, df_ambiguous = plantTraits.clarite_process.categorize()
     out, err = capfd.readouterr()
     assert out == "0 of 31 variables (0.00%) had no non-NA values and are discarded.\n"\
                   "0 of 31 variables (0.00%) had only one value and are discarded.\n"\
@@ -14,15 +14,15 @@ def test_categorize(plantTraits, capfd):
 
     assert all(df_bin.nunique() == 2)
     assert df_bin.shape == (136, 20)
-    clarite.make_binary(df_bin)
+    clarite.modify.make_binary(df_bin)
 
     assert all((df_cat.nunique() >= 3) & (df_cat.nunique() <= 6))
     assert df_cat.shape == (136, 6)
-    clarite.make_categorical(df_cat)
+    clarite.modify.make_categorical(df_cat)
 
     assert all(df_cont.nunique() >= 15)
     assert df_cont.shape == (136, 2)
-    clarite.make_continuous(df_cont)
+    clarite.modify.make_continuous(df_cont)
 
     assert all((df_ambiguous.nunique() > 6) & (df_ambiguous.nunique() < 15))
     assert df_ambiguous.shape == (136, 3)
