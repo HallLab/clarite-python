@@ -300,6 +300,7 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
 
 def make_binary(df: pd.DataFrame):
     """
+    # TODO: Support series
     Validate and type a dataframe of binary variables
 
     Checks that each variable has at most 2 values and converts the type to pd.Categorical

@@ -81,3 +81,6 @@ target/
 
 # VS Code
 .vscode
+
+# Test output
+test_output/*

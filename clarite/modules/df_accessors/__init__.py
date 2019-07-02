@@ -23,12 +23,14 @@ Available DataFrame Accessors
      :toctree: modules/df_accessors
 
      ClariteDescribeDFAccessor
+     ClariteIODFAccessor
      ClariteModifyDFAccessor
      ClaritePlotDFAccessor
      ClariteProcessDFAccessor
 """
 
 from .clarite_describe import ClariteDescribeDFAccessor
+from .clarite_io import ClariteIODFAccessor
 from .clarite_modify import ClariteModifyDFAccessor
 from .clarite_plot import ClaritePlotDFAccessor
 from .clarite_process import ClariteProcessDFAccessor
