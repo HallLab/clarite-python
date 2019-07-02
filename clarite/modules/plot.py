@@ -69,7 +69,7 @@ def histogram(
     >>> title = f"Discovery: Skew of BMIMBX = {stats.skew(nhanes_discovery_cont['BMXBMI']):.6}"
     >>> clarite.plot.histogram(nhanes_discovery_cont, column="BMXBMI", title=title, bins=100)
 
-    .. image:: _static/histogram.png
+    .. image:: ../../_static/plot/histogram.png
     """
     if title is None:
         title = f"Histogram for {column}"
@@ -123,19 +123,19 @@ def distributions(
     >>> import clarite
     >>> clarite_plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test")
 
-    .. image:: _static/distributions_count.png
+    .. image:: ../../_static/plot/distributions_count.png
 
     >>> clarite_plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='box')
 
-    .. image:: _static/distributions_box.png
+    .. image:: ../../_static/plot/distributions_box.png
 
     >>> clarite_plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='violin')
 
-    .. image:: _static/distributions_violin.png
+    .. image:: ../../_static/plot/distributions_violin.png
 
     >>> clarite_plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='qq')
 
-    .. image:: _static/distributions_qq.png
+    .. image:: ../../_static/plot/distributions_qq.png
 
     """
     # Limit variables
@@ -282,7 +282,7 @@ def manhattan(
     --------
     >>> clarite.plot_manhattan({'discovery':disc_df, 'replication':repl_df}, categories=data_categories, title="EWAS Results")
 
-    .. image:: _static/manhattan.png
+    .. image:: ../../_static/plot/manhattan.png
     """
     # Hardcoded options
     offset = 5  # Spacing between categories

@@ -49,7 +49,7 @@ class ClaritePlotDFAccessor(object):
         >>> title = f"Discovery: Skew of BMIMBX = {stats.skew(nhanes_discovery_cont['BMXBMI']):.6}"
         >>> nhanes_discovery_cont.clarite_plot.histogram(column="BMXBMI", title=title, bins=100)
 
-        .. image:: ../plot/_static/histogram.png
+        .. image:: ../../_static/plot/histogram.png
         """
         df = self._obj
         plot.histogram(df, column=column, figsize=figsize, **kwargs)
@@ -94,19 +94,19 @@ class ClaritePlotDFAccessor(object):
         >>> import clarite
         >>> df[['female', 'occupation', 'LBX074']].clarite_plot.distributions(filename="test")
 
-        .. image:: ../plot/_static/distributions_count.png
+        .. image:: ../../_static/plot/distributions_count.png
 
         >>> df[['female', 'occupation', 'LBX074']].clarite_plot.distributions(filename="test", continuous_kind='box')
 
-        .. image:: ../plot/_static/distributions_box.png
+        .. image:: ../../_static/plot/distributions_box.png
 
         >>> df[['female', 'occupation', 'LBX074']].clarite_plot.distributions(filename="test", continuous_kind='violin')
 
-        .. image:: ../plot/_static/distributions_violin.png
+        .. image:: ../../_static/plot/distributions_violin.png
 
         >>> df[['female', 'occupation', 'LBX074']].clarite_plot.distributions(filename="test", continuous_kind='qq')
 
-        .. image:: ../plot/_static/distributions_qq.png
+        .. image:: ../../_static/plot/distributions_qq.png
 
         """
         df = self._obj
@@ -157,7 +157,7 @@ class ClaritePlotDFAccessor(object):
         --------
         >>> ewas_discovery.clarite_plot.manhattan(categories=data_categories, title="Discovery", filename="discovery.png")
 
-        .. image:: ../plot/_static/manhattan_single.png
+        .. image:: ../../_static/plot/manhattan_single.png
         """
         df = self._obj
 
