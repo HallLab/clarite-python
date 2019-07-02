@@ -7,7 +7,7 @@ import scipy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
-from .survey import SurveyDesignSpec, SurveyModel
+from ..modules.survey import SurveyDesignSpec, SurveyModel
 from .calculations import regTermTest
 
 

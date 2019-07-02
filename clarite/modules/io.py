@@ -1,3 +1,19 @@
+"""
+IO
+========
+
+Input/Output of data in different formats
+
+  **DataFrame Accessor**: ``None``
+
+  **CLI Command**: ``io``
+
+  .. autosummary::
+     :toctree: modules/io
+
+     load_data
+"""
+
 from pathlib import Path
 from typing import Union
 import pandas as pd

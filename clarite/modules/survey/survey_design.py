@@ -31,12 +31,13 @@ class SurveyDesignSpec:
 
     Examples
     --------
-    >>>clarite.SurveyDesignSpec(survey_df=survey_design_replication,
-                                          strata="SDMVSTRA",
-                                          cluster="SDMVPSU",
-                                          nest=True,
-                                          weights=weights_replication,
-                                          single_cluster='scaled')
+    >>> import clarite
+    >>> clarite.analyze.SurveyDesignSpec(survey_df=survey_design_replication,
+                                         strata="SDMVSTRA",
+                                         cluster="SDMVPSU",
+                                         nest=True,
+                                         weights=weights_replication,
+                                         single_cluster='scaled')
     """
     def __init__(self,
                  survey_df: pd.DataFrame,

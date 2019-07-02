@@ -17,7 +17,7 @@ def test_simple_ewas(capfd):
     df = df[[c for c in list(df) if c not in list(df_survey)]]
 
     # Categorize and recombine
-    df_bin, df_cat, df_cont, df_check = df.clarite.categorize()
+    df_bin, df_cat, df_cont, df_check = df.clarite_process.categorize()
     out, err = capfd.readouterr()
     assert out == "0 of 37 variables (0.00%) had no non-NA values and are discarded.\n"\
                   "0 of 37 variables (0.00%) had only one value and are discarded.\n"\
