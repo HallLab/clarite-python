@@ -45,5 +45,14 @@ def freq_table(data, output):
 
 
 @describe_cli.command()
-def percent_na():
-    pass
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+def percent_na(data, output):
+    # Load data
+    data = io.load_data(data)
+    # Describe
+    results = describe.percent_na(data)
+    # Save results
+    results.to_csv(output, sep="\t", index=False)
+    # Log
+    click.echo(click.style(f"Done: Saved results for {len(results):,} variables to {output}", fg='green'))

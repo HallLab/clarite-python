@@ -146,9 +146,13 @@ def percent_na(data):
     --------
     >>> import clarite
     >>> clarite.describe.percent_na(df)
-    SDDSRVYR                 0.000000
-    female                   0.000000
-    LBXHBC                   0.049321
-    LBXHBS                   0.049873
+    variable    percent_na
+    SDDSRVYR                 0.00000
+    female                   0.00000
+    LBXHBC                   4.99321
+    LBXHBS                   4.98730
     """
-    return 1 - (data.count() / data.apply(len))
+    result = 100 * (1 - (data.count() / data.apply(len)))
+    result = result.reset_index()
+    result.columns = ['variable', 'percent_na']
+    return result
