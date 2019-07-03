@@ -171,6 +171,7 @@ def rowfilter_incomplete_observations(data, skip: Optional[List[str]] = None, on
     Removed 3,687 of 22,624 rows (16.30%) due to NA values in the specified columns
     """
     columns = _validate_skip_only(list(data), skip, only)
+
     keep_IDs = data[columns].isnull().sum(axis=1) == 0  # Number of NA in each row is 0
     n_removed = len(data) - sum(keep_IDs)
 

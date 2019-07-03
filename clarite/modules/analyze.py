@@ -24,7 +24,7 @@ from numpy import nan
 from statsmodels.stats.multitest import multipletests
 from .survey import SurveyDesignSpec
 
-from .modify import make_binary, make_categorical, make_continuous, merge_variables
+from .modify import make_binary, make_categorical, make_continuous
 from ..internal.regression import Regression
 
 
@@ -74,29 +74,26 @@ def ewas(
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery_bin, nhanes_discovery_cat, nhanes_discovery_cont)
     Running EWAS on a continuous variable
     """
-    # Merge the different datasets to ensure a consistent index, then reset it for simplicity in downstream processing
-    dfs = [df for df in (bin_df, cat_df, cont_df) if df is not None]
-    unified = dfs[0]
-    for df in dfs[1:]:
-        # Outer-merge on index
-        unified = merge_variables(unified, df)
-    # Reset index to a simple incrementing ID number for each observation
-    unified = unified.reset_index(drop=True)
-    unified.index.name = "ID"
+    # Make sure the index of each dataset is not a multiindex and give it a consistent name
+    for param_name, df in {'bin_df': bin_df, 'cat_df': cat_df, 'cont_df': cont_df}.items():
+        if df is not None:
+            if isinstance(df.index, pd.core.index.MultiIndex):
+                raise ValueError(f"{param_name}: DataFrame must not have a multiindex")
+            df.index.name = "ID"
 
     # Collects lists of regression variables and format dataframes using the new index from 'unified'
     rv_bin, rv_cat, rv_cont = list(), list(), list()
     if bin_df is not None:
         # Get original columns with new index and format as binary
-        bin_df = make_binary(unified[list(bin_df)])
+        bin_df = make_binary(bin_df)
         rv_bin = [v for v in list(bin_df) if v not in covariates and v != phenotype]
     if cat_df is not None:
         # Get original columns with new index and format as categorical
-        cat_df = make_categorical(unified[list(cat_df)])
+        cat_df = make_categorical(cat_df)
         rv_cat = [v for v in list(cat_df) if v not in covariates and v != phenotype]
     if cont_df is not None:
         # Get original columns with new index and format as continuous
-        cont_df = make_continuous(unified[list(cont_df)])
+        cont_df = make_continuous(cont_df)
         rv_cont = [v for v in list(cont_df) if v not in covariates and v != phenotype]
 
     # Ensure covariates are all present
@@ -212,6 +209,7 @@ def run_regressions(phenotype: str,
     result['phenotype'] = phenotype  # Add phenotype
     result = result.sort_values('pvalue').set_index(['variable', 'phenotype'])  # Sort and set index
     result = result[['variable_type', 'converged', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']]  # Sort columns
+    print("Completed EWAS\n")
     return result
 
 
