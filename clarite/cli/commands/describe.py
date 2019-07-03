@@ -24,8 +24,24 @@ def correlations(data, output, threshold):
 
 
 @describe_cli.command()
-def freq_table():
-    pass
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+def freq_table(data, output):
+    # Load data
+    data = io.load_data(data)
+    # Describe
+    results = describe.freq_table(data)
+    # Save results
+    results.to_csv(output, sep="\t", index=False)
+    # Log
+    processed = results.loc[results['value'] != '<Non-Categorical Values>',]
+    if len(processed) > 0:
+        num_values = processed[['variable', 'value']].nunique()
+        num_variables = processed['variable'].nunique()
+    else:
+        num_values = 0
+        num_variables = 0
+    click.echo(click.style(f"Done: Saved {num_values:,} unique value counts for {num_variables:,} non-continuous variables to {output}", fg='green'))
 
 
 @describe_cli.command()
