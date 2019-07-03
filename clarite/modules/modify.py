@@ -32,7 +32,7 @@ import pandas as pd
 from ..internal.utilities import _validate_skip_only
 
 
-def colfilter_percent_zero(data: pd.DataFrame, proportion: float = 0.9,
+def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
                            skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
     """
     Remove columns which have <proportion> or more values of zero (excluding NA)
@@ -41,8 +41,8 @@ def colfilter_percent_zero(data: pd.DataFrame, proportion: float = 0.9,
     ----------
     data: pd.DataFrame
         The DataFrame to be processed and returned
-    proportion: float, default 0.9
-        If the proportion of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
+    filter_percent: float, default 90.0
+            If the percentage of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
     skip: list or None, default None
         List of variables that the filter should *not* be applied to
     only: list or None, default None
@@ -62,12 +62,12 @@ def colfilter_percent_zero(data: pd.DataFrame, proportion: float = 0.9,
     columns = _validate_skip_only(list(data), skip, only)
     num_before = len(data.columns)
 
-    percent_value = data.apply(lambda col: sum(col == 0) / col.count())
-    kept = (percent_value < proportion) | ~data.columns.isin(columns)
+    percent_value = 100 * data.apply(lambda col: sum(col == 0) / col.count())
+    kept = (percent_value < filter_percent) | ~data.columns.isin(columns)
     num_removed = num_before - sum(kept)
 
     print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) "
-          f"which were equal to zero in at least {proportion:.2%} of non-NA observations.")
+          f"which were equal to zero in at least {filter_percent:.2f}% of non-NA observations.")
     return data.loc[:, kept]
 
 

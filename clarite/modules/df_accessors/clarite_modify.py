@@ -39,7 +39,7 @@ class ClariteModifyDFAccessor(object):
 
     def colfilter_percent_zero(
         self,
-        proportion: float = 0.9,
+        filter_percent: float = 90.0,
         skip: Optional[List[str]] = None,
         only: Optional[List[str]] = None,
     ):
@@ -48,8 +48,8 @@ class ClariteModifyDFAccessor(object):
 
         Parameters
         ----------
-        proportion: float, default 0.9
-            If the proportion of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
+        filter_percent: float, default 90.0
+            If the percentage of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
         skip: list or None, default None
             List of variables that the filter should *not* be applied to
         only: list or None, default None
@@ -67,7 +67,7 @@ class ClariteModifyDFAccessor(object):
         """
         df = self._obj
         return modify.colfilter_percent_zero(
-            df, proportion=proportion, skip=skip, only=only
+            df, filter_percent=filter_percent, skip=skip, only=only
         )
 
     def colfilter_min_n(
