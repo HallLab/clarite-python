@@ -4,4 +4,4 @@ import statsmodels as sm
 # Datasets for testing
 @pytest.fixture
 def plantTraits():
-    return sm.datasets.get_rdataset('plantTraits', 'cluster').data
+    return sm.datasets.get_rdataset('plantTraits', 'cluster', cache=True).data
