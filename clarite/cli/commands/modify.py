@@ -55,3 +55,8 @@ def make_continuous():
 @modify_cli.command()
 def merge_variables():
     pass
+
+
+@modify_cli.command()
+def move_variables():
+    pass

@@ -421,3 +421,47 @@ def merge_variables(data: pd.DataFrame, other: pd.DataFrame, how: str = 'outer')
     >>> df = clarite.modify.merge_variables(df_bin, df_cat, how='outer')
     """
     return data.merge(other, left_index=True, right_index=True, how=how)
+
+
+def move_variables(data: pd.DataFrame, other: pd.DataFrame,
+                   skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+    """
+    Move one or more variables from one DataFrame to another
+
+    Parameters
+    ----------
+    data: pd.Dataframe
+        DataFrame containing the variable(s) to be moved
+    other: pd.DataFrame
+        DataFrame (which uses the same index) that the variable(s) will be moved to
+    variables: List of strings
+        Names of the variables to move (all are moved by def)
+
+    Returns
+    -------
+    data: pd.DataFrame
+        The first DataFrame with the variables removed
+    other: pd.DataFrame
+        The second DataFrame with the variables added
+
+    Examples
+    --------
+    >>> import clarite
+    >>> clarity.modify.move_variables(df_cat, df_cont, only=["DRD350AQ", "DRD350DQ", "DRD350GQ"])
+    Moved {} variables
+    """
+    # TODO: Update doctring
+    # Copy to avoid replacing in-place
+    data = data.copy(deep=True)
+
+    # Which columns
+    columns = _validate_skip_only(list(data), skip, only)
+
+    # Add to new df
+    other = merge_variables(other, data[columns])
+
+    # Remove from original
+    data = data.drop(columns, axis='columns')
+
+    # Return
+    return data, other

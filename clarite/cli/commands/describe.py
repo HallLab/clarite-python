@@ -34,7 +34,7 @@ def freq_table(data, output):
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
-    processed = results.loc[results['value'] != '<Non-Categorical Values>',]
+    processed = results.loc[results['value'] != '<Non-Categorical Values>', ]
     if len(processed) > 0:
         num_values = processed[['variable', 'value']].nunique()
         num_variables = processed['variable'].nunique()

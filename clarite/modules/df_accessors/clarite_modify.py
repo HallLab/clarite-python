@@ -37,6 +37,36 @@ class ClariteModifyDFAccessor(object):
         df = self._obj
         return df.merge(other, left_index=True, right_index=True, how=how)
 
+    def move_variables(self, other: pd.DataFrame,
+                       skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """
+        Move one or more variables from this DataFrame to another
+
+        Parameters
+        ----------
+        other: pd.DataFrame
+            DataFrame (which uses the same index) that the variable(s) will be moved to
+        variables: List of strings
+            Names of the variables to move (all are moved by def)
+
+        Returns
+        -------
+        data: pd.DataFrame
+            The first DataFrame with the variables removed
+        other: pd.DataFrame
+            The second DataFrame with the variables added
+
+        Examples
+        --------
+        >>> import clarite
+        >>> df_cat.clarity_modify.move_variables(df_cont, only=["DRD350AQ", "DRD350DQ", "DRD350GQ"])
+        Moved {} variables
+        """
+        # TODO: Update docstring
+        # Copy to avoid replacing in-place
+        data = self._obj.copy(deep=True)
+        return modify.move_variables(data, other=other, skip=skip, only=only)
+
     def colfilter_percent_zero(
         self,
         filter_percent: float = 90.0,
