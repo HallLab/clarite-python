@@ -1,11 +1,17 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import numpy as np
 import pandas as pd
 
 
-def _validate_skip_only(columns, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+def _validate_skip_only(columns, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """Validate use of the 'skip' and 'only' parameters, returning a valid list of columns to filter"""
+    # Convert string to a list
+    if type(skip) == str:
+        skip = [skip]
+    if type(only) == str:
+        only = [only]
+
     if skip is not None and only is not None:
         raise ValueError("It isn't possible to specify 'skip' and 'only' at the same time.")
     elif skip is not None and only is None:

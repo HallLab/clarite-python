@@ -12,8 +12,8 @@ def test_save_and_load(plantTraits, capfd):
 
 def test_save_with_cat(plantTraits, capfd):
     df = plantTraits
-    df['begflow'] = modify.make_categorical(df['begflow'])
-    df['piq'] = modify.make_binary(df['piq'])
+    df = modify.make_categorical(df, only='begflow')
+    df = modify.make_binary(df, only='piq')
 
     io.save(df, 'test_output/saved.txt')
     loaded = io.load_data('test_output/saved.txt')

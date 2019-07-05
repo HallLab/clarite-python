@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import pandas as pd
 
@@ -77,7 +77,7 @@ class ClariteProcessDFAccessor(object):
         return process.merge_variables(df, other, how=how)
 
     def move_variables(self, other: pd.DataFrame,
-                       skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                       skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
         """
         Move one or more variables from this DataFrame to another
 

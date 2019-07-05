@@ -32,7 +32,7 @@ from ..internal.utilities import _validate_skip_only
 
 
 def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
-                           skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                           skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove columns which have <proportion> or more values of zero (excluding NA)
 
@@ -42,9 +42,9 @@ def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
         The DataFrame to be processed and returned
     filter_percent: float, default 90.0
             If the percentage of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the filter should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the filter should *only* be applied to
 
     Returns
@@ -71,7 +71,7 @@ def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
 
 
 def colfilter_min_n(data: pd.DataFrame, n: int = 200,
-                    skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                    skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove columns which have less than <n> unique values (excluding NA)
 
@@ -81,9 +81,9 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
         The DataFrame to be processed and returned
     n: int, default 200
         The minimum number of unique values required in order for a variable not to be filtered
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the filter should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the filter should *only* be applied to
 
     Returns
@@ -108,7 +108,7 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
     return data.loc[:, kept]
 
 
-def colfilter_min_cat_n(data, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove columns which have less than <n> occurences of each unique value
 
@@ -118,9 +118,9 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[List[str]] = None, on
         The DataFrame to be processed and returned
     n: int, default 200
         The minimum number of occurences of each unique value required in order for a variable not to be filtered
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the filter should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the filter should *only* be applied to
 
     Returns
@@ -145,7 +145,7 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[List[str]] = None, on
     return data.loc[:, kept]
 
 
-def rowfilter_incomplete_observations(data, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+def rowfilter_incomplete_observations(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove rows containing null values
 
@@ -153,9 +153,9 @@ def rowfilter_incomplete_observations(data, skip: Optional[List[str]] = None, on
     ----------
     data: pd.DataFrame
         The DataFrame to be processed and returned
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of columns that are not checked for null values
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of columns that are the only ones to be checked for null values
 
     Returns
@@ -179,7 +179,7 @@ def rowfilter_incomplete_observations(data, skip: Optional[List[str]] = None, on
 
 
 def recode_values(data, replacement_dict,
-                  skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                  skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Convert values in a dataframe.  By default, replacement occurs in all columns but this may be modified with 'skip' or 'only'.
     Pandas has more powerful 'replace' methods for more complicated scenarios.
@@ -190,9 +190,9 @@ def recode_values(data, replacement_dict,
         The DataFrame to be processed and returned
     replacement_dict: dictionary
         A dictionary mapping the value being replaced to the value being inserted
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the replacement should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the replacement should *only* be applied to
 
     Examples
@@ -227,7 +227,7 @@ def recode_values(data, replacement_dict,
 
 
 def remove_outliers(data, method: str = 'gaussian', cutoff=3,
-                    skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                    skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove outliers from the dataframe by replacing them with np.nan
 
@@ -240,9 +240,9 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     cutoff: positive numeric, default of 3
         Either the number of standard deviations from the mean (method='gaussian') or the multiple of the IQR (method='iqr')
         Any values equal to or more extreme will be replaced with np.nan
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the replacement should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the replacement should *only* be applied to
 
     Examples
@@ -297,7 +297,7 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     return data
 
 
-def make_binary(data: Union[pd.DataFrame, pd.Series]):
+def make_binary(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Validate and type a dataframe of binary variables
 
@@ -307,39 +307,40 @@ def make_binary(data: Union[pd.DataFrame, pd.Series]):
     ----------
     data: pd.DataFrame or pd.Series
         Data to be processed
+    skip: str, list or None (default is None)
+        List of variables that should *not* be made binary
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be made binary
 
     Returns
     -------
-    data: same type as input data
-        DataFrame with the same data but validated and converted to categorical types
+    data: pd.DataFrame
+        DataFrame with the same data but validated and converted to binary types
 
     Examples
     --------
     >>> import clarite
     >>> df = clarite.modify.make_binary(df)
-    Processed 32 binary variables with 4,321 observations
+    Set 32 of 32 variables as binary, each with 4,321 observations
     """
+    # Which columns
+    columns = _validate_skip_only(list(data), skip, only)
+
     # Check the number of unique values
     unique_values = data.nunique()
-    if type(data) == pd.DataFrame:
-        num_non_binary = (unique_values != 2).sum()
-        if num_non_binary > 0:
-            raise ValueError(f"{num_non_binary} of {len(unique_values)} variables did not have 2 unique values and couldn't be processed as a binary type")
-    elif type(data) == pd.Series:
-        if unique_values != 2:
-            ValueError(f"The provided variable ('{data.name}') did not have 2 unique values and couldn't be processed as a binary type")
-
+    num_non_binary = (unique_values[columns] > 2).sum()
+    if num_non_binary > 0:
+        raise ValueError(f"{num_non_binary} of {len(columns)} variables did not have 2 unique values and couldn't be processed as a binary type")
     # TODO: possibly add further validation to make sure values are 1 and 0
-    data = data.astype('category')
-    if type(data) == pd.DataFrame:
-        print(f"Processed {len(data.columns):,} binary variables with {len(data):,} observations")
-    elif type(data) == pd.Series:
-        print(f"Processed a binary variable ('{data.name}') with {len(data):,} observations")
+
+    # Convert dtype
+    data = data.astype({c: 'category' for c in columns})
+    print(f"Set {len(columns):,} of {len(data.columns)} variables as binary, each with {len(data):,} observations")
 
     return data
 
 
-def make_categorical(data: Union[pd.DataFrame, pd.Series]):
+def make_categorical(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Validate and type a dataframe of categorical variables
 
@@ -347,30 +348,37 @@ def make_categorical(data: Union[pd.DataFrame, pd.Series]):
 
     Parameters
     ----------
-    data: pd.DataFrame or ps.Series
+    data: pd.DataFrame or pd.Series
         Data to be processed
+    skip: str, list or None (default is None)
+        List of variables that should *not* be made categorical
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be made categorical
 
     Returns
     -------
-    data: same type as input data
+    data: pd.DataFrame
         DataFrame with the same data but validated and converted to categorical types
 
     Examples
     --------
     >>> import clarite
     >>> df = clarite.modify.make_categorical(df)
-    Processed 12 categorical variables with 4,321 observations
+    Set 12 of 12 variables as categorical, each with 4,321 observations
     """
-    # TODO: add further validation
-    data = data.astype('category')
-    if type(data) == pd.DataFrame:
-        print(f"Processed {len(data.columns):,} categorical variables with {len(data):,} observations")
-    elif type(data) == pd.Series:
-        print(f"Processed a categorical variable ('{data.name}') with {len(data):,} observations")
+    # Which columns
+    columns = _validate_skip_only(list(data), skip, only)
+
+    # TODO: possibly add further validation
+
+    # Convert dtype
+    data = data.astype({c: 'category' for c in columns})
+    print(f"Set {len(columns):,} of {len(data.columns)} variables as categorical, each with {len(data):,} observations")
+
     return data
 
 
-def make_continuous(data: Union[pd.DataFrame, pd.Series]):
+def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Validate and type a dataframe of continuous variables
 
@@ -378,24 +386,31 @@ def make_continuous(data: Union[pd.DataFrame, pd.Series]):
 
     Parameters
     ----------
-    data: pd.DataFrame or ps.Series
+    data: pd.DataFrame or pd.Series
         Data to be processed
+    skip: str, list or None (default is None)
+        List of variables that should *not* be made continuous
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be made continuous
 
     Returns
     -------
-    data: same type as input data
+    data: pd.DataFrame
         DataFrame with the same data but validated and converted to numeric types
 
     Examples
     --------
     >>> import clarite
     >>> df = clarite.modify.make_continuous(df)
-    Processed 128 continuous variables with 4,321 observations
+    Set 128 of 128 variables as continuous, each with 4,321 observations
     """
-    # TODO: add further validation
-    data = data.apply(pd.to_numeric)
-    if type(data) == pd.DataFrame:
-        print(f"Processed {len(data.columns):,} continuous variables with {len(data):,} observations")
-    elif type(data) == pd.Series:
-        print(f"Processed a continuous variable ('{data.name}') with {len(data):,} observations")
+    # Which columns
+    columns = _validate_skip_only(list(data), skip, only)
+
+    # TODO: possibly add further validation
+
+    # Convert dtype
+    data = pd.DataFrame({c: data[c] if c not in columns else pd.to_numeric(data[c]) for c in list(data)})
+    print(f"Set {len(columns):,} of {len(data.columns)} variables as continuous, each with {len(data):,} observations")
+
     return data

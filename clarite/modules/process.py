@@ -17,7 +17,7 @@ Functions used to process data from one form into another, such as categorizing 
 
 """
 
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import pandas as pd
 
@@ -129,7 +129,7 @@ def merge_variables(data: pd.DataFrame, other: pd.DataFrame, how: str = 'outer')
 
 
 def move_variables(data: pd.DataFrame, other: pd.DataFrame,
-                   skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                   skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Move one or more variables from one DataFrame to another
 
@@ -139,9 +139,11 @@ def move_variables(data: pd.DataFrame, other: pd.DataFrame,
         DataFrame containing the variable(s) to be moved
     other: pd.DataFrame
         DataFrame (which uses the same index) that the variable(s) will be moved to
-    variables: List of strings
-        Names of the variables to move (all are moved by def)
-
+    skip: str, list or None (default is None)
+        List of variables that will *not* be moved
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be moved
+        
     Returns
     -------
     data: pd.DataFrame
@@ -171,6 +173,6 @@ def move_variables(data: pd.DataFrame, other: pd.DataFrame,
         print("Moved 1 variable.")
     else:
         print(f"Moved {len(columns)} variables.")
-    
+
     # Return
     return data, other

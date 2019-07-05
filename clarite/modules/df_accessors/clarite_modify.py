@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import pandas as pd
 
@@ -21,8 +21,8 @@ class ClariteModifyDFAccessor(object):
     def colfilter_percent_zero(
         self,
         filter_percent: float = 90.0,
-        skip: Optional[List[str]] = None,
-        only: Optional[List[str]] = None,
+        skip: Optional[Union[str, List[str]]] = None,
+        only: Optional[Union[str, List[str]]] = None,
     ):
         """
         Remove columns which have <proportion> or more values of zero (excluding NA)
@@ -31,9 +31,9 @@ class ClariteModifyDFAccessor(object):
         ----------
         filter_percent: float, default 90.0
             If the percentage of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
-        skip: list or None, default None
+        skip: str, list or None (default is None)
             List of variables that the filter should *not* be applied to
-        only: list or None, default None
+        only: str, list or None (default is None)
             List of variables that the filter should *only* be applied to
 
         Returns
@@ -54,8 +54,8 @@ class ClariteModifyDFAccessor(object):
     def colfilter_min_n(
         self,
         n: int = 200,
-        skip: Optional[List[str]] = None,
-        only: Optional[List[str]] = None,
+        skip: Optional[Union[str, List[str]]] = None,
+        only: Optional[Union[str, List[str]]] = None,
     ):
         """
         Remove columns which have less than <n> unique values (excluding NA)
@@ -64,9 +64,9 @@ class ClariteModifyDFAccessor(object):
         ----------
         n: int, default 200
             The minimum number of unique values required in order for a variable not to be filtered
-        skip: list or None, default None
+        skip: str, list or None (default is None)
             List of variables that the filter should *not* be applied to
-        only: list or None, default None
+        only: str, list or None (default is None)
             List of variables that the filter should *only* be applied to
 
         Returns
@@ -85,8 +85,8 @@ class ClariteModifyDFAccessor(object):
     def colfilter_min_cat_n(
         self,
         n: int = 200,
-        skip: Optional[List[str]] = None,
-        only: Optional[List[str]] = None,
+        skip: Optional[Union[str, List[str]]] = None,
+        only: Optional[Union[str, List[str]]] = None,
     ):
         """
         Remove columns which have less than <n> occurences of each unique value
@@ -95,9 +95,9 @@ class ClariteModifyDFAccessor(object):
         ----------
         n: int, default 200
             The minimum number of occurences of each unique value required in order for a variable not to be filtered
-        skip: list or None, default None
+        skip: str, list or None (default is None)
             List of variables that the filter should *not* be applied to
-        only: list or None, default None
+        only: str, list or None (default is None)
             List of variables that the filter should *only* be applied to
 
         Returns
@@ -114,16 +114,16 @@ class ClariteModifyDFAccessor(object):
         return modify.colfilter_min_cat_n(df, n=n, skip=skip, only=only)
 
     def rowfilter_incomplete_observations(
-        self, skip: Optional[List[str]] = None, only: Optional[List[str]] = None
+        self, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None
     ):
         """
         Remove rows containing null values
 
         Parameters
         ----------
-        skip: list or None, default None
+        skip: str, list or None (default is None)
             List of columns that are not checked for null values
-        only: list or None, default None
+        only: str, list or None (default is None)
             List of columns that are the only ones to be checked for null values
 
         Returns
@@ -142,8 +142,8 @@ class ClariteModifyDFAccessor(object):
     def recode_values(
         self,
         replacement_dict,
-        skip: Optional[List[str]] = None,
-        only: Optional[List[str]] = None,
+        skip: Optional[Union[str, List[str]]] = None,
+        only: Optional[Union[str, List[str]]] = None,
     ):
         """
         Convert values in a dataframe.  By default, replacement occurs in all columns but this may be modified with 'skip' or 'only'.
@@ -153,9 +153,9 @@ class ClariteModifyDFAccessor(object):
         ----------
         replacement_dict: dictionary
             A dictionary mapping the value being replaced to the value being inserted
-        skip: list or None, default None
+        skip: str, list or None (default is None)
             List of variables that the replacement should *not* be applied to
-        only: list or None, default None
+        only: str, list or None (default is None)
             List of variables that the replacement should *only* be applied to
 
         Examples
@@ -174,8 +174,8 @@ class ClariteModifyDFAccessor(object):
         self,
         method: str = "gaussian",
         cutoff=3,
-        skip: Optional[List[str]] = None,
-        only: Optional[List[str]] = None,
+        skip: Optional[Union[str, List[str]]] = None,
+        only: Optional[Union[str, List[str]]] = None,
     ):
         """
         Remove outliers from the dataframe by replacing them with np.nan
@@ -187,9 +187,9 @@ class ClariteModifyDFAccessor(object):
         cutoff: positive numeric, default of 3
             Either the number of standard deviations from the mean (method='gaussian') or the multiple of the IQR (method='iqr')
             Any values equal to or more extreme will be replaced with np.nan
-        skip: list or None, default None
+        skip: str, list or None (default is None)
             List of variables that the replacement should *not* be applied to
-        only: list or None, default None
+        only: str, list or None (default is None)
             List of variables that the replacement should *only* be applied to
 
         Examples
