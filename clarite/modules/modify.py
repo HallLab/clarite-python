@@ -211,8 +211,8 @@ def recode_values(data, replacement_dict,
 
     # Log
     diff = result.eq(data)
-    diff[pd.isnull(result) == pd.isnull(data)] = True  # NAs are not equal by default
-    diff = ~diff  # not True where a value was replaced
+    diff[pd.isnull(result) & pd.isnull(data)] = True  # NAs are not equal by default
+    diff = ~diff  # make True where a value was replaced
     cols_with_changes = (diff.sum() > 0).sum()
     cells_with_changes = diff.sum().sum()
     if cells_with_changes > 0:
