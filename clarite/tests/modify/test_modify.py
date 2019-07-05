@@ -1,6 +1,6 @@
 import pytest
 
-from clarite import modify
+from clarite import modify, process
 
 
 def test_make_binary(plantTraits, capfd):
@@ -39,7 +39,8 @@ def test_merge(plantTraits):
     df1 = plantTraits.loc[:, list(plantTraits)[:3]]
     df2 = plantTraits.loc[:, list(plantTraits)[3:6]]
     df3 = plantTraits.loc[:, list(plantTraits)[6:]]
-    df = modify.merge_variables(df1, df2).clarite_modify.merge_variables(df3)
+    df = process.merge_variables(df1, df2)
+    df = process.merge_variables(df, df3)
     assert all(df == plantTraits)
 
 

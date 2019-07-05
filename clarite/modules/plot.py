@@ -119,19 +119,19 @@ def distributions(
     Examples
     --------
     >>> import clarite
-    >>> clarite_plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test")
+    >>> clarite.plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test")
 
     .. image:: ../../_static/plot/distributions_count.png
 
-    >>> clarite_plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='box')
+    >>> clarite.plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='box')
 
     .. image:: ../../_static/plot/distributions_box.png
 
-    >>> clarite_plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='violin')
+    >>> clarite.plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='violin')
 
     .. image:: ../../_static/plot/distributions_violin.png
 
-    >>> clarite_plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='qq')
+    >>> clarite.plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='qq')
 
     .. image:: ../../_static/plot/distributions_qq.png
 
