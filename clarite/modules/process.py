@@ -107,15 +107,15 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
     return bin_df, cat_df, cont_df, other_df
 
 
-def merge_variables(data: pd.DataFrame, other: pd.DataFrame, how: str = 'outer'):
+def merge_variables(left: pd.DataFrame, right: pd.DataFrame, how: str = 'outer'):
     """
     Merge a list of dataframes with different variables side-by-side.  Keep all observations ('outer' merge) by default.
 
     Parameters
     ----------
-    data: pd.Dataframe
+    left: pd.Dataframe
         "left" DataFrame
-    other: pd.DataFrame
+    right: pd.DataFrame
         "right" DataFrame which uses the same index
     how: merge method, one of {'left', 'right', 'inner', 'outer'}
         Keep only rows present in the left data, the right data, both datasets, or either dataset.
@@ -125,19 +125,19 @@ def merge_variables(data: pd.DataFrame, other: pd.DataFrame, how: str = 'outer')
     >>> import clarite
     >>> df = clarite.modify.merge_variables(df_bin, df_cat, how='outer')
     """
-    return data.merge(other, left_index=True, right_index=True, how=how)
+    return left.merge(right, left_index=True, right_index=True, how=how)
 
 
-def move_variables(data: pd.DataFrame, other: pd.DataFrame,
+def move_variables(left: pd.DataFrame, right: pd.DataFrame,
                    skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Move one or more variables from one DataFrame to another
 
     Parameters
     ----------
-    data: pd.Dataframe
+    left: pd.Dataframe
         DataFrame containing the variable(s) to be moved
-    other: pd.DataFrame
+    right: pd.DataFrame
         DataFrame (which uses the same index) that the variable(s) will be moved to
     skip: str, list or None (default is None)
         List of variables that will *not* be moved
@@ -146,9 +146,9 @@ def move_variables(data: pd.DataFrame, other: pd.DataFrame,
 
     Returns
     -------
-    data: pd.DataFrame
+    left: pd.DataFrame
         The first DataFrame with the variables removed
-    other: pd.DataFrame
+    right: pd.DataFrame
         The second DataFrame with the variables added
 
     Examples
@@ -160,13 +160,13 @@ def move_variables(data: pd.DataFrame, other: pd.DataFrame,
     Moved 39 variables.
     """
     # Which columns
-    columns = _validate_skip_only(list(data), skip, only)
+    columns = _validate_skip_only(list(left), skip, only)
 
     # Add to new df
-    other = merge_variables(other, data[columns])
+    right = merge_variables(right, left[columns])
 
     # Remove from original
-    data = data.drop(columns, axis='columns')
+    left = left.drop(columns, axis='columns')
 
     # Log
     if len(columns) == 1:
@@ -175,4 +175,4 @@ def move_variables(data: pd.DataFrame, other: pd.DataFrame,
         print(f"Moved {len(columns)} variables.")
 
     # Return
-    return data, other
+    return left, right

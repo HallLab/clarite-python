@@ -1,7 +1,7 @@
 from pathlib import Path
 import click
 from ...modules import process, io
-from ..parameters import input_file, output_file
+from ..parameters import input_file, output_file, skip, only
 
 
 @click.group(name='process')
@@ -33,16 +33,16 @@ def categorize(data, output, cat_min, cat_max, cont_min):
 
 
 @process_cli.command()
-@click.argument('data', type=input_file)
-@click.argument('other', type=input_file)
+@click.argument('left', type=input_file)
+@click.argument('right', type=input_file)
 @click.argument('output', type=output_file)
-@click.Option('--how', '-h', default='outer', type=click.Choice(['left', 'right', 'inner', 'outer']), help="Type of Merge")
-def merge_variables(data, other, output, how):
+@click.option('--how', '-h', default='outer', type=click.Choice(['left', 'right', 'inner', 'outer']), help="Type of Merge")
+def merge_variables(left, right, output, how):
     # Load data
-    data = io.load_data(data)
-    other = io.load_data(other)
+    left = io.load_data(left)
+    right = io.load_data(right)
     # Merge
-    result = process.merge_variables(data, other, how)
+    result = process.merge_variables(left, right, how)
     # Save
     result.to_csv(output, sep="\t")
     # Log
@@ -50,5 +50,18 @@ def merge_variables(data, other, output, how):
 
 
 @process_cli.command()
-def move_variables():
-    pass
+@click.argument('left', type=input_file)
+@click.argument('right', type=input_file)
+@click.argument('output_left', type=output_file)
+@click.argument('output_right', type=output_file)
+@skip
+@only
+def move_variables(left, right, output_left, output_right, skip, only):
+    # Load data
+    left = io.load_data(left)
+    right = io.load_data(right)
+    # Move
+    left, right = process.move_variables(left, right, skip=skip, only=only)
+    # Save
+    left.to_csv(output_left, sep="\t")
+    right.to_csv(output_right, sep="\t")
