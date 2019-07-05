@@ -143,7 +143,7 @@ def move_variables(data: pd.DataFrame, other: pd.DataFrame,
         List of variables that will *not* be moved
     only: str, list or None (default is None)
         List of variables that are the *only* ones to be moved
-        
+
     Returns
     -------
     data: pd.DataFrame

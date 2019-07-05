@@ -9,7 +9,7 @@ def io_cli():
 
 @io_cli.command()
 def load_data():
-    """Load Data"""
+    """Load Data from some format and save it in the standard format for further processing"""
     print("Loaded Data")
     pass
 

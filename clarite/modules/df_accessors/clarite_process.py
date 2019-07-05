@@ -85,8 +85,10 @@ class ClariteProcessDFAccessor(object):
         ----------
         other: pd.DataFrame
             DataFrame (which uses the same index) that the variable(s) will be moved to
-        variables: List of strings
-            Names of the variables to move (all are moved by def)
+        skip: str, list or None (default is None)
+            List of variables that will *not* be moved
+        only: str, list or None (default is None)
+            List of variables that are the *only* ones to be moved
 
         Returns
         -------

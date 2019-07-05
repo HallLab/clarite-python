@@ -33,8 +33,20 @@ def categorize(data, output, cat_min, cat_max, cont_min):
 
 
 @process_cli.command()
-def merge_variables():
-    pass
+@click.argument('data', type=input_file)
+@click.argument('other', type=input_file)
+@click.argument('output', type=output_file)
+@click.Option('--how', '-h', default='outer', type=click.Choice(['left', 'right', 'inner', 'outer']), help="Type of Merge")
+def merge_variables(data, other, output, how):
+    # Load data
+    data = io.load_data(data)
+    other = io.load_data(other)
+    # Merge
+    result = process.merge_variables(data, other, how)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved {len(result.columns):,} with {len(result):,} variables to {output}", fg='green'))
 
 
 @process_cli.command()
