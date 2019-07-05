@@ -58,7 +58,7 @@ def test_colfilter_min_cat_n(plantTraits):
     return
 
 
-def test_rowfilter_incomplete_observations(plantTraits):
+def test_rowfilter_incomplete_obs(plantTraits):
     # TODO
     return
 

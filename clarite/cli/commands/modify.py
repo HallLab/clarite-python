@@ -36,7 +36,7 @@ def colfilter_min_cat_n():
 
 
 @modify_cli.command()
-def rowfilter_incomplete_observations():
+def rowfilter_incomplete_obs():
     pass
 
 

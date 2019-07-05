@@ -5,8 +5,6 @@ Survey
 
 Complex survey design
 
-  **DataFrame Accessor**: ``None``
-
   **CLI Command**: ``None``
 
   .. autosummary::

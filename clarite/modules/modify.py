@@ -4,8 +4,6 @@ Modify
 
 Functions used to filter and/or change some data, always taking in one set of data and returning one set of data.
 
-  **DataFrame Accessor**: ``clarite_modify``
-
   **CLI Command**: ``modify``
 
   .. autosummary::
@@ -14,7 +12,7 @@ Functions used to filter and/or change some data, always taking in one set of da
      colfilter_percent_zero
      colfilter_min_n
      colfilter_min_cat_n
-     rowfilter_incomplete_observations
+     rowfilter_incomplete_obs
      recode_values
      remove_outliers
      make_binary
@@ -145,7 +143,7 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]
     return data.loc[:, kept]
 
 
-def rowfilter_incomplete_observations(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def rowfilter_incomplete_obs(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove rows containing null values
 
@@ -166,7 +164,7 @@ def rowfilter_incomplete_observations(data, skip: Optional[Union[str, List[str]]
     Examples
     --------
     >>> import clarite
-    >>> nhanes = clarite.modify.rowfilter_incomplete_observations(only=[phenotype] + covariates)
+    >>> nhanes = clarite.modify.rowfilter_incomplete_obs(only=[phenotype] + covariates)
     Removed 3,687 of 22,624 rows (16.30%) due to NA values in the specified columns
     """
     columns = _validate_skip_only(list(data), skip, only)

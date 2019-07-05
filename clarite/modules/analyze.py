@@ -4,8 +4,6 @@ Analyze
 
 EWAS and associated calculations
 
-  **DataFrame Accessor**: ``None``
-
   **CLI Command**: ``analyze``
 
   .. autosummary::

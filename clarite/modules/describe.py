@@ -4,8 +4,6 @@ Describe
 
 Functions that are used to gather information about some data
 
-  **DataFrame Accessor**: ``clarite_describe``
-
   **CLI Command**: ``describe``
 
   .. autosummary::

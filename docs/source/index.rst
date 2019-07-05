@@ -22,14 +22,6 @@ method, this part of the documentation is for you.
 
    api
 
-DataFrame Accessors
--------------------
-
-.. toctree::
-   :maxdepth: 2
-   
-   df_accessors
-
 Additional Notes
 ----------------
 

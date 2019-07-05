@@ -4,8 +4,6 @@ Plot
 
 Functions that generate plots
 
-  **DataFrame Accessor**: ``clarite_plot``
-
   **CLI Command**: ``plot``
 
   .. autosummary::

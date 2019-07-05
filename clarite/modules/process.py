@@ -4,8 +4,6 @@ Process
 
 Functions used to process data from one form into another, such as categorizing variables and placing them in separate DataFrames
 
-  **DataFrame Accessor**: ``clarite_process``
-
   **CLI Command**: ``process``
 
   .. autosummary::
