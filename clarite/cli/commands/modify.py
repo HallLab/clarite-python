@@ -8,10 +8,11 @@ def modify_cli():
     pass
 
 
-@modify_cli.command()
+@modify_cli.command(help="Filter variables based on the fraction of observations with a value of zero")
 @click.argument('data', type=input_file)
 @click.argument('output', type=output_file)
-@click.option('-p', '--filter-percent', default='90.0', type=click.FloatRange(min=0, max=100))
+@click.option('-p', '--filter-percent', default='90.0', type=click.FloatRange(min=0, max=100),
+              help="Remove variables when the percentage of observations equal to 0 is >= this value (0 to 100)")
 @skip
 @only
 def colfilter_percent_zero(data, output, filter_percent, skip, only):
@@ -25,24 +26,97 @@ def colfilter_percent_zero(data, output, filter_percent, skip, only):
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
 
-@modify_cli.command()
-def colfilter_min_n():
-    pass
+@modify_cli.command(help="Filter variables based on a minimum number of non-NA observations")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@click.option('-n', default=200, type=click.IntRange(min=0),
+              help="Remove variables with less than this many non-na observations")
+@skip
+@only
+def colfilter_min_n(data, output, n, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Modify
+    result = modify.colfilter_min_n(data=data, n=n, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
 
-@modify_cli.command()
-def colfilter_min_cat_n():
-    pass
+@modify_cli.command(help="Filter variables based on a minimum number of non-NA observations per category")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@click.option('-n', default=200, type=click.IntRange(min=0),
+              help="Remove variables with less than this many non-na observations in each category")
+@skip
+@only
+def colfilter_min_cat_n(data, output, n, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Modify
+    result = modify.colfilter_min_cat_n(data=data, n=n, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
 
-@modify_cli.command()
-def rowfilter_incomplete_obs():
-    pass
+@modify_cli.command(help="Filter out observations that are not complete cases (contain no NA values)")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@skip
+@only
+def rowfilter_incomplete_obs(data, output, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Modify
+    result = modify.rowfilter_incomplete_obs(data=data, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
 
-@modify_cli.command()
-def recode_values():
-    pass
+@modify_cli.command(help="Replace values in the data with other values."
+                         "The value being replaced ('current') and the new value ('replacement') "
+                         "are specified with their type, and only one may be included for each. "
+                         "If it is not specified, the value being replaced or being inserted is None.")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@click.option('--current-str', 'cs', type=click.STRING, default=None, help="Replace occurences of this string value")
+@click.option('--current-int', 'ci', type=click.INT, default=None, help="Replace occurences of this integer value")
+@click.option('--current-float', 'cf', type=click.FLOAT, default=None, help="Replace occurences of this float value")
+@click.option('--replacement-str', 'rs', type=click.STRING, default=None, help="Insert this string value")
+@click.option('--replacement-int', 'ri', type=click.INT, default=None, help="Insert this integer value")
+@click.option('--replacement-float', 'rf', type=click.FLOAT, default=None, help="Insert this float value")
+@skip
+@only
+def recode_values(data, output, cs, ci, cf, rs, ri, rf, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Decode current
+    c = [v for v in (cs, ci, cf) if v is not None]
+    if len(c) == 0:
+        current = None
+    elif len(c) == 1:
+        current = c[0]
+    else:
+        raise ValueError("The 'current' value was specified for multiple types.  It should be specified with at most one type.")
+    # Decode replacement
+    r = [v for v in (rs, ri, rf) if v is not None]
+    if len(r) == 0:
+        replacement = None
+    elif len(r) == 1:
+        replacement = r[0]
+    else:
+        raise ValueError("The 'replacement' value was specified for multiple types.  It should be specified with at most one type.")
+    # Modify
+    result = modify.recode_values(data=data, replacement_dict={current: replacement}, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved recoded data to {output}", fg='green'))
 
 
 @modify_cli.command()
@@ -50,16 +124,49 @@ def remove_outliers():
     pass
 
 
-@modify_cli.command()
-def make_binary():
-    pass
+@modify_cli.command(help="Set the type of variables to 'binary'")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@skip
+@only
+def make_binary(data, output, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Modify
+    result = modify.make_binary(data=data, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
 
-@modify_cli.command()
-def make_categorical():
-    pass
+@modify_cli.command(help="Set the type of variables to 'categorical'")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@skip
+@only
+def make_categorical(data, output, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Modify
+    result = modify.make_categorical(data=data, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
 
-@modify_cli.command()
-def make_continuous():
-    pass
+@modify_cli.command(help="Set the type of variables to 'continuous'")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@skip
+@only
+def make_continuous(data, output, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Modify
+    result = modify.make_continuous(data=data, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))

@@ -8,7 +8,7 @@ def describe_cli():
     pass
 
 
-@describe_cli.command()
+@describe_cli.command(help="Report top correlations between variables")
 @click.argument('data', type=input_file)
 @click.argument('output', type=output_file)
 @click.option('-t', '--threshold', default=0.75, help="Report correlations with R >= this value")
@@ -23,7 +23,7 @@ def correlations(data, output, threshold):
     click.echo(click.style(f"Done: Saved {len(results):,} correlations to {output}", fg='green'))
 
 
-@describe_cli.command()
+@describe_cli.command(help="Report the number of occurences of each value for each variable")
 @click.argument('data', type=input_file)
 @click.argument('output', type=output_file)
 def freq_table(data, output):
@@ -44,7 +44,7 @@ def freq_table(data, output):
     click.echo(click.style(f"Done: Saved {num_values:,} unique value counts for {num_variables:,} non-continuous variables to {output}", fg='green'))
 
 
-@describe_cli.command()
+@describe_cli.command(help="Report the percent of observations that are NA for each variable")
 @click.argument('data', type=input_file)
 @click.argument('output', type=output_file)
 def percent_na(data, output):

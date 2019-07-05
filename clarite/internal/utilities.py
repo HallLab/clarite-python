@@ -13,7 +13,7 @@ def _validate_skip_only(columns, skip: Optional[Union[str, List[str]]] = None, o
         only = [only]
 
     if skip is not None and only is not None:
-        raise ValueError("It isn't possible to specify 'skip' and 'only' at the same time.")
+        raise ValueError(f"It isn't possible to specify 'skip' ({skip}) and 'only' ({only}) at the same time.")
     elif skip is not None and only is None:
         invalid_cols = set(skip) - set(columns)
         if len(invalid_cols) > 0:

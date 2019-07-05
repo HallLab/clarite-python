@@ -9,7 +9,7 @@ def process_cli():
     pass
 
 
-@process_cli.command()
+@process_cli.command(help="Categorize data based on the number of unique values")
 @click.argument('data', type=input_file)
 @click.option('--output', '-o', type=output_file, default=None, help="Output will have '_bin.txt', '_cat.txt', '_cont.txt', and '_check.txt' suffixes added")
 @click.option('--cat_min', default=3, help="Minimum number of unique values in a variable to make it a categorical type")
@@ -32,7 +32,7 @@ def categorize(data, output, cat_min, cat_max, cont_min):
         click.echo(click.style(f"Saved {name} results to {output_name}", fg='green'))
 
 
-@process_cli.command()
+@process_cli.command(help="Merge variables from two different datasets into one")
 @click.argument('left', type=input_file)
 @click.argument('right', type=input_file)
 @click.argument('output', type=output_file)
@@ -49,7 +49,7 @@ def merge_variables(left, right, output, how):
     click.echo(click.style(f"Done: Saved {len(result.columns):,} with {len(result):,} variables to {output}", fg='green'))
 
 
-@process_cli.command()
+@process_cli.command(help="Move variables from one dataset to another")
 @click.argument('left', type=input_file)
 @click.argument('right', type=input_file)
 @click.argument('output_left', type=output_file)
