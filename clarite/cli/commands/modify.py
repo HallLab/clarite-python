@@ -50,13 +50,3 @@ def make_categorical():
 @modify_cli.command()
 def make_continuous():
     pass
-
-
-@modify_cli.command()
-def merge_variables():
-    pass
-
-
-@modify_cli.command()
-def move_variables():
-    pass

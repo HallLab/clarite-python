@@ -1,3 +1,5 @@
+from typing import List, Optional
+
 import pandas as pd
 
 from .. import process
@@ -54,3 +56,52 @@ class ClariteProcessDFAccessor(object):
         return process.categorize(
             df, cat_min=cat_min, cat_max=cat_max, cont_min=cont_min
         )
+
+    def merge_variables(self, other: pd.DataFrame, how: str = 'outer'):
+        """
+        Merge a list of dataframes with different variables side-by-side.  Keep all observations ('outer' merge) by default.
+
+        Parameters
+        ----------
+        other: pd.DataFrame
+            "right" DataFrame which uses the same index
+        how: merge method, one of {'left', 'right', 'inner', 'outer'}
+            Keep only rows present in the original data, the merging data, both datasets, or either dataset.
+
+        Examples
+        --------
+        >>> import clarite
+        >>> df = df_bin.clarite_process.merge_variables(df_cat)
+        """
+        df = self._obj
+        return process.merge_variables(df, other, how=how)
+
+    def move_variables(self, other: pd.DataFrame,
+                       skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """
+        Move one or more variables from this DataFrame to another
+
+        Parameters
+        ----------
+        other: pd.DataFrame
+            DataFrame (which uses the same index) that the variable(s) will be moved to
+        variables: List of strings
+            Names of the variables to move (all are moved by def)
+
+        Returns
+        -------
+        data: pd.DataFrame
+            The first DataFrame with the variables removed
+        other: pd.DataFrame
+            The second DataFrame with the variables added
+
+        Examples
+        --------
+        >>> import clarite
+        >>> df_cat, df_cont = df_cat.clarite_process.move_variables(df_cont, only=["DRD350AQ", "DRD350DQ", "DRD350GQ"])
+        Moved 3 variables.
+        >>> discovery_check, discovery_cont = discovery_check.clarite_process.move_variables(discovery_cont)
+        Moved 39 variables.
+        """
+        data = self._obj
+        return process.move_variables(data, other=other, skip=skip, only=only)

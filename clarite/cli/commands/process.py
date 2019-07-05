@@ -30,3 +30,13 @@ def categorize(data, output, cat_min, cat_max, cont_min):
         output_name = str(output.with_suffix('')) + f"_{name}"
         io.save(df, filename=output_name)
         click.echo(click.style(f"Saved {name} results to {output_name}", fg='green'))
+
+
+@process_cli.command()
+def merge_variables():
+    pass
+
+
+@process_cli.command()
+def move_variables():
+    pass
