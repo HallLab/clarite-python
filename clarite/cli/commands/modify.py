@@ -119,9 +119,22 @@ def recode_values(data, output, cs, ci, cf, rs, ri, rf, skip, only):
     click.echo(click.style(f"Done: Saved recoded data to {output}", fg='green'))
 
 
-@modify_cli.command()
-def remove_outliers():
-    pass
+@modify_cli.command(help="Replace outlier values with NaN.  Outliers are defined using a gaussian or IQR approach.")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@click.option('--method', '-m', type=click.Choice(['gaussian', 'iqr']), default='gaussian')
+@click.option('--cutoff', '-c', type=click.FLOAT, default=3.0)
+@skip
+@only
+def remove_outliers(data, output, method, cutoff, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Modify
+    result = modify.remove_outliers(data=data, method=method, cutoff=cutoff, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Removed outliers and saved data to {output}", fg='green'))
 
 
 @modify_cli.command(help="Set the type of variables to 'binary'")
