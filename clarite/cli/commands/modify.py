@@ -11,7 +11,7 @@ def modify_cli():
 @modify_cli.command()
 @click.argument('data', type=input_file)
 @click.argument('output', type=output_file)
-@click.option()
+@click.option('-p', '--filter-percent', default='90.0', type=click.FloatRange(min=0, max=100))
 @skip
 @only
 def colfilter_percent_zero(data, output, filter_percent, skip, only):
