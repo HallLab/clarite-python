@@ -17,5 +17,5 @@ def test_save_with_cat(plantTraits, capfd):
 
     io.save(df, 'test_output/saved.txt')
     loaded = io.load_data('test_output/saved.txt')
-    pd.testing.assert_frame_equal(loaded, plantTraits)
+    pd.testing.assert_frame_equal(loaded, df)
     return
