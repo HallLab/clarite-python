@@ -60,8 +60,12 @@ def move_variables(left, right, output_left, output_right, skip, only):
     # Load data
     left = io.load_data(left)
     right = io.load_data(right)
+    before = len(list(left))
     # Move
     left, right = process.move_variables(left, right, skip=skip, only=only)
+    after = len(list(left))
     # Save
     left.to_csv(output_left, sep="\t")
     right.to_csv(output_right, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Moved {before-after:,} variables and saved results to {output_left} and {output_right}", fg='green'))

@@ -1,5 +1,6 @@
 import click
-from ...modules import modify
+from ...modules import modify, io
+from ..parameters import input_file, output_file, skip, only
 
 
 @click.group(name='modify')
@@ -8,8 +9,20 @@ def modify_cli():
 
 
 @modify_cli.command()
-def colfilter_percent_zero():
-    pass
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@click.option()
+@skip
+@only
+def colfilter_percent_zero(data, output, filter_percent, skip, only):
+    # Load data
+    data = io.load_data(data)
+    # Modify
+    result = modify.colfilter_percent_zero(data=data, filter_percent=filter_percent, skip=skip, only=only)
+    # Save
+    result.to_csv(output, sep="\t")
+    # Log
+    click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
 
 @modify_cli.command()
