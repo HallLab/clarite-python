@@ -28,8 +28,11 @@ def categorize(data, output, cat_min, cat_max, cont_min):
     # Save Data
     for name, df in zip(['binary', 'categorical', 'continuous', 'check'], [df_bin, df_cat, df_cont, df_check]):
         output_name = str(output.with_suffix('')) + f"_{name}"
-        io.save(df, filename=output_name)
-        click.echo(click.style(f"Saved {name} results to {output_name}", fg='green'))
+        if len(df.columns) > 0:
+            io.save(df, filename=output_name)
+            click.echo(click.style(f"Saved {name} results to {output_name}", fg='green'))
+        else:
+            click.echo(click.style(f"No {name} variables available to save to {output_name}", fg='yellow'))
 
 
 @process_cli.command(help="Merge variables from two different datasets into one")

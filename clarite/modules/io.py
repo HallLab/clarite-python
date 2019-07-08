@@ -177,5 +177,6 @@ def save(data: pd.DataFrame, filename: str):
         filename += ".txt"
     filename_dtypes = filename + ".dtypes"
 
-    data.to_csv(filename, sep="\t", header=True)
-    save_dtypes(data, filename_dtypes)
+    if len(data.columns) > 0:
+        data.to_csv(filename, sep="\t", header=True)
+        save_dtypes(data, filename_dtypes)
