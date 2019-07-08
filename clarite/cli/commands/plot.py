@@ -5,6 +5,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from ...modules import plot, io
+from ...modules.analyze import result_columns, corrected_pvalue_columns
 from ..parameters import input_file, output_file
 
 
@@ -60,6 +61,9 @@ def manhattan(data, output, categories, other, nlabeled, label):
     data = {Path(data).name: pd.read_csv(data, sep="\t", index_col=['variable', 'phenotype'])}
     for o in other:
         data[Path(o).name] = pd.read_csv(o, sep="\t", index_col=['variable', 'phenotype'])
+    for d_name, d in data.items():
+        if list(d) != result_columns + corrected_pvalue_columns:
+            raise ValueError(f"{d_name} was not a valid EWAS result file.")
     # Load categories, if any
     if categories is not None:
         categories = pd.read_csv(categories, sep="\t")
