@@ -37,8 +37,3 @@ def load_data(data, output, index, tab, comma):
     data.to_csv(output, sep="\t")
     # Log
     click.echo(click.style(f"Done: Saved {len(data.columns):,} variables with {len(data):,} observations to {output}", fg='green'))
-
-
-@io_cli.command()
-def save_dtypes():
-    pass

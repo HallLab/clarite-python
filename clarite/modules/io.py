@@ -68,7 +68,7 @@ def load_data(filename: str, index_col: Optional[Union[str, int]] = None, sep: s
     else:
         dtypes_filename = dtypes
     dtypes_file = Path(dtypes_filename)
-    
+
     # Depending on the input parameter, handle dtypes
     if dtypes is False:
         # Don't load the file no matter what

@@ -76,7 +76,7 @@ def histogram(
 
     _, ax = plt.subplots(figsize=figsize)
     ax.set_title(title)
-    sns.distplot(data[column], ax=ax, **kwargs)
+    sns.distplot(data.loc[~data[column].isna(), column], ax=ax, **kwargs)
 
 
 def distributions(
