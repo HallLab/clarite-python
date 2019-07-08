@@ -24,7 +24,7 @@ import pandas as pd
 from ..internal.utilities import get_dtypes, set_dtypes
 
 
-def load_data(filename: str, index_col: Optional[Union[str, int]] = None, sep: str = '\t',
+def load_data(filename: str, index_col: Optional[Union[str, int]] = 0, sep: str = '\t',
               dtypes: Optional[Union[str, bool]] = None, **kwargs):
     """Load data from a file
 
@@ -61,6 +61,9 @@ def load_data(filename: str, index_col: Optional[Union[str, int]] = None, sep: s
     # Load data
     data = pd.read_csv(filename, index_col=index_col, sep=sep, **kwargs)
     print(f"Loaded {len(data):,} observations of {len(data.columns):,} variables")
+
+    # Rename index to ID
+    data.index.name = "ID"
 
     # Get default dtypes filename if one wasn't provided
     if dtypes is None or dtypes is True or dtypes is False:
