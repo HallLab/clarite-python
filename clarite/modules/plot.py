@@ -239,7 +239,7 @@ def manhattan(
     categories: Dict[str, str] = dict(),
     num_labeled: int = 3,
     label_vars: List[str] = list(),
-    figsize: Tuple[int, int] = (10, 4),
+    figsize: Tuple[int, int] = (12, 6),
     dpi: int = 300,
     title: Optional[str] = None,
     colors: List[str] = ["#53868B", "#4D4D4D"],
@@ -259,7 +259,7 @@ def manhattan(
         Label the top <num_labeled> results with the variable name
     label_vars: list of strings, default empty list
         Label the named variables
-    figsize: tuple(int, int), default (10, 4)
+    figsize: tuple(int, int), default (12, 6)
         The figure size of the resulting plot in inches
     dpi: int, default 300
         The figure dots-per-inch
@@ -290,7 +290,7 @@ def manhattan(
         if list(df) != result_columns + corrected_pvalue_columns:
             raise ValueError(
                 f"This plot may only be created for EWAS results with corrected p-values added. "
-                f"DataFrame {df_idx} of {len(dfs)} did not have the expected columns."
+                f"DataFrame {df_idx + 1} of {len(dfs)} did not have the expected columns."
             )
 
     # Create a dataframe of pvalues indexed by variable name

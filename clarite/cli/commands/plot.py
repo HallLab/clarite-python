@@ -1,5 +1,9 @@
+from pathlib import Path
+
 import click
+import pandas as pd
 from matplotlib import pyplot as plt
+
 from ...modules import plot, io
 from ..parameters import input_file, output_file
 
@@ -21,6 +25,8 @@ def histogram(data, variable, output):
     # Save and Close
     plt.savefig(output)
     plt.close()
+    # Log
+    click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
 
 
 @plot_cli.command(help="Generate a pdf containing distribution plots for each variable")
@@ -36,10 +42,31 @@ def histogram(data, variable, output):
 def distributions(data, output, kind, nrows, ncols, quality, sort):
     # Load data
     data = io.load_data(data)
-    # Plot
+    # Plot and save
     plot.distributions(data=data, filename=output, continuous_kind=kind, nrows=nrows, ncols=ncols, quality=quality, sort=sort)
+    # Log
+    click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
 
 
-@plot_cli.command()
-def manhattan():
-    pass
+@plot_cli.command(help="Generate a manhattan plot of EWAS results")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@click.option('--categories', '-c', type=input_file, default=None, help="tab-separate file with two columns: 'Variable' and 'category'")
+@click.option('--other', '-o', multiple=True, help="other datasets to include in the plot")
+@click.option('--nlabeled', default=3, type=click.IntRange(min=0, max=50), help="label top n points")
+@click.option('--label', default=None, multiple=True, type=click.STRING, help="label points by name")
+def manhattan(data, output, categories, other, nlabeled, label):
+    # Load data
+    data = {Path(data).name: pd.read_csv(data, sep="\t", index_col=['variable', 'phenotype'])}
+    for o in other:
+        data[Path(o).name] = pd.read_csv(o, sep="\t", index_col=['variable', 'phenotype'])
+    # Load categories, if any
+    if categories is not None:
+        categories = pd.read_csv(categories, sep="\t")
+        categories.columns = ['Variable', 'category']
+        categories.set_index('Variable')['category'].to_dict()
+        print(categories)
+    # Plot and save
+    plot.manhattan(data, categories=categories, num_labeled=nlabeled, label_vars=label, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
