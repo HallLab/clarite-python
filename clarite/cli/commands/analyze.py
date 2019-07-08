@@ -39,7 +39,6 @@ def ewas(phenotype, bin_data, cat_data, cont_data, covariate, covariance_calc, m
     cont_data = io.load_data(cont_data)
     # Make covariates into a list
     covariates = list(covariate)
-    print(covariates)
     # Load optional survey data
     if survey_data is not None:
         survey_data = pd.read_csv(survey_data, sep="\t")
