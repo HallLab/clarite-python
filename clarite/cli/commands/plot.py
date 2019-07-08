@@ -64,8 +64,7 @@ def manhattan(data, output, categories, other, nlabeled, label):
     if categories is not None:
         categories = pd.read_csv(categories, sep="\t")
         categories.columns = ['Variable', 'category']
-        categories.set_index('Variable')['category'].to_dict()
-        print(categories)
+        categories = categories.set_index('Variable')['category'].to_dict()
     # Plot and save
     plot.manhattan(data, categories=categories, num_labeled=nlabeled, label_vars=label, filename=output)
     # Log
