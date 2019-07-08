@@ -24,8 +24,8 @@ import pandas as pd
 from ..internal.utilities import get_dtypes, set_dtypes
 
 
-def load_data(filename: str, index_col: Union[str, int] = 0, sep: str = '\t',
-              dtypes_filename: Optional[str] = None, **kwargs):
+def load_data(filename: str, index_col: Optional[Union[str, int]] = None, sep: str = '\t',
+              dtypes: Optional[Union[str, bool]] = None, **kwargs):
     """Load data from a file
 
     Wraps the Pandas 'read_csv' function but requires an index_col,
@@ -39,8 +39,10 @@ def load_data(filename: str, index_col: Union[str, int] = 0, sep: str = '\t',
         Column to use as the row labels of the DataFrame.
     sep: str (default is "\t" for tab-separated)
         column separator (delimiter)
-    dtypes_filename: optional string
-        Name of the dtypes file for this data.  If not provided, check for filename + ".dtypes".  If that isn't found, don't change types from the default.
+    dtypes_filename: optional string or boolean
+        Name of the dtypes file for this data.
+         If not provided, check for the default dtypes file (filename + ".dtypes") and use it if available.
+         If a boolean, require that the default dtypes file is available (True) or don't use it (False).
     **kwargs:
         Other keword arguments to pass to pd.read_csv
 
@@ -60,16 +62,31 @@ def load_data(filename: str, index_col: Union[str, int] = 0, sep: str = '\t',
     data = pd.read_csv(filename, index_col=index_col, sep=sep, **kwargs)
     print(f"Loaded {len(data):,} observations of {len(data.columns):,} variables")
 
-    # Load dtypes
-    if dtypes_filename is None:
+    # Get default dtypes filename if one wasn't provided
+    if dtypes is None or dtypes is True or dtypes is False:
         dtypes_filename = str(filename) + ".dtypes"
-    dtypes_filename = Path(dtypes_filename)
-    if dtypes_filename.exists():
-        # Try to load and set dtypes
-        dtypes = load_dtypes(dtypes_filename)
-        set_dtypes(data, dtypes)
     else:
-        print("A dtypes file was not found, keeping default datatypes")
+        dtypes_filename = dtypes
+    dtypes_file = Path(dtypes_filename)
+    
+    # Depending on the input parameter, handle dtypes
+    if dtypes is False:
+        # Don't load the file no matter what
+        print("Ignoring any existing dtypes file, using default datatypes instead")
+    elif dtypes is None:
+        # Try to load the default filename, but do nothing if not found
+        if dtypes_file.exists():
+            dtypes = load_dtypes(dtypes_filename)
+            set_dtypes(data, dtypes)
+        else:
+            print("A dtypes file was not found, using default datatypes instead")
+    elif dtypes is True or type(dtypes) == str:
+        # Throw an error if the file isn't found (True, or a specific file)
+        if dtypes_file.exists():
+            dtypes = load_dtypes(dtypes_filename)
+            set_dtypes(data, dtypes)
+        else:
+            raise ValueError(f"Couldn't load dtypes file: {dtypes_filename}")
 
     return data
 
