@@ -1,11 +1,30 @@
 import click
 from ...modules import modify, io
+from ...internal.utilities import _validate_skip_only
 from ..parameters import input_file, output_file, skip, only
 
 
 @click.group(name='modify')
 def modify_cli():
     pass
+
+
+@modify_cli.command(help="Remove some columns from a dataset")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@skip
+@only
+def colfilter(data, output, skip, only):
+    """Load Data, remove some columns, and save the data"""
+    # Load Data
+    data = io.load_data(filename=data)
+    # Process skip/only parameters
+    columns = _validate_skip_only(list(data), skip, only)
+    data = data[columns]
+    # Save
+    io.save(data, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved {len(data.columns):,} variables with {len(data):,} observations to {output}", fg='green'))
 
 
 @modify_cli.command(help="Filter variables based on the fraction of observations with a value of zero")
