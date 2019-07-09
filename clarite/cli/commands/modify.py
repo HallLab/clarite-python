@@ -81,6 +81,45 @@ def colfilter_min_cat_n(data, output, n, skip, only):
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
 
+@modify_cli.command(help="Select some rows from a dataset using a simple comparison, keeping rows where the comparison is True.")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@click.argument('column', type=click.STRING)
+@click.option('--value-str', 'vs', type=click.STRING, default=None, help="Compare values in the column to this string")
+@click.option('--value-int', 'vi', type=click.INT, default=None, help="Compare values in the column to this integer")
+@click.option('--value-float', 'vf', type=click.FLOAT, default=None, help="Compare values in the column to this floating point number")
+@click.option('--comparison', '-c', default='eq', type=click.Choice(['lt', 'lte', 'eq', 'gte', 'gt']),
+              help="Keep rows where the value of the column is lt (<), lte (<=), eq (==), gte (>=), or gt (>) the specified value.  Eq by default.")
+def rowfilter(data, output, column, vs, vi, vf, comparison):
+    """Load Data, keep certain rows, and save the data"""
+    # Load Data
+    data = io.load_data(filename=data)
+    # Ensure column is present
+    if column not in data.columns:
+        raise ValueError(f"The specified column {column} was not found in the data.")
+    # Decode value
+    values = [v for v in (vs, vi, vf) if v is not None]
+    if len(values) != 1:
+        raise ValueError("The comparison value ('--value-str', '--value-int', or '--value-float') must be specified just once.")
+    else:
+        value = values[0]
+    # Filter
+    if comparison == 'lt':
+        result = data.loc[data[column] < value, ]
+    elif comparison == 'lte':
+        result = data.loc[data[column] <= value, ]
+    elif comparison == 'eq':
+        result = data.loc[data[column] == value, ]
+    elif comparison == 'gt':
+        result = data.loc[data[column] >= value, ]
+    elif comparison == 'gte':
+        result = data.loc[data[column] > value, ]
+    # Save
+    io.save(result, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved {len(result.columns):,} variables with {len(result):,} observations to {output}", fg='green'))
+
+
 @modify_cli.command(help="Filter out observations that are not complete cases (contain no NA values)")
 @click.argument('data', type=input_file)
 @click.argument('output', type=output_file)

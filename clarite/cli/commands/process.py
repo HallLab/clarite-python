@@ -1,5 +1,6 @@
 from pathlib import Path
 import click
+import pandas as pd
 from ...modules import process, io
 from ..parameters import input_file, output_file, skip, only
 
@@ -46,6 +47,31 @@ def merge_variables(left, right, output, how):
     right = io.load_data(right)
     # Merge
     result = process.merge_variables(left, right, how)
+    # Save
+    io.save(result, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved {len(result.columns):,} with {len(result):,} variables to {output}", fg='green'))
+
+
+@process_cli.command(help="Merge rows from two different datasets into one")
+@click.argument('top', type=input_file)
+@click.argument('bottom', type=input_file)
+@click.argument('output', type=output_file)
+def merge_rows(top, bottom, output):
+    # Load data
+    top = io.load_data(top)
+    bottom = io.load_data(bottom)
+    # Merge
+    extra = set(list(top)) - set(list(bottom))
+    missing = set(list(bottom)) - set(list(top))
+    if len(extra) > 0:
+        raise ValueError(f"Couldn't merge rows: Extra columns in the 'bottom' data: {', '.join(extra)}")
+    elif len(missing) > 0:
+        raise ValueError(f"Couldn't merge rows: Missing columns in the 'bottom' data: {', '.join(missing)}")
+    elif (top.dtypes != bottom.dtypes).any():
+        raise ValueError("Couldn't merge rows: different data types")
+    else:
+        result = pd.concat([top, bottom], verify_integrity=True, sort=False)
     # Save
     io.save(result, filename=output)
     # Log
