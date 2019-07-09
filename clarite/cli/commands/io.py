@@ -1,6 +1,7 @@
 import click
 from ...modules import io
-from ..parameters import input_file, output_file
+from ...internal.utilities import _validate_skip_only
+from ..parameters import input_file, output_file, skip, only
 
 
 @click.group(name='io')
@@ -14,7 +15,9 @@ def io_cli():
 @click.option('--index', '-i', type=click.STRING, help="Name of the column to use as the index.  Default is the first column.")
 @click.option('--tab', is_flag=True, help="File is tab-separated")
 @click.option('--comma', is_flag=True, help="File is comma-separated")
-def load_data(data, output, index, tab, comma):
+@skip
+@only
+def load_data(data, output, index, tab, comma, skip, only):
     """Load Data from some format and save it in the standard format for further processing"""
     # Determine seperator character
     if tab and comma:
@@ -33,7 +36,10 @@ def load_data(data, output, index, tab, comma):
     # Raise error if no variables were found (only one column)
     if len(data.columns) == 0:
         raise ValueError("Only one column was found- was the correct delimeter used?")
+    # Process skip/only parameters
+    columns = _validate_skip_only(list(data), skip, only)
+    data = data[columns]
     # Save
-    data.to_csv(output, sep="\t")
+    io.save(data, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved {len(data.columns):,} variables with {len(data):,} observations to {output}", fg='green'))

@@ -47,7 +47,7 @@ def merge_variables(left, right, output, how):
     # Merge
     result = process.merge_variables(left, right, how)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved {len(result.columns):,} with {len(result):,} variables to {output}", fg='green'))
 
@@ -68,7 +68,7 @@ def move_variables(left, right, output_left, output_right, skip, only):
     left, right = process.move_variables(left, right, skip=skip, only=only)
     after = len(list(left))
     # Save
-    left.to_csv(output_left, sep="\t")
-    right.to_csv(output_right, sep="\t")
+    io.save(left, filename=output_left)
+    io.save(right, filename=output_right)
     # Log
     click.echo(click.style(f"Done: Moved {before-after:,} variables and saved results to {output_left} and {output_right}", fg='green'))

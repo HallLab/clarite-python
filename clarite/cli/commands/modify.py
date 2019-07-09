@@ -21,7 +21,7 @@ def colfilter_percent_zero(data, output, filter_percent, skip, only):
     # Modify
     result = modify.colfilter_percent_zero(data=data, filter_percent=filter_percent, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
@@ -39,7 +39,7 @@ def colfilter_min_n(data, output, n, skip, only):
     # Modify
     result = modify.colfilter_min_n(data=data, n=n, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
@@ -57,7 +57,7 @@ def colfilter_min_cat_n(data, output, n, skip, only):
     # Modify
     result = modify.colfilter_min_cat_n(data=data, n=n, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
@@ -73,7 +73,7 @@ def rowfilter_incomplete_obs(data, output, skip, only):
     # Modify
     result = modify.rowfilter_incomplete_obs(data=data, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
@@ -114,7 +114,7 @@ def recode_values(data, output, cs, ci, cf, rs, ri, rf, skip, only):
     # Modify
     result = modify.recode_values(data=data, replacement_dict={current: replacement}, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved recoded data to {output}", fg='green'))
 
@@ -132,7 +132,7 @@ def remove_outliers(data, output, method, cutoff, skip, only):
     # Modify
     result = modify.remove_outliers(data=data, method=method, cutoff=cutoff, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Removed outliers and saved data to {output}", fg='green'))
 
@@ -148,7 +148,7 @@ def make_binary(data, output, skip, only):
     # Modify
     result = modify.make_binary(data=data, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
@@ -164,7 +164,7 @@ def make_categorical(data, output, skip, only):
     # Modify
     result = modify.make_categorical(data=data, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
 
@@ -180,6 +180,6 @@ def make_continuous(data, output, skip, only):
     # Modify
     result = modify.make_continuous(data=data, skip=skip, only=only)
     # Save
-    result.to_csv(output, sep="\t")
+    io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
