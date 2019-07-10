@@ -241,3 +241,26 @@ def make_continuous(data, output, skip, only):
     io.save(result, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved filtered data to {output}", fg='green'))
+
+
+@modify_cli.command(help="Apply a function to each value of a variable")
+@click.argument('data', type=input_file)
+@click.argument('output', type=output_file)
+@click.argument('variable', type=click.STRING)
+@click.argument('transform', type=click.STRING)
+@click.argument('new_name', type=click.STRING)
+def transform_variable(data, output, variable, transform, new_name):
+    # Load data
+    data = io.load_data(data)
+    # Create new variable
+    try:
+        data[new_name] = data[variable].apply(transform)
+    except Exception:
+        raise ValueError(f"Couldn't apply a function named '{transform}'' to '{variable}'' in order to create a new '{new_name}' variable.")
+    # Drop old variable
+    if new_name != variable:
+        data = data.drop(variable, axis='columns')
+    # Save
+    io.save(data, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved modified data to {output}", fg='green'))
