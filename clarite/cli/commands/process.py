@@ -12,7 +12,7 @@ def process_cli():
 
 @process_cli.command(help="Categorize data based on the number of unique values")
 @click.argument('data', type=input_file)
-@click.option('--output', '-o', type=output_file, default=None, help="Output will have '_bin.txt', '_cat.txt', '_cont.txt', and '_check.txt' suffixes added")
+@click.argument('output', type=output_file)
 @click.option('--cat_min', default=3, help="Minimum number of unique values in a variable to make it a categorical type")
 @click.option('--cat_max', default=6, help="Maximum number of unique values in a variable to make it a categorical type")
 @click.option('--cont_min', default=15, help="Minimum number of unique values in a variable to make it a continuous type")
@@ -31,7 +31,7 @@ def categorize(data, output, cat_min, cat_max, cont_min):
         output_name = str(output.with_suffix('')) + f"_{name}"
         if len(df.columns) > 0:
             io.save(df, filename=output_name)
-            click.echo(click.style(f"Saved {name} results to {output_name}", fg='green'))
+            click.echo(click.style(f"Saved {name} results to {output_name}.txt", fg='green'))
         else:
             click.echo(click.style(f"No {name} variables available to save to {output_name}", fg='yellow'))
 
