@@ -41,11 +41,15 @@ def ewas(phenotype, bin_data, cat_data, cont_data, covariate, covariance_calc, m
     covariates = list(covariate)
     # Load optional survey data
     if survey_data is not None:
-        survey_data = pd.read_csv(survey_data, sep="\t")
+        survey_data = io.load_data(survey_data)
         if weights_file is not None and weight is not None:
             raise ValueError("Either 'weights-file' or 'weight' should be specified, not both.")
         elif weights_file is not None:
             weights = pd.read_csv(weights_file, sep="\t")
+            if list(weights) != ['variable', 'weight']:
+                raise ValueError(f"The weights-file must be a tab-separated file with two columns: 'variable' and 'weight'. "
+                                 f"Columns were: {', '.join(list(weights))}")
+            weights = weights.set_index('variable')['weight'].to_dict()
         elif weight is not None:
             weights = weight
         elif weights_file is None and weight is None:
@@ -53,6 +57,20 @@ def ewas(phenotype, bin_data, cat_data, cont_data, covariate, covariance_calc, m
         sd = SurveyDesignSpec(survey_data, strata=strata, cluster=cluster, nest=nested, weights=weights, single_cluster=single_cluster)
     else:
         sd = None
+    # Remove variables with missing weights
+    if type(weights) == dict:
+        missing_weights_bin = set(list(bin_data)) - set([phenotype] + covariates) - set(weights.keys())
+        for v in missing_weights_bin:
+            click.echo(click.style(f"\tSkipping binary variable '{v}' because it wasn't listed in the weights file", fg='yellow'))
+            bin_data = bin_data.drop(v, axis='columns')
+        missing_weights_cat = set(list(cat_data)) - set([phenotype] + covariates) - set(weights.keys())
+        for v in missing_weights_cat:
+            click.echo(click.style(f"\tSkipping categorical variable '{v}' because it wasn't listed in the weights file", fg='yellow'))
+            cat_data = cat_data.drop(v, axis='columns')
+        missing_weights_cont = set(list(cont_data)) - set([phenotype] + covariates) - set(weights.keys())
+        for v in missing_weights_cont:
+            click.echo(click.style(f"\tSkipping continuous variable '{v}' because it wasn't listed in the weights file", fg='yellow'))
+            cont_data = cont_data.drop(v, axis='columns')
     # Run ewas
     result = analyze.ewas(phenotype=phenotype, covariates=covariates, bin_df=bin_data, cat_df=cat_data, cont_df=cont_data,
                           survey_design_spec=sd, cov_method=covariance_calc, min_n=min_n)
