@@ -74,7 +74,7 @@ def get_significant(ewas_result_data, output, use_fdr, pvalue):
     data = pd.read_csv(ewas_result_data, sep="\t", index_col=['variable', 'phenotype'])
     # Check columns
     if list(data) != analyze.result_columns + analyze.corrected_pvalue_columns:
-            raise ValueError(f"{ewas_result_data} was not a valid EWAS result file.")
+        raise ValueError(f"{ewas_result_data} was not a valid EWAS result file.")
     # Filter
     if use_fdr:
         col = 'pvalue_fdr'
