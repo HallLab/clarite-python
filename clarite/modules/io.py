@@ -81,8 +81,7 @@ def load_data(filename: str, index_col: Optional[Union[str, int]] = 0, sep: str 
         if dtypes_file.exists():
             dtypes = load_dtypes(dtypes_filename)
             set_dtypes(data, dtypes)
-        else:
-            print("\tA dtypes file was not found, using default datatypes instead")
+            print(f"\tLoaded dtypes file: {dtypes_filename}")
     elif dtypes is True or type(dtypes) == str:
         # Throw an error if the file isn't found (True, or a specific file)
         if dtypes_file.exists():
