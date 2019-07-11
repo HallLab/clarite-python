@@ -52,8 +52,7 @@ class SurveyModel(object):
         ----------
         X : array-like
             A n x p array where 'n' is the number of observations and 'p'
-            is the number of regressors. An intercept is not included by
-            deault and should be added by the user
+            is the number of regressors.
         y : array-like
             1d array of the response variable
 

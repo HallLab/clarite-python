@@ -17,12 +17,32 @@ def test_simple_ewas(capfd):
     df = df[[c for c in list(df) if c not in list(df_survey)]]
 
     # Categorize and recombine
-    df_bin, df_cat, df_cont, df_check = df.clarite_process.categorize()
+    df_bin, df_cat, df_cont, _ = clarite.process.categorize(df)
+    phenotype = "LBDBCDSI"
+    covariates = ["RIDAGEYR", "female", "mexican", "other_hisp", "black", "asian", "other_eth"]
+    _ = clarite.analyze.ewas(phenotype, covariates, df_bin, df_cat, df_cont)
     out, err = capfd.readouterr()
     assert out == "0 of 37 variables (0.00%) had no non-NA values and are discarded.\n"\
                   "0 of 37 variables (0.00%) had only one value and are discarded.\n"\
                   "29 of 37 variables (78.38%) are classified as binary (2 values).\n"\
                   "1 of 37 variables (2.70%) are classified as categorical (3 to 6 values).\n"\
                   "7 of 37 variables (18.92%) are classified as continuous (>= 15 values).\n"\
-                  "0 of 37 variables (0.00%) are not classified (between 6 and 15 values).\n"
+                  "0 of 37 variables (0.00%) are not classified (between 6 and 15 values).\n"\
+                  "Set 29 of 29 variables as binary, each with 5,932 observations\n"\
+                  "Set 1 of 1 variables as categorical, each with 5,932 observations\n"\
+                  "Set 7 of 7 variables as continuous, each with 5,932 observations\n"\
+                  "Running EWAS on a continuous variable\n"\
+                  "\n"\
+                  "####### Regressing 5 Continuous Variables #######\n"\
+                  "\n"\
+                  "\n"\
+                  "####### Regressing 23 Binary Variables #######\n"\
+                  "\n"\
+                  "MCQ170K = NULL due to: too few complete obervations (153 < 200)\n"\
+                  "MCQ170L = NULL due to: too few complete obervations (104 < 200)\n"\
+                  "\n"\
+                  "####### Regressing 1 Categorical Variables #######\n"\
+                  "\n"\
+                  "Completed EWAS\n"\
+                  "\n"
     assert err == ""

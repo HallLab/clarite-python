@@ -47,9 +47,9 @@ class Regression(object):
 
         # Select regression family
         if phenotype_kind == "continuous":
-            self.family = sm.families.Gaussian(link=sm.families.links.identity)
+            self.family = sm.families.Gaussian(link=sm.families.links.identity())
         elif phenotype_kind == 'binary':
-            self.family = sm.families.Binomial(link=sm.families.links.logit)
+            self.family = sm.families.Binomial(link=sm.families.links.logit())
         else:
             # TODO
             # Note: DoF might change

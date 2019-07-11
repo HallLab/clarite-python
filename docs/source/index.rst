@@ -22,13 +22,15 @@ method, this part of the documentation is for you.
 
    api
 
-DataFrame Accessors
--------------------
+CLI Reference
+-------------
+
+Documentation for using the CLI
 
 .. toctree::
    :maxdepth: 2
-   
-   df_accessors
+
+   cli
 
 Additional Notes
 ----------------

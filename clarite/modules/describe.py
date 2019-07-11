@@ -4,10 +4,6 @@ Describe
 
 Functions that are used to gather information about some data
 
-  **DataFrame Accessor**: ``clarite_describe``
-
-  **CLI Command**: ``describe``
-
   .. autosummary::
      :toctree: modules/describe
 
@@ -45,11 +41,11 @@ def correlations(data, threshold: float = 0.75):
     >>> correlations = clarite.describe.correlations(df, threshold=0.9)
     >>> correlations.head()
                         var1      var2  correlation
-    36704  supplement_count  DSDCOUNT     1.000000
-    32807          DR1TM181  DR1TMFAT     0.997900
-    33509          DR1TP182  DR1TPFAT     0.996172
-    39575          DRD370FQ  DRD370UQ     0.987974
-    35290          DR1TS160  DR1TSFAT     0.984733
+    0  supplement_count  DSDCOUNT     1.000000
+    1          DR1TM181  DR1TMFAT     0.997900
+    2          DR1TP182  DR1TPFAT     0.996172
+    3          DRD370FQ  DRD370UQ     0.987974
+    4          DR1TS160  DR1TSFAT     0.984733
     """
     # Get correlaton matrix
     correlation = data.corr()
@@ -66,10 +62,10 @@ def correlations(data, threshold: float = 0.75):
     )
     # Remove those with correlation below threshold
     correlation = correlation.loc[correlation["correlation"].abs() >= threshold, ]
-    # Sort by absolute value and return
-    return correlation.reindex(
-        correlation["correlation"].abs().sort_values(ascending=False).index
-    )
+    # Sort by absolute value
+    correlation = correlation.reindex(correlation["correlation"].abs().sort_values(ascending=False).index)
+    # Return with a reset index
+    return correlation.reset_index(drop=True)
 
 
 def freq_table(data):
@@ -146,9 +142,13 @@ def percent_na(data):
     --------
     >>> import clarite
     >>> clarite.describe.percent_na(df)
-    SDDSRVYR                 0.000000
-    female                   0.000000
-    LBXHBC                   0.049321
-    LBXHBS                   0.049873
+    variable    percent_na
+    SDDSRVYR                 0.00000
+    female                   0.00000
+    LBXHBC                   4.99321
+    LBXHBS                   4.98730
     """
-    return 1 - (data.count() / data.apply(len))
+    result = 100 * (1 - (data.count() / data.apply(len)))
+    result = result.reset_index()
+    result.columns = ['variable', 'percent_na']
+    return result

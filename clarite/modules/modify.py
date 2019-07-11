@@ -1,12 +1,8 @@
 """
 Modify
-========
+======
 
-Functions used to filter and/or change some data
-
-  **DataFrame Accessor**: ``clarite_modify``
-
-  **CLI Command**: ``modify``
+Functions used to filter and/or change some data, always taking in one set of data and returning one set of data.
 
   .. autosummary::
      :toctree: modules/modify
@@ -14,17 +10,16 @@ Functions used to filter and/or change some data
      colfilter_percent_zero
      colfilter_min_n
      colfilter_min_cat_n
-     rowfilter_incomplete_observations
+     rowfilter_incomplete_obs
      recode_values
      remove_outliers
      make_binary
      make_categorical
      make_continuous
-     merge_variables
 
 """
 
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import numpy as np
 import pandas as pd
@@ -32,8 +27,8 @@ import pandas as pd
 from ..internal.utilities import _validate_skip_only
 
 
-def colfilter_percent_zero(data: pd.DataFrame, proportion: float = 0.9,
-                           skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
+                           skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove columns which have <proportion> or more values of zero (excluding NA)
 
@@ -41,11 +36,11 @@ def colfilter_percent_zero(data: pd.DataFrame, proportion: float = 0.9,
     ----------
     data: pd.DataFrame
         The DataFrame to be processed and returned
-    proportion: float, default 0.9
-        If the proportion of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
-    skip: list or None, default None
+    filter_percent: float, default 90.0
+            If the percentage of rows in the data with a value of zero is greater than or equal to this value, the variable is filtered out.
+    skip: str, list or None (default is None)
         List of variables that the filter should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the filter should *only* be applied to
 
     Returns
@@ -62,17 +57,17 @@ def colfilter_percent_zero(data: pd.DataFrame, proportion: float = 0.9,
     columns = _validate_skip_only(list(data), skip, only)
     num_before = len(data.columns)
 
-    percent_value = data.apply(lambda col: sum(col == 0) / col.count())
-    kept = (percent_value < proportion) | ~data.columns.isin(columns)
+    percent_value = 100 * data.apply(lambda col: sum(col == 0) / col.count())
+    kept = (percent_value < filter_percent) | ~data.columns.isin(columns)
     num_removed = num_before - sum(kept)
 
     print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) "
-          f"which were equal to zero in at least {proportion:.2%} of non-NA observations.")
+          f"which were equal to zero in at least {filter_percent:.2f}% of non-NA observations.")
     return data.loc[:, kept]
 
 
 def colfilter_min_n(data: pd.DataFrame, n: int = 200,
-                    skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                    skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove columns which have less than <n> unique values (excluding NA)
 
@@ -82,9 +77,9 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
         The DataFrame to be processed and returned
     n: int, default 200
         The minimum number of unique values required in order for a variable not to be filtered
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the filter should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the filter should *only* be applied to
 
     Returns
@@ -109,7 +104,7 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
     return data.loc[:, kept]
 
 
-def colfilter_min_cat_n(data, n: int = 200, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove columns which have less than <n> occurences of each unique value
 
@@ -119,9 +114,9 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[List[str]] = None, on
         The DataFrame to be processed and returned
     n: int, default 200
         The minimum number of occurences of each unique value required in order for a variable not to be filtered
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the filter should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the filter should *only* be applied to
 
     Returns
@@ -146,7 +141,7 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[List[str]] = None, on
     return data.loc[:, kept]
 
 
-def rowfilter_incomplete_observations(data, skip, only):
+def rowfilter_incomplete_obs(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove rows containing null values
 
@@ -154,9 +149,9 @@ def rowfilter_incomplete_observations(data, skip, only):
     ----------
     data: pd.DataFrame
         The DataFrame to be processed and returned
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of columns that are not checked for null values
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of columns that are the only ones to be checked for null values
 
     Returns
@@ -167,7 +162,7 @@ def rowfilter_incomplete_observations(data, skip, only):
     Examples
     --------
     >>> import clarite
-    >>> nhanes = clarite.modify.rowfilter_incomplete_observations(only=[phenotype] + covariates)
+    >>> nhanes = clarite.modify.rowfilter_incomplete_obs(only=[phenotype] + covariates)
     Removed 3,687 of 22,624 rows (16.30%) due to NA values in the specified columns
     """
     columns = _validate_skip_only(list(data), skip, only)
@@ -180,7 +175,7 @@ def rowfilter_incomplete_observations(data, skip, only):
 
 
 def recode_values(data, replacement_dict,
-                  skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                  skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Convert values in a dataframe.  By default, replacement occurs in all columns but this may be modified with 'skip' or 'only'.
     Pandas has more powerful 'replace' methods for more complicated scenarios.
@@ -191,9 +186,9 @@ def recode_values(data, replacement_dict,
         The DataFrame to be processed and returned
     replacement_dict: dictionary
         A dictionary mapping the value being replaced to the value being inserted
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the replacement should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the replacement should *only* be applied to
 
     Examples
@@ -214,8 +209,8 @@ def recode_values(data, replacement_dict,
 
     # Log
     diff = result.eq(data)
-    diff[pd.isnull(result) == pd.isnull(data)] = True  # NAs are not equal by default
-    diff = ~diff  # not True where a value was replaced
+    diff[pd.isnull(result) & pd.isnull(data)] = True  # NAs are not equal by default
+    diff = ~diff  # make True where a value was replaced
     cols_with_changes = (diff.sum() > 0).sum()
     cells_with_changes = diff.sum().sum()
     if cells_with_changes > 0:
@@ -228,7 +223,7 @@ def recode_values(data, replacement_dict,
 
 
 def remove_outliers(data, method: str = 'gaussian', cutoff=3,
-                    skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+                    skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove outliers from the dataframe by replacing them with np.nan
 
@@ -241,9 +236,9 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     cutoff: positive numeric, default of 3
         Either the number of standard deviations from the mean (method='gaussian') or the multiple of the IQR (method='iqr')
         Any values equal to or more extreme will be replaced with np.nan
-    skip: list or None, default None
+    skip: str, list or None (default is None)
         List of variables that the replacement should *not* be applied to
-    only: list or None, default None
+    only: str, list or None (default is None)
         List of variables that the replacement should *only* be applied to
 
     Examples
@@ -298,7 +293,7 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     return data
 
 
-def make_binary(df: pd.DataFrame):
+def make_binary(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Validate and type a dataframe of binary variables
 
@@ -306,36 +301,42 @@ def make_binary(df: pd.DataFrame):
 
     Parameters
     ----------
-    df: pd.DataFrame
-        DataFrame to be processed
+    data: pd.DataFrame or pd.Series
+        Data to be processed
+    skip: str, list or None (default is None)
+        List of variables that should *not* be made binary
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be made binary
 
     Returns
     -------
-    df: pd.DataFrame
-        DataFrame with the same data but validated and converted to categorical types
+    data: pd.DataFrame
+        DataFrame with the same data but validated and converted to binary types
 
     Examples
     --------
     >>> import clarite
     >>> df = clarite.modify.make_binary(df)
-    Processed 32 binary variables with 4,321 observations
+    Set 32 of 32 variables as binary, each with 4,321 observations
     """
-    # Validate index
-    if isinstance(df.index, pd.core.index.MultiIndex):
-        raise ValueError("bin_df: DataFrames passed to the ewas function must not have a multiindex")
-    df.index.name = "ID"
+    # Which columns
+    columns = _validate_skip_only(list(data), skip, only)
+
     # Check the number of unique values
-    unique_values = df.nunique()
-    non_binary = unique_values[unique_values != 2]
-    if len(non_binary) > 0:
-        raise ValueError(f"{len(non_binary)} of {len(unique_values)} variables did not have 2 unique values and couldn't be processed as a binary type")
+    unique_values = data.nunique()
+    num_non_binary = (unique_values[columns] > 2).sum()
+    if num_non_binary > 0:
+        raise ValueError(f"{num_non_binary} of {len(columns)} variables did not have 2 unique values and couldn't be processed as a binary type")
     # TODO: possibly add further validation to make sure values are 1 and 0
-    df = df.astype('category')
-    print(f"Processed {len(df.columns):,} binary variables with {len(df):,} observations")
-    return df
+
+    # Convert dtype
+    data = data.astype({c: 'category' for c in columns})
+    print(f"Set {len(columns):,} of {len(data.columns)} variables as binary, each with {len(data):,} observations")
+
+    return data
 
 
-def make_categorical(df: pd.DataFrame):
+def make_categorical(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Validate and type a dataframe of categorical variables
 
@@ -343,31 +344,37 @@ def make_categorical(df: pd.DataFrame):
 
     Parameters
     ----------
-    df: pd.DataFrame
-        DataFrame to be processed
+    data: pd.DataFrame or pd.Series
+        Data to be processed
+    skip: str, list or None (default is None)
+        List of variables that should *not* be made categorical
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be made categorical
 
     Returns
     -------
-    df: pd.DataFrame
+    data: pd.DataFrame
         DataFrame with the same data but validated and converted to categorical types
 
     Examples
     --------
     >>> import clarite
     >>> df = clarite.modify.make_categorical(df)
-    Processed 12 categorical variables with 4,321 observations
+    Set 12 of 12 variables as categorical, each with 4,321 observations
     """
-    # Validate index
-    if isinstance(df.index, pd.core.index.MultiIndex):
-        raise ValueError("cat_df: DataFrames passed to the ewas function must not have a multiindex")
-    df.index.name = "ID"
-    # TODO: add further validation
-    df = df.astype('category')
-    print(f"Processed {len(df.columns):,} categorical variables with {len(df):,} observations")
-    return df
+    # Which columns
+    columns = _validate_skip_only(list(data), skip, only)
+
+    # TODO: possibly add further validation
+
+    # Convert dtype
+    data = data.astype({c: 'category' for c in columns})
+    print(f"Set {len(columns):,} of {len(data.columns)} variables as categorical, each with {len(data):,} observations")
+
+    return data
 
 
-def make_continuous(df: pd.DataFrame):
+def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Validate and type a dataframe of continuous variables
 
@@ -375,46 +382,31 @@ def make_continuous(df: pd.DataFrame):
 
     Parameters
     ----------
-    df: pd.DataFrame
-        DataFrame to be processed
+    data: pd.DataFrame or pd.Series
+        Data to be processed
+    skip: str, list or None (default is None)
+        List of variables that should *not* be made continuous
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be made continuous
 
     Returns
     -------
-    df: pd.DataFrame
+    data: pd.DataFrame
         DataFrame with the same data but validated and converted to numeric types
 
     Examples
     --------
     >>> import clarite
     >>> df = clarite.modify.make_continuous(df)
-    Processed 128 continuous variables with 4,321 observations
+    Set 128 of 128 variables as continuous, each with 4,321 observations
     """
-    # Validate index
-    if isinstance(df.index, pd.core.index.MultiIndex):
-        raise ValueError("cont_df: DataFrames passed to the ewas function must not have a multiindex")
-    df.index.name = "ID"
-    # TODO: add further validation
-    df = df.apply(pd.to_numeric)
-    print(f"Processed {len(df.columns):,} continuous variables with {len(df):,} observations")
-    return df
+    # Which columns
+    columns = _validate_skip_only(list(data), skip, only)
 
+    # TODO: possibly add further validation
 
-def merge_variables(data: pd.DataFrame, other: pd.DataFrame, how: str = 'outer'):
-    """
-    Merge a list of dataframes with different variables side-by-side.  Keep all observations ('outer' merge) by default.
+    # Convert dtype
+    data = pd.DataFrame({c: data[c] if c not in columns else pd.to_numeric(data[c]) for c in list(data)})
+    print(f"Set {len(columns):,} of {len(data.columns)} variables as continuous, each with {len(data):,} observations")
 
-    Parameters
-    ----------
-    data: pd.Dataframe
-        "left" DataFrame
-    other: pd.DataFrame
-        "right" DataFrame which uses the same index
-    how: merge method, one of {'left', 'right', 'inner', 'outer'}
-        Keep only rows present in the left data, the right data, both datasets, or either dataset.
-
-    Examples
-    --------
-    >>> import clarite
-    >>> df = clarite.modify.merge_variables(df_bin, df_cat, how='outer')
-    """
-    return data.merge(other, left_index=True, right_index=True, how=how)
+    return data

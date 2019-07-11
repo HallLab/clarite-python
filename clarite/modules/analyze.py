@@ -4,10 +4,6 @@ Analyze
 
 EWAS and associated calculations
 
-  **DataFrame Accessor**: ``None``
-
-  **CLI Command**: ``analyze``
-
   .. autosummary::
      :toctree: modules/analyze
 
@@ -74,15 +70,25 @@ def ewas(
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery_bin, nhanes_discovery_cat, nhanes_discovery_cont)
     Running EWAS on a continuous variable
     """
-    # Process variable inputs
+    # Make sure the index of each dataset is not a multiindex and give it a consistent name
+    for param_name, df in {'bin_df': bin_df, 'cat_df': cat_df, 'cont_df': cont_df}.items():
+        if df is not None:
+            if isinstance(df.index, pd.core.index.MultiIndex):
+                raise ValueError(f"{param_name}: DataFrame must not have a multiindex")
+            df.index.name = "ID"
+
+    # Collects lists of regression variables and format dataframes using the new index from 'unified'
     rv_bin, rv_cat, rv_cont = list(), list(), list()
     if bin_df is not None:
+        # Get original columns with new index and format as binary
         bin_df = make_binary(bin_df)
         rv_bin = [v for v in list(bin_df) if v not in covariates and v != phenotype]
     if cat_df is not None:
+        # Get original columns with new index and format as categorical
         cat_df = make_categorical(cat_df)
         rv_cat = [v for v in list(cat_df) if v not in covariates and v != phenotype]
     if cont_df is not None:
+        # Get original columns with new index and format as continuous
         cont_df = make_continuous(cont_df)
         rv_cont = [v for v in list(cont_df) if v not in covariates and v != phenotype]
 
@@ -199,6 +205,7 @@ def run_regressions(phenotype: str,
     result['phenotype'] = phenotype  # Add phenotype
     result = result.sort_values('pvalue').set_index(['variable', 'phenotype'])  # Sort and set index
     result = result[['variable_type', 'converged', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']]  # Sort columns
+    print("Completed EWAS\n")
     return result
 
 
