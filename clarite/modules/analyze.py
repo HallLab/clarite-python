@@ -4,8 +4,6 @@ Analyze
 
 EWAS and associated calculations
 
-  **CLI Command**: ``analyze``
-
   .. autosummary::
      :toctree: modules/analyze
 

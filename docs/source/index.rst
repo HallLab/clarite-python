@@ -22,6 +22,16 @@ method, this part of the documentation is for you.
 
    api
 
+CLI Reference
+-------------
+
+Documentation for using the CLI
+
+.. toctree::
+   :maxdepth: 2
+
+   cli
+
 Additional Notes
 ----------------
 

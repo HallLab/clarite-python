@@ -4,8 +4,6 @@ IO
 
 Input/Output of data in different formats
 
-  **CLI Command**: ``io``
-
   .. autosummary::
      :toctree: modules/io
 

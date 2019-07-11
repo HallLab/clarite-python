@@ -5,8 +5,6 @@ Survey
 
 Complex survey design
 
-  **CLI Command**: ``None``
-
   .. autosummary::
      :toctree: modules/survey
 

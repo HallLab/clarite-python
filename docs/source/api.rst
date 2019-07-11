@@ -2,8 +2,7 @@
 API Reference
 =============
 
-Modules
--------
+CLARITE functions are organized into several modules:
 
 .. automodule:: clarite.analyze
 

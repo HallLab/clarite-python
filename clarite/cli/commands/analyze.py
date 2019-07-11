@@ -24,7 +24,7 @@ def analyze_cli():
 @click.option('--strata', type=click.STRING, default=None, help="Name of the strata column in the survey data")
 @click.option('--cluster', type=click.STRING, default=None, help="Name of the cluster column in the survey data")
 @click.option('--nested/--not-nested', help="Whether survey data is nested or not")
-@click.option('--weights-file', '-w', type=input_file, default=None,
+@click.option('--weights-file', type=input_file, default=None,
               help="Tab-delimited data file with 'Variable' and 'weight' columns to match weights from the survey data to specific variables")
 @click.option('--weight', '-w', type=click.STRING, default=None,
               help="Name of a survey weight column found in the survey data.  This option can't be used with --weights-file")

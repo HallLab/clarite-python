@@ -4,8 +4,6 @@ Plot
 
 Functions that generate plots
 
-  **CLI Command**: ``plot``
-
   .. autosummary::
      :toctree: modules/plot
 

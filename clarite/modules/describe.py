@@ -4,8 +4,6 @@ Describe
 
 Functions that are used to gather information about some data
 
-  **CLI Command**: ``describe``
-
   .. autosummary::
      :toctree: modules/describe
 
