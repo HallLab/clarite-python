@@ -9,7 +9,7 @@ def test_simple_ewas(capfd):
     # Load the data
     df = clarite.io.load_data(DATA_PATH / "nhanes_test.txt", index_col='SEQN', sep="\t")
     out, err = capfd.readouterr()
-    assert out == "Loaded 5,932 observations of 42 variables\nA dtypes file was not found, keeping default datatypes\n"
+    assert out == "Loaded 5,932 observations of 42 variables\n"
     assert err == ""
 
     # Separate weight/survey info from the actual variables
