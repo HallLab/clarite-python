@@ -2,6 +2,16 @@
 Release History
 ===============
 
+v0.6.0 (2019-07-11)
+-------------------
+
+Extensive changes in organization, but limited new functionality (not counting the CLI).
+
+Enhancements
+^^^^^^^^^^^^
+* Reorganize functions - https://github.com/HallLab/clarite-python/pull/13
+* Add a CLI - https://github.com/HallLab/clarite-python/pull/11
+
 v0.5.0 (2019-06-28)
 -------------------
 
