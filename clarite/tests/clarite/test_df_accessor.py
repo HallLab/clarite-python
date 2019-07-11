@@ -2,7 +2,7 @@ import clarite
 
 
 def test_categorize(plantTraits, capfd):
-    df_bin, df_cat, df_cont, df_ambiguous = plantTraits.clarite_process.categorize()
+    df_bin, df_cat, df_cont, df_ambiguous = clarite.process.categorize(plantTraits)
     out, err = capfd.readouterr()
     assert out == "0 of 31 variables (0.00%) had no non-NA values and are discarded.\n"\
                   "0 of 31 variables (0.00%) had only one value and are discarded.\n"\

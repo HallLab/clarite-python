@@ -9,7 +9,7 @@ class SurveyDesignSpec:
 
     Parameters
     ----------
-    survey_df: pd.DataFrame or None
+    survey_df: pd.DataFrame
         A DataFrame containing Cluster, Strata, and/or weights data
     strata: string or None
         The name of the strata variable in the survey_df
