@@ -62,3 +62,26 @@ def ewas(phenotype, bin_data, cat_data, cont_data, covariate, covariance_calc, m
     result.to_csv(output, sep="\t")
     # Log
     click.echo(click.style(f"Done: Saved EWAS results to {output}", fg='green'))
+
+
+@analyze_cli.command(help="filter out non-significant results")
+@click.argument('ewas_result_data', type=input_file)
+@click.argument('output', type=output_file)
+@click.option('--fdr/--bonferroni', 'use_fdr', default=True, help="Use FDR (--fdr) or Bonferroni pvalues (--bonferroni).  FDR by default.")
+@click.option('--pvalue', '-p', type=click.FLOAT, default=0.05, help="Keep results with a pvalue <= this value (0.05 by default)")
+def get_significant(ewas_result_data, output, use_fdr, pvalue):
+    # Load data
+    data = pd.read_csv(ewas_result_data, sep="\t", index_col=['variable', 'phenotype'])
+    # Check columns
+    if list(data) != analyze.result_columns + analyze.corrected_pvalue_columns:
+            raise ValueError(f"{ewas_result_data} was not a valid EWAS result file.")
+    # Filter
+    if use_fdr:
+        col = 'pvalue_fdr'
+    else:
+        col = 'pvalue_bonferroni'
+    data = data.loc[data[col] <= pvalue, ]
+    # Save result
+    io.save(data, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved {len(data):,} variables to {output}", fg='green'))
