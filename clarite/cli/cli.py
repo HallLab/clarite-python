@@ -1,9 +1,12 @@
 import click
 
+from clarite import __version__
+
 from .commands import analyze_cli, describe_cli, io_cli, modify_cli, plot_cli, process_cli
 
 
 @click.group()
+@click.version_option(version=__version__)
 def entry_point():
     pass
 
