@@ -4,9 +4,9 @@ import click
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from ...modules import plot, io
+from ...modules import plot
 from ...modules.analyze import result_columns, corrected_pvalue_columns
-from ..parameters import input_file, output_file
+from ..parameters import clarite_data_arg, CLARITE_DATA, INPUT_FILE, OUTPUT_FILE
 
 
 @click.group(name='plot')
@@ -15,14 +15,12 @@ def plot_cli():
 
 
 @plot_cli.command(help="Create a histogram plot of a variable")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
+@clarite_data_arg
+@click.argument('output', type=OUTPUT_FILE)
 @click.argument('variable', type=click.STRING)
 def histogram(data, output, variable):
-    # Load data
-    data = io.load_data(data)
     # Plot
-    plot.histogram(data=data, column=variable)
+    plot.histogram(data=data.df, column=variable)
     # Save and Close
     plt.savefig(output)
     plt.close()
@@ -31,8 +29,8 @@ def histogram(data, output, variable):
 
 
 @plot_cli.command(help="Generate a pdf containing distribution plots for each variable")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
+@clarite_data_arg
+@click.argument('output', type=OUTPUT_FILE)
 @click.option('--kind', '-k', default='count', type=click.Choice(['count', 'box', 'violin', 'qq']),
               help="Kind of plot used for continuous data.  Non-continuous always shows a count plot.")
 @click.option('--nrows', default=4, type=click.IntRange(min=1, max=10), help="Number of rows per page")
@@ -41,19 +39,18 @@ def histogram(data, output, variable):
               help="Quality of the generated plots: low (150 dpi), medium (300 dpi), or high (1200 dpi).")
 @click.option('--sort/--no-sort', help="Sort variables alphabetically")
 def distributions(data, output, kind, nrows, ncols, quality, sort):
-    # Load data
-    data = io.load_data(data)
     # Plot and save
-    plot.distributions(data=data, filename=output, continuous_kind=kind, nrows=nrows, ncols=ncols, quality=quality, sort=sort)
+    plot.distributions(data=data.df, filename=output, continuous_kind=kind, nrows=nrows, ncols=ncols, quality=quality, sort=sort)
     # Log
     click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
 
 
+# TODO: Make this use an ewas_result datatype
 @plot_cli.command(help="Generate a manhattan plot of EWAS results")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
-@click.option('--categories', '-c', type=input_file, default=None, help="tab-separate file with two columns: 'Variable' and 'category'")
-@click.option('--other', '-o', multiple=True, help="other datasets to include in the plot")
+@clarite_data_arg
+@click.argument('output', type=OUTPUT_FILE)
+@click.option('--categories', '-c', type=INPUT_FILE, default=None, help="tab-separate file with two columns: 'Variable' and 'category'")
+@click.option('--other', '-o', multiple=True, type=CLARITE_DATA, help="other datasets to include in the plot")
 @click.option('--nlabeled', default=3, type=click.IntRange(min=0, max=50), help="label top n points")
 @click.option('--label', default=None, multiple=True, type=click.STRING, help="label points by name")
 def manhattan(data, output, categories, other, nlabeled, label):

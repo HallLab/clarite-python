@@ -13,8 +13,8 @@ Analyze
 Describe
   Functions used to gather information about data
 
-IO
-  Functions used to load, convert, and save data
+Load
+  Functions used to load data from different formats or sources
 
 Modify
   Functions used to filter and/or modify data
@@ -40,7 +40,7 @@ This can be done using the function directly:
 .. code-block:: python
 
    import clarite
-   df = clarite.io.load_data('data.txt')
+   df = clarite.load.from_tsv('data.txt')
    df_filtered = clarite.modify.colfilter_min_n(df, n=250)
    df_filtered_complete = clarite.modify.rowfilter_incomplete_obs(df_filtered)
    clarite.plot.distributions(df_filtered_complete, filename='plots.pdf')
@@ -57,8 +57,10 @@ Or it can be done using Pandas *pipe*
 
 .. code-block:: bash
 
-   clarite-cli modify colfilter-min-n data.txt data_filtered.txt -n 250
-   clarite-cli modify rowfilter-incomplete-obs data_filtered.txt data_filtered_complete.txt
-   clarite-cli plot distributions data_filtered_complete.txt plots.pdf
+   clarite-cli load from_tsv data/nhanes.txt results/data.txt --index SEQN
+   cd results
+   clarite-cli modify colfilter-min-n data data_filtered -n 250
+   clarite-cli modify rowfilter-incomplete-obs data_filtered data_filtered_complete
+   clarite-cli plot distributions data_filtered_complete plots.pdf
 
 3. Using the GUI (coming soon) 

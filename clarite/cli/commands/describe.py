@@ -1,6 +1,6 @@
 import click
-from ...modules import describe, io
-from ..parameters import input_file, output_file
+from ...modules import describe
+from ..parameters import clarite_data_arg, OUTPUT_FILE
 
 
 @click.group(name='describe')
@@ -9,14 +9,12 @@ def describe_cli():
 
 
 @describe_cli.command(help="Report top correlations between variables")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
+@clarite_data_arg
+@click.argument('output', type=OUTPUT_FILE)
 @click.option('-t', '--threshold', default=0.75, help="Report correlations with R >= this value")
 def correlations(data, output, threshold):
-    # Load data
-    data = io.load_data(data)
     # Describe
-    results = describe.correlations(data, threshold)
+    results = describe.correlations(data.df, threshold)
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
@@ -24,13 +22,11 @@ def correlations(data, output, threshold):
 
 
 @describe_cli.command(help="Report the number of occurences of each value for each variable")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
+@clarite_data_arg
+@click.argument('output', type=OUTPUT_FILE)
 def freq_table(data, output):
-    # Load data
-    data = io.load_data(data)
     # Describe
-    results = describe.freq_table(data)
+    results = describe.freq_table(data.df)
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
@@ -45,13 +41,11 @@ def freq_table(data, output):
 
 
 @describe_cli.command(help="Report the percent of observations that are NA for each variable")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
+@clarite_data_arg
+@click.argument('output', type=OUTPUT_FILE)
 def percent_na(data, output):
-    # Load data
-    data = io.load_data(data)
     # Describe
-    results = describe.percent_na(data)
+    results = describe.percent_na(data.df)
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log

@@ -57,7 +57,7 @@ def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
     columns = _validate_skip_only(list(data), skip, only)
     num_before = len(data.columns)
 
-    percent_value = 100 * data.apply(lambda col: sum(col == 0) / col.count())
+    percent_value = 100 * data.apply(lambda col: (col == 0).sum() / col.count())
     kept = (percent_value < filter_percent) | ~data.columns.isin(columns)
     num_removed = num_before - sum(kept)
 

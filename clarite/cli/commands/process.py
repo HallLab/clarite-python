@@ -1,8 +1,8 @@
-from pathlib import Path
 import click
 import pandas as pd
-from ...modules import process, io
-from ..parameters import input_file, output_file, skip, only
+from ...modules import process
+from ..parameters import clarite_data_arg, CLARITE_DATA, INPUT_FILE, OUTPUT_FILE, skip, only
+from ..custom_types import ClariteData
 
 
 @click.group(name='process')
@@ -11,59 +11,48 @@ def process_cli():
 
 
 @process_cli.command(help="Categorize data based on the number of unique values")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
+@clarite_data_arg
+@click.argument('output', type=OUTPUT_FILE)
 @click.option('--cat_min', default=3, help="Minimum number of unique values in a variable to make it a categorical type")
 @click.option('--cat_max', default=6, help="Maximum number of unique values in a variable to make it a categorical type")
 @click.option('--cont_min', default=15, help="Minimum number of unique values in a variable to make it a continuous type")
 def categorize(data, output, cat_min, cat_max, cont_min):
-    # Get output prefix
-    if output is None:
-        output = Path(data)
-    else:
-        output = Path(output)
-    # Load data
-    data = io.load_data(data)
-    # Categorize
-    df_bin, df_cat, df_cont, df_check = process.categorize(data, cat_min=cat_min, cat_max=cat_max, cont_min=cont_min)
+    # Get output
+    output = data.output
+    # Categorize and convert to ClariteData types
+    df_bin, df_cat, df_cont, df_check = process.categorize(data.df, cat_min=cat_min, cat_max=cat_max, cont_min=cont_min)
+    df_bin = ClariteData(data.name + "_bin", output=str(output.with_suffix('')) + f"_bin", df=df_bin)
+    df_cat = ClariteData(data.name + "_cat", output=str(output.with_suffix('')) + f"_cat", df=df_cat)
+    df_cont = ClariteData(data.name + "_cont", output=str(output.with_suffix('')) + f"_cont", df=df_cont)
+    df_check = ClariteData(data.name + "_check", output=str(output.with_suffix('')) + f"_check", df=df_check)
     # Save Data
-    for name, df in zip(['binary', 'categorical', 'continuous', 'check'], [df_bin, df_cat, df_cont, df_check]):
-        output_name = str(output.with_suffix('')) + f"_{name}"
-        if len(df.columns) > 0:
-            io.save(df, filename=output_name)
-            click.echo(click.style(f"Saved {name} results to {output_name}.txt", fg='green'))
-        else:
-            click.echo(click.style(f"No {name} variables available to save to {output_name}", fg='yellow'))
+    df_bin.save_data()
+    df_cat.save_data()
+    df_cont.save_data()
+    df_check.save_data()
 
 
 @process_cli.command(help="Merge variables from two different datasets into one")
-@click.argument('left', type=input_file)
-@click.argument('right', type=input_file)
-@click.argument('output', type=output_file)
+@click.argument('left', type=CLARITE_DATA)
+@click.argument('right', type=CLARITE_DATA)
+@click.argument('output', type=OUTPUT_FILE)
 @click.option('--how', '-h', default='outer', type=click.Choice(['left', 'right', 'inner', 'outer']), help="Type of Merge")
 def merge_variables(left, right, output, how):
-    # Load data
-    left = io.load_data(left)
-    right = io.load_data(right)
     # Merge
-    result = process.merge_variables(left, right, how)
+    result = process.merge_variables(left.df, right.df, how)
+    result = ClariteData(name=f"{left.name}.{right.name}", output=output, df=result)
     # Save
-    io.save(result, filename=output)
-    # Log
-    click.echo(click.style(f"Done: Saved {len(result.columns):,} with {len(result):,} variables to {output}", fg='green'))
+    result.save_data()
 
 
 @process_cli.command(help="Merge rows from two different datasets into one")
-@click.argument('top', type=input_file)
-@click.argument('bottom', type=input_file)
-@click.argument('output', type=output_file)
+@click.argument('top', type=CLARITE_DATA)
+@click.argument('bottom', type=CLARITE_DATA)
+@click.argument('output', type=OUTPUT_FILE)
 def merge_rows(top, bottom, output):
-    # Load data
-    top = io.load_data(top)
-    bottom = io.load_data(bottom)
     # Merge
-    extra = set(list(top)) - set(list(bottom))
-    missing = set(list(bottom)) - set(list(top))
+    extra = set(list(top.df)) - set(list(bottom.df))
+    missing = set(list(bottom.df)) - set(list(top.df))
     if len(extra) > 0:
         raise ValueError(f"Couldn't merge rows: Extra columns in the 'bottom' data: {', '.join(extra)}")
     elif len(missing) > 0:
@@ -71,30 +60,24 @@ def merge_rows(top, bottom, output):
     elif (top.dtypes != bottom.dtypes).any():
         raise ValueError("Couldn't merge rows: different data types")
     else:
-        result = pd.concat([top, bottom], verify_integrity=True, sort=False)
+        result = pd.concat([top.df, bottom.df], verify_integrity=True, sort=False)
+        result = ClariteData(name=f"{top.name}.{bottom.name}", output=output, df=result)
     # Save
-    io.save(result, filename=output)
-    # Log
-    click.echo(click.style(f"Done: Saved {len(result.columns):,} with {len(result):,} variables to {output}", fg='green'))
+    result.save_data()
 
 
 @process_cli.command(help="Move variables from one dataset to another")
-@click.argument('left', type=input_file)
-@click.argument('right', type=input_file)
-@click.argument('output_left', type=output_file)
-@click.argument('output_right', type=output_file)
+@click.argument('left', type=INPUT_FILE)
+@click.argument('right', type=INPUT_FILE)
+@click.argument('output_left', type=OUTPUT_FILE)
+@click.argument('output_right', type=OUTPUT_FILE)
 @skip
 @only
 def move_variables(left, right, output_left, output_right, skip, only):
-    # Load data
-    left = io.load_data(left)
-    right = io.load_data(right)
-    before = len(list(left))
     # Move
-    left, right = process.move_variables(left, right, skip=skip, only=only)
-    after = len(list(left))
+    left_df, right_df = process.move_variables(left.df, right.df, skip=skip, only=only)
     # Save
-    io.save(left, filename=output_left)
-    io.save(right, filename=output_right)
-    # Log
-    click.echo(click.style(f"Done: Moved {before-after:,} variables and saved results to {output_left} and {output_right}", fg='green'))
+    left = ClariteData(name=left.name, output=output_left, df=left_df)
+    right = ClariteData(name=right.name, output=output_right, df=right_df)
+    left.save_data()
+    right.save_data()

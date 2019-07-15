@@ -1,9 +1,17 @@
 import click
 
-input_file = click.Path(exists=True, file_okay=True, dir_okay=False, readable=True)
-output_file = click.Path(file_okay=True, dir_okay=False, writable=True)
+from .custom_types import ClariteDataParamType
+
+# File IO
+INPUT_FILE = click.Path(exists=True, file_okay=True, dir_okay=False, readable=True)
+OUTPUT_FILE = click.Path(file_okay=True, dir_okay=False, writable=True)
+
+# Standard datatype that uses multiple files together
+CLARITE_DATA = ClariteDataParamType()  # Instantiate it to use as a type in arguments/options
+clarite_data_arg = click.argument('data', type=CLARITE_DATA)
 
 
+# Skip/Only handling
 def process_skip_only(ctx, param, value):
     if len(value) == 0:
         return None
