@@ -1,7 +1,7 @@
 import click
 from ...modules import modify
 from ...internal.utilities import _validate_skip_only
-from ..parameters import clarite_data_arg, OUTPUT_FILE, skip, only
+from ..parameters import arg_data, option_output, option_skip, option_only
 
 
 @click.group(name='modify')
@@ -10,26 +10,26 @@ def modify_cli():
 
 
 @modify_cli.command(help="Remove some columns from a dataset")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
-@skip
-@only
+@arg_data
+@option_output
+@option_skip
+@option_only
 def colfilter(data, output, skip, only):
     """Load Data, remove some columns, and save the data"""
     # Process skip/only parameters
-    columns = _validate_skip_only(list(data), skip, only)
+    columns = _validate_skip_only(list(data.df), skip, only)
     data.df = data.df[columns]
     # Save
     data.save_data()
 
 
 @modify_cli.command(help="Filter variables based on the fraction of observations with a value of zero")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
+@arg_data
+@option_output
 @click.option('-p', '--filter-percent', default='90.0', type=click.FloatRange(min=0, max=100),
               help="Remove variables when the percentage of observations equal to 0 is >= this value (0 to 100)")
-@skip
-@only
+@option_skip
+@option_only
 def colfilter_percent_zero(data, output, filter_percent, skip, only):
     # Modify
     data.df = modify.colfilter_percent_zero(data=data.df, filter_percent=filter_percent, skip=skip, only=only)
@@ -38,12 +38,12 @@ def colfilter_percent_zero(data, output, filter_percent, skip, only):
 
 
 @modify_cli.command(help="Filter variables based on a minimum number of non-NA observations")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
+@arg_data
+@option_output
 @click.option('-n', default=200, type=click.IntRange(min=0),
               help="Remove variables with less than this many non-na observations")
-@skip
-@only
+@option_skip
+@option_only
 def colfilter_min_n(data, output, n, skip, only):
     # Modify
     data.df = modify.colfilter_min_n(data=data.df, n=n, skip=skip, only=only)
@@ -52,12 +52,12 @@ def colfilter_min_n(data, output, n, skip, only):
 
 
 @modify_cli.command(help="Filter variables based on a minimum number of non-NA observations per category")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
+@arg_data
+@option_output
 @click.option('-n', default=200, type=click.IntRange(min=0),
               help="Remove variables with less than this many non-na observations in each category")
-@skip
-@only
+@option_skip
+@option_only
 def colfilter_min_cat_n(data, output, n, skip, only):
     # Modify
     data.df = modify.colfilter_min_cat_n(data=data.df, n=n, skip=skip, only=only)
@@ -66,8 +66,8 @@ def colfilter_min_cat_n(data, output, n, skip, only):
 
 
 @modify_cli.command(help="Select some rows from a dataset using a simple comparison, keeping rows where the comparison is True.")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
+@arg_data
+@option_output
 @click.argument('column', type=click.STRING)
 @click.option('--value-str', 'vs', type=click.STRING, default=None, help="Compare values in the column to this string")
 @click.option('--value-int', 'vi', type=click.INT, default=None, help="Compare values in the column to this integer")
@@ -87,24 +87,24 @@ def rowfilter(data, output, column, vs, vi, vf, comparison):
         value = values[0]
     # Filter
     if comparison == 'lt':
-        data.df = data.df.loc[data[column] < value, ]
+        data.df = data.df.loc[data.df[column] < value, ]
     elif comparison == 'lte':
-        data.df = data.df.loc[data[column] <= value, ]
+        data.df = data.df.loc[data.df[column] <= value, ]
     elif comparison == 'eq':
-        data.df = data.df.loc[data[column] == value, ]
+        data.df = data.df.loc[data.df[column] == value, ]
     elif comparison == 'gt':
-        data.df = data.df.loc[data[column] >= value, ]
+        data.df = data.df.loc[data.df[column] >= value, ]
     elif comparison == 'gte':
-        data.df = data.df.loc[data[column] > value, ]
+        data.df = data.df.loc[data.df[column] > value, ]
     # Save
     data.save_data()
 
 
 @modify_cli.command(help="Filter out observations that are not complete cases (contain no NA values)")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
-@skip
-@only
+@arg_data
+@option_output
+@option_skip
+@option_only
 def rowfilter_incomplete_obs(data, output, skip, only):
     # Modify
     data.df = modify.rowfilter_incomplete_obs(data=data.df, skip=skip, only=only)
@@ -116,16 +116,16 @@ def rowfilter_incomplete_obs(data, output, skip, only):
                          "The value being replaced ('current') and the new value ('replacement') "
                          "are specified with their type, and only one may be included for each. "
                          "If it is not specified, the value being replaced or being inserted is None.")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
+@arg_data
+@option_output
 @click.option('--current-str', 'cs', type=click.STRING, default=None, help="Replace occurences of this string value")
 @click.option('--current-int', 'ci', type=click.INT, default=None, help="Replace occurences of this integer value")
 @click.option('--current-float', 'cf', type=click.FLOAT, default=None, help="Replace occurences of this float value")
 @click.option('--replacement-str', 'rs', type=click.STRING, default=None, help="Insert this string value")
 @click.option('--replacement-int', 'ri', type=click.INT, default=None, help="Insert this integer value")
 @click.option('--replacement-float', 'rf', type=click.FLOAT, default=None, help="Insert this float value")
-@skip
-@only
+@option_skip
+@option_only
 def recode_values(data, output, cs, ci, cf, rs, ri, rf, skip, only):
     # Decode current
     c = [v for v in (cs, ci, cf) if v is not None]
@@ -150,12 +150,12 @@ def recode_values(data, output, cs, ci, cf, rs, ri, rf, skip, only):
 
 
 @modify_cli.command(help="Replace outlier values with NaN.  Outliers are defined using a gaussian or IQR approach.")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
+@arg_data
+@option_output
 @click.option('--method', '-m', type=click.Choice(['gaussian', 'iqr']), default='gaussian')
 @click.option('--cutoff', '-c', type=click.FLOAT, default=3.0)
-@skip
-@only
+@option_skip
+@option_only
 def remove_outliers(data, output, method, cutoff, skip, only):
     # Modify
     data.df = modify.remove_outliers(data=data.df, method=method, cutoff=cutoff, skip=skip, only=only)
@@ -164,10 +164,10 @@ def remove_outliers(data, output, method, cutoff, skip, only):
 
 
 @modify_cli.command(help="Set the type of variables to 'binary'")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
-@skip
-@only
+@arg_data
+@option_output
+@option_skip
+@option_only
 def make_binary(data, output, skip, only):
     # Modify
     data.df = modify.make_binary(data=data.df, skip=skip, only=only)
@@ -176,10 +176,10 @@ def make_binary(data, output, skip, only):
 
 
 @modify_cli.command(help="Set the type of variables to 'categorical'")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
-@skip
-@only
+@arg_data
+@option_output
+@option_skip
+@option_only
 def make_categorical(data, output, skip, only):
     # Modify
     data.df = modify.make_categorical(data=data.df, skip=skip, only=only)
@@ -188,10 +188,10 @@ def make_categorical(data, output, skip, only):
 
 
 @modify_cli.command(help="Set the type of variables to 'continuous'")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
-@skip
-@only
+@arg_data
+@option_output
+@option_skip
+@option_only
 def make_continuous(data, output, skip, only):
     # Modify
     data.df = modify.make_continuous(data=data.df, skip=skip, only=only)
@@ -200,8 +200,8 @@ def make_continuous(data, output, skip, only):
 
 
 @modify_cli.command(help="Apply a function to each value of a variable")
-@clarite_data_arg
-@click.argument('output', type=OUTPUT_FILE)
+@arg_data
+@option_output
 @click.argument('variable', type=click.STRING)
 @click.argument('transform', type=click.STRING)
 @click.argument('new_name', type=click.STRING)

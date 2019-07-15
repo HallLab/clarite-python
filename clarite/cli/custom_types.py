@@ -14,19 +14,18 @@ class ClariteDataParamType(click.ParamType):
         if param is None:
             return None
         try:
-            if ctx is not None:
-                dtypes_filename = ctx.params.get('dtypes', None)
-                output = ctx.params.get('output', None)
-            else:
-                dtypes_filename = None
-                output = None
+            # dtypes and output are None by default, but if they are specified (using is_eager) they are available here.
+            # Both are only relevant when saving data in standard format after loading it in standard format.
+            # Possible TODO: Add dtypes parameter when loading data to allow custom dtypes filename when loading
+            dtypes_filename = ctx.params.get('dtypes', None)
+            output = ctx.params.get('output', None)
             data = ClariteData(name=value, output=output, df=None)  # df = None b/c it will be loaded from file
             data.load_data(dtypes_filename=dtypes_filename)
             return data
         except ValueError as e:
-            self.fail(f"Failed to read {value} as a CLARITE dataset."
+            self.fail(f"Failed to read {value} as a CLARITE dataset. "
                       f"Has it been converted using an io function?"
-                      f"\n{e}",
+                      f"\nError: {e}",
                       param,
                       ctx)
 
@@ -60,6 +59,14 @@ class ClariteData:
             name.txt (tsv file) into a self.df
             name.dtypes (json file) into self.dtypes
         """
+        # Load Data
+        data_filename = Path(self.name + ".txt")
+        data_file = Path(data_filename)
+        if not data_file.exists():
+            raise ValueError(f"Could not read '{data_filename}'")
+        else:
+            self.df = pd.read_csv(data_file, sep="\t", index_col="ID")
+
         # Load dtypes from file (default or specified file)
         if dtypes_filename is None:
             dtypes_filename = self.name + ".dtypes"
@@ -72,14 +79,6 @@ class ClariteData:
                     self.dtypes = json.load(f)
                 except json.JSONDecodeError as e:
                     raise ValueError(f"'{dtypes_filename}' was not a valid dtypes file: {e}")
-
-        # Load Data
-        data_filename = Path(self.name + ".txt")
-        data_file = Path(data_filename)
-        if not data_file.exists():
-            raise ValueError(f"Could not read '{data_filename}'")
-        else:
-            self.df = pd.read_csv(data_file, sep="\t")
 
     def save_data(self):
         """

@@ -1,6 +1,6 @@
 import click
 from ...modules import describe
-from ..parameters import clarite_data_arg, OUTPUT_FILE
+from ..parameters import arg_data, OUTPUT_FILE
 
 
 @click.group(name='describe')
@@ -9,7 +9,7 @@ def describe_cli():
 
 
 @describe_cli.command(help="Report top correlations between variables")
-@clarite_data_arg
+@arg_data
 @click.argument('output', type=OUTPUT_FILE)
 @click.option('-t', '--threshold', default=0.75, help="Report correlations with R >= this value")
 def correlations(data, output, threshold):
@@ -22,7 +22,7 @@ def correlations(data, output, threshold):
 
 
 @describe_cli.command(help="Report the number of occurences of each value for each variable")
-@clarite_data_arg
+@arg_data
 @click.argument('output', type=OUTPUT_FILE)
 def freq_table(data, output):
     # Describe
@@ -41,7 +41,7 @@ def freq_table(data, output):
 
 
 @describe_cli.command(help="Report the percent of observations that are NA for each variable")
-@clarite_data_arg
+@arg_data
 @click.argument('output', type=OUTPUT_FILE)
 def percent_na(data, output):
     # Describe

@@ -16,6 +16,7 @@ def analyze_cli():
 @click.argument('bin-data', type=CLARITE_DATA)
 @click.argument('cat-data', type=CLARITE_DATA)
 @click.argument('cont-data', type=CLARITE_DATA)
+@click.argument('output', type=OUTPUT_FILE)
 @click.option('--covariate', '-c', multiple=True, help="Covariates")
 @click.option('--covariance-calc', default='stata', type=click.Choice(['stata', 'jackknife']), help="Covariance calculation method")
 @click.option('--min-n', default=200, type=click.IntRange(0, 999999), help="Minimum number of complete cases needed to run a regression")
@@ -29,10 +30,13 @@ def analyze_cli():
 @click.option('--weight', '-w', type=click.STRING, default=None,
               help="Name of a survey weight column found in the survey data.  This option can't be used with --weights-file")
 @click.option('--single-cluster', type=click.Choice(['error', 'scaled', 'centered', 'certainty']), default='error', help="How to handle singular clusters")
-@click.argument('output', type=OUTPUT_FILE)
-def ewas(phenotype, bin_data, cat_data, cont_data, covariate, covariance_calc, min_n,
-         survey_data, strata, cluster, nested, weights_file, weight, single_cluster, output):
+def ewas(phenotype, bin_data, cat_data, cont_data, output, covariate, covariance_calc, min_n,
+         survey_data, strata, cluster, nested, weights_file, weight, single_cluster):
     """Run EWAS and add corrected pvalues"""
+    # Keep just the data from the loaded CLARITE_DATA arguments/options
+    bin_data = bin_data.df
+    cat_data = cat_data.df
+    cont_data = cont_data.df
     # Make covariates into a list
     covariates = list(covariate)
     # Load optional survey data
@@ -49,9 +53,10 @@ def ewas(phenotype, bin_data, cat_data, cont_data, covariate, covariance_calc, m
             weights = weight
         elif weights_file is None and weight is None:
             weights = None
-        sd = SurveyDesignSpec(survey_data, strata=strata, cluster=cluster, nest=nested, weights=weights, single_cluster=single_cluster)
+        sd = SurveyDesignSpec(survey_data.df, strata=strata, cluster=cluster, nest=nested, weights=weights, single_cluster=single_cluster)
     else:
         sd = None
+        weights = None
     # Remove variables with missing weights
     if type(weights) == dict:
         missing_weights_bin = set(list(bin_data)) - set([phenotype] + covariates) - set(weights.keys())

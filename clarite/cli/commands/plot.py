@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from ...modules import plot
 from ...modules.analyze import result_columns, corrected_pvalue_columns
-from ..parameters import clarite_data_arg, CLARITE_DATA, INPUT_FILE, OUTPUT_FILE
+from ..parameters import arg_data, CLARITE_DATA, INPUT_FILE, OUTPUT_FILE
 
 
 @click.group(name='plot')
@@ -15,7 +15,7 @@ def plot_cli():
 
 
 @plot_cli.command(help="Create a histogram plot of a variable")
-@clarite_data_arg
+@arg_data
 @click.argument('output', type=OUTPUT_FILE)
 @click.argument('variable', type=click.STRING)
 def histogram(data, output, variable):
@@ -29,7 +29,7 @@ def histogram(data, output, variable):
 
 
 @plot_cli.command(help="Generate a pdf containing distribution plots for each variable")
-@clarite_data_arg
+@arg_data
 @click.argument('output', type=OUTPUT_FILE)
 @click.option('--kind', '-k', default='count', type=click.Choice(['count', 'box', 'violin', 'qq']),
               help="Kind of plot used for continuous data.  Non-continuous always shows a count plot.")
@@ -47,7 +47,7 @@ def distributions(data, output, kind, nrows, ncols, quality, sort):
 
 # TODO: Make this use an ewas_result datatype
 @plot_cli.command(help="Generate a manhattan plot of EWAS results")
-@clarite_data_arg
+@arg_data
 @click.argument('output', type=OUTPUT_FILE)
 @click.option('--categories', '-c', type=INPUT_FILE, default=None, help="tab-separate file with two columns: 'Variable' and 'category'")
 @click.option('--other', '-o', multiple=True, type=CLARITE_DATA, help="other datasets to include in the plot")
