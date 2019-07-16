@@ -3,7 +3,8 @@ import pandas as pd
 
 from ...modules.survey import SurveyDesignSpec
 from ...modules import analyze
-from ..parameters import CLARITE_DATA, INPUT_FILE, arg_output
+from ..parameters import CLARITE_DATA, INPUT_FILE, EWAS_RESULT, arg_output
+from ..custom_types import save_clarite_ewas
 
 
 @click.group(name='analyze')
@@ -77,29 +78,21 @@ def ewas(phenotype, bin_data, cat_data, cont_data, output, covariate, covariance
     # Add corrected pvalues
     analyze.add_corrected_pvalues(result)
     # Save
-    result.to_csv(output, sep="\t")
-    # Log
-    click.echo(click.style(f"Done: Saved EWAS results to {output}", fg='green'))
+    save_clarite_ewas(result, output)
 
-# TODO: Make this use an ewas result datatype
+
 @analyze_cli.command(help="filter out non-significant results")
-@click.argument('ewas_result_data', type=INPUT_FILE)
+@click.argument('ewas_result', type=EWAS_RESULT)
 @arg_output
 @click.option('--fdr/--bonferroni', 'use_fdr', default=True, help="Use FDR (--fdr) or Bonferroni pvalues (--bonferroni).  FDR by default.")
 @click.option('--pvalue', '-p', type=click.FLOAT, default=0.05, help="Keep results with a pvalue <= this value (0.05 by default)")
-def get_significant(ewas_result_data, output, use_fdr, pvalue):
-    # Load data
-    data = pd.read_csv(ewas_result_data, sep="\t", index_col=['variable', 'phenotype'])
-    # Check columns
-    if list(data) != analyze.result_columns + analyze.corrected_pvalue_columns:
-        raise ValueError(f"{ewas_result_data} was not a valid EWAS result file.")
+def get_significant(ewas_result, output, use_fdr, pvalue):
     # Filter
     if use_fdr:
         col = 'pvalue_fdr'
     else:
         col = 'pvalue_bonferroni'
+    _, data = ewas_result
     data = data.loc[data[col] <= pvalue, ]
     # Save result
-    data.to_csv(output, sep="\t")
-    # Log
-    click.echo(click.style(f"Done: Saved {len(data):,} variables to {output}", fg='green'))
+    save_clarite_ewas(data, output)

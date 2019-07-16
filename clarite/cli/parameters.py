@@ -1,6 +1,6 @@
 import click
 
-from .custom_types import ClariteDataParamType
+from .custom_types import ClariteDataParamType, ClariteEwasResultParamType
 
 # File IO
 INPUT_FILE = click.Path(exists=True, file_okay=True, dir_okay=False, readable=True)
@@ -14,6 +14,9 @@ option_output = click.option('--output', type=OUTPUT_FILE, default=None,
 # Standard datatypes that use multiple files together
 CLARITE_DATA = ClariteDataParamType()  # Instantiate it to use as a type in arguments/options
 arg_data = click.argument('data', type=CLARITE_DATA)
+
+# Tuple of dataset name, ewas df
+EWAS_RESULT = ClariteEwasResultParamType()
 
 
 # Skip/Only handling

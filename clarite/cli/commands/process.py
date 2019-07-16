@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import click
 import pandas as pd
 from ...modules import process
@@ -26,10 +24,10 @@ def categorize(data, output, cat_min, cat_max, cont_min):
     data_cont = ClariteData(data.name + "_cont", df=df_cont)
     data_check = ClariteData(data.name + "_check", df=df_check)
     # Save Data
-    save_clarite_data(data=data_bin, output=str(output.with_suffix('')) + f"_bin")
-    save_clarite_data(data=data_cat, output=str(output.with_suffix('')) + f"_cat")
-    save_clarite_data(data=data_cont, output=str(output.with_suffix('')) + f"_cont")
-    save_clarite_data(data=data_check, output=str(output.with_suffix('')) + f"_check")
+    save_clarite_data(data=data_bin, output=f"{output}_bin")
+    save_clarite_data(data=data_cat, output=f"{output}_cat")
+    save_clarite_data(data=data_cont, output=f"{output}_cont")
+    save_clarite_data(data=data_check, output=f"{output}_check")
 
 
 @process_cli.command(help="Merge variables from two different datasets into one")

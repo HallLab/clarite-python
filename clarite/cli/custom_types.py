@@ -6,6 +6,8 @@ import click
 import pandas as pd
 import numpy as np
 
+from ..modules import analyze
+
 
 class ClariteData:
     """
@@ -123,6 +125,23 @@ def save_clarite_data(data: ClariteData, output: str = None):
     click.echo(click.style(f"Done: Saved {data.describe()} to {output}", fg='green'))
 
 
+def save_clarite_ewas(data: pd.DataFrame, output: str = None):
+    """
+    Save CLARITE EWAS result.
+    """
+    # Skip saving if there is no data
+    if len(data) == 0:
+        click.echo(click.style(f"No variables to output: {output}.txt was not written.", fg='yellow'))
+
+    # Save data
+    output_filename = output + ".txt"
+    output_file = Path(output_filename)
+    data.to_csv(output_file, sep="\t")
+
+    # Log
+    click.echo(click.style(f"Done: Saved EWAS results for {len(data):,} variables to {output}", fg='green'))
+
+
 class ClariteDataParamType(click.ParamType):
     name = "clarite-data"
 
@@ -135,6 +154,26 @@ class ClariteDataParamType(click.ParamType):
         except ValueError as e:
             self.fail(f"Failed to read {value} as a CLARITE dataset. "
                       f"Has it been converted using an io function?"
-                      f"\nError: {e}",
+                      f"\n\t{e}",
+                      param,
+                      ctx)
+
+
+class ClariteEwasResultParamType(click.ParamType):
+    name = "clarite-ewas-result"
+
+    def convert(self, value, param, ctx):
+        if param is None:
+            return None
+        try:
+            # Load data
+            data = pd.read_csv(value+".txt", sep="\t", index_col=['variable', 'phenotype'])
+            # Check columns
+            if list(data) != analyze.result_columns + analyze.corrected_pvalue_columns:
+                raise ValueError(f"{value} was not a valid EWAS result file.")
+            return (value, data)  # tuple to include name
+        except ValueError as e:
+            self.fail(f"Failed to read {value}.txt as a CLARITE EWAS result dataset. "
+                      f"\n\t{e}",
                       param,
                       ctx)
