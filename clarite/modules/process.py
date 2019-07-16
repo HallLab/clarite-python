@@ -12,7 +12,7 @@ Functions used to process data from one form into another, such as categorizing 
      move_variables
 
 """
-
+from collections import Counter
 from typing import List, Optional, Union
 
 import pandas as pd
@@ -37,19 +37,18 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
 
     Returns
     -------
-    bin_df: pd.DataFrame
-        DataFrame with variables that were categorized as *binary*
-    cat_df: pd.DataFrame
-        DataFrame with variables that were categorized as *categorical*
-    bin_df: pd.DataFrame
-        DataFrame with variables that were categorized as *continuous*
-    other_df: pd.DataFrame
-        DataFrame with variables that were not categorized and should be examined manually
+    categorized_df: pd.DataFrame
+        DataFrame with variables that were categorized by setting the datatype
+          - binary = 'bool'
+          - categorical = 'category'
+          - continuous = numeric (several possible types)
+          - unknown = str
+
 
     Examples
     --------
     >>> import clarite
-    >>> nhanes_bin, nhanes_cat, nhanes_cont, nhanes_other = clarite.process.categorize()
+    >>> nhanes = clarite.process.categorize()
     10 of 945 variables (1.06%) had no non-NA values and are discarded.
     33 of 945 variables (3.49%) had only one value and are discarded.
     361 of 945 variables (38.20%) are classified as binary (2 values).
@@ -64,43 +63,52 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
 
     # Create filter series
     num_before = len(data.columns)
-    unique_count = data.nunique()
+    unique_count = data.nunique(dropna=True)
 
-    # No values (All NA)
-    zero_filter = unique_count == 0
-    num_zero = sum(zero_filter)
-    print(f"{num_zero:,} of {num_before:,} variables ({num_zero/num_before:.2%}) had no non-NA values and are discarded.")
+    # Count classifications
+    counts = Counter()
 
-    # Single value variables (useless for regression)
-    single_filter = unique_count == 1
-    num_single = sum(single_filter)
-    print(f"{num_single:,} of {num_before:,} variables ({num_single/num_before:.2%}) had only one value and are discarded.")
+    # Process each column
+    for col in data.columns:
+        if unique_count[col] == 0:
+            data[col] = data[col].astype(str)
+            counts['check_zero'] += 1
+        elif unique_count[col] == 1:
+            data[col] = data[col].astype(str)
+            counts['check_one'] += 1
+        elif unique_count[col] == 2:
+            if set(data[col].unique()) == {0, 1}:
+                data[col] = data[col].astype(bool)
+                counts['keep_binary'] += 1
+            else:
+                data[col] = data[col].astype(str)
+                counts['check_binary'] += 1
+        elif (unique_count[col] >= cat_min) & (unique_count[col] <= cat_max):
+            data[col] = data[col].astype('category')
+            counts['keep_categorical'] += 1
+        elif (unique_count[col] >= cont_min):
+            data[col] = pd.to_numeric(data[col])
+            counts['keep_continuous'] += 1
+        else:
+            data[col] = data[col].astype(str)
+            counts['check_other'] += 1
 
-    # Binary
-    binary_filter = unique_count == 2
-    num_binary = sum(binary_filter)
-    print(f"{num_binary:,} of {num_before:,} variables ({num_binary/num_before:.2%}) are classified as binary (2 values).")
-    bin_df = data.loc[:, binary_filter]
+    # Log results
+    num_binary = counts['keep_binary']
+    num_cat = counts['keep_categorical']
+    num_cont = counts['keep_continuous']
+    num_categorized = num_binary + num_cat + num_cont
+    print(f"{num_categorized:,} of {num_before:,} were categorized:")
+    print(f"\t{num_binary:,} of {num_before:,} variables ({num_binary/num_before:.2%}) are classified as binary (2 values).")
+    print(f"\t{num_cat:,} of {num_before:,} variables ({num_cat/num_before:.2%}) are classified as categorical ({cat_min} to {cat_max} values).")
+    print(f"\t{num_cont:,} of {num_before:,} variables ({num_cont/num_before:.2%}) are classified as continuous (>= {cont_min} values).")
+    print(f"{num_before - num_categorized} of {num_before:,} were not categorized.")
+    print(f"\t{counts['check_zero']:,} of {num_before:,} variables ({counts['check_zero']/num_before:.2%}) had zero values (all NA)")
+    print(f"\t{counts['check_one']:,} of {num_before:,} variables ({counts['check_one']/num_before:.2%}) had one unique value")
+    print(f"\t{counts['check_binary']:,} of {num_before:,} variables ({counts['check_binary']/num_before:.2%}) had two unique values, but were not coded as '0' and '1'")
+    print(f"\t{counts['check_other']:,} of {num_before:,} variables ({counts['check_other']/num_before:.2%}) had between {cat_max} and {cont_min} unique values")
 
-    # Categorical
-    cat_filter = (unique_count >= cat_min) & (unique_count <= cat_max)
-    num_cat = sum(cat_filter)
-    print(f"{num_cat:,} of {num_before:,} variables ({num_cat/num_before:.2%}) are classified as categorical ({cat_min} to {cat_max} values).")
-    cat_df = data.loc[:, cat_filter]
-
-    # Continuous
-    cont_filter = unique_count >= cont_min
-    num_cont = sum(cont_filter)
-    print(f"{num_cont:,} of {num_before:,} variables ({num_cont/num_before:.2%}) are classified as continuous (>= {cont_min} values).")
-    cont_df = data.loc[:, cont_filter]
-
-    # Other
-    other_filter = ~zero_filter & ~single_filter & ~binary_filter & ~cat_filter & ~cont_filter
-    num_other = sum(other_filter)
-    print(f"{num_other:,} of {num_before:,} variables ({num_other/num_before:.2%}) are not classified (between {cat_max} and {cont_min} values).")
-    other_df = data.loc[:, other_filter]
-
-    return bin_df, cat_df, cont_df, other_df
+    return data
 
 
 def merge_variables(left: pd.DataFrame, right: pd.DataFrame, how: str = 'outer'):
