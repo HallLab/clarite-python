@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from ...modules import plot
 from ...modules.analyze import result_columns, corrected_pvalue_columns
-from ..parameters import arg_data, CLARITE_DATA, INPUT_FILE, OUTPUT_FILE
+from ..parameters import arg_data, arg_output, CLARITE_DATA, INPUT_FILE
 
 
 @click.group(name='plot')
@@ -16,7 +16,7 @@ def plot_cli():
 
 @plot_cli.command(help="Create a histogram plot of a variable")
 @arg_data
-@click.argument('output', type=OUTPUT_FILE)
+@arg_output
 @click.argument('variable', type=click.STRING)
 def histogram(data, output, variable):
     # Plot
@@ -30,7 +30,7 @@ def histogram(data, output, variable):
 
 @plot_cli.command(help="Generate a pdf containing distribution plots for each variable")
 @arg_data
-@click.argument('output', type=OUTPUT_FILE)
+@arg_output
 @click.option('--kind', '-k', default='count', type=click.Choice(['count', 'box', 'violin', 'qq']),
               help="Kind of plot used for continuous data.  Non-continuous always shows a count plot.")
 @click.option('--nrows', default=4, type=click.IntRange(min=1, max=10), help="Number of rows per page")
@@ -48,7 +48,7 @@ def distributions(data, output, kind, nrows, ncols, quality, sort):
 # TODO: Make this use an ewas_result datatype
 @plot_cli.command(help="Generate a manhattan plot of EWAS results")
 @arg_data
-@click.argument('output', type=OUTPUT_FILE)
+@arg_output
 @click.option('--categories', '-c', type=INPUT_FILE, default=None, help="tab-separate file with two columns: 'Variable' and 'category'")
 @click.option('--other', '-o', multiple=True, type=CLARITE_DATA, help="other datasets to include in the plot")
 @click.option('--nlabeled', default=3, type=click.IntRange(min=0, max=50), help="label top n points")

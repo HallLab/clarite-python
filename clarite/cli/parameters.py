@@ -6,10 +6,12 @@ from .custom_types import ClariteDataParamType
 INPUT_FILE = click.Path(exists=True, file_okay=True, dir_okay=False, readable=True)
 OUTPUT_FILE = click.Path(file_okay=True, dir_okay=False, writable=True)
 
-option_output = click.option('--output', type=OUTPUT_FILE, is_eager=True, default=None,
+# Frequently used output parameters
+arg_output = click.argument('output', type=OUTPUT_FILE)
+option_output = click.option('--output', type=OUTPUT_FILE, default=None,
                              help='Output name.  By default the input name is used (the original data is overwritten).')
 
-# Standard datatype that uses multiple files together
+# Standard datatypes that use multiple files together
 CLARITE_DATA = ClariteDataParamType()  # Instantiate it to use as a type in arguments/options
 arg_data = click.argument('data', type=CLARITE_DATA)
 

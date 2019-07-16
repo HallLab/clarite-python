@@ -2,6 +2,7 @@ import click
 from ...modules import modify
 from ...internal.utilities import _validate_skip_only
 from ..parameters import arg_data, option_output, option_skip, option_only
+from ..custom_types import save_clarite_data
 
 
 @click.group(name='modify')
@@ -20,7 +21,7 @@ def colfilter(data, output, skip, only):
     columns = _validate_skip_only(list(data.df), skip, only)
     data.df = data.df[columns]
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Filter variables based on the fraction of observations with a value of zero")
@@ -34,7 +35,7 @@ def colfilter_percent_zero(data, output, filter_percent, skip, only):
     # Modify
     data.df = modify.colfilter_percent_zero(data=data.df, filter_percent=filter_percent, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Filter variables based on a minimum number of non-NA observations")
@@ -48,7 +49,7 @@ def colfilter_min_n(data, output, n, skip, only):
     # Modify
     data.df = modify.colfilter_min_n(data=data.df, n=n, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Filter variables based on a minimum number of non-NA observations per category")
@@ -62,7 +63,7 @@ def colfilter_min_cat_n(data, output, n, skip, only):
     # Modify
     data.df = modify.colfilter_min_cat_n(data=data.df, n=n, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Select some rows from a dataset using a simple comparison, keeping rows where the comparison is True.")
@@ -97,7 +98,7 @@ def rowfilter(data, output, column, vs, vi, vf, comparison):
     elif comparison == 'gte':
         data.df = data.df.loc[data.df[column] > value, ]
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Filter out observations that are not complete cases (contain no NA values)")
@@ -109,7 +110,7 @@ def rowfilter_incomplete_obs(data, output, skip, only):
     # Modify
     data.df = modify.rowfilter_incomplete_obs(data=data.df, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Replace values in the data with other values."
@@ -146,7 +147,7 @@ def recode_values(data, output, cs, ci, cf, rs, ri, rf, skip, only):
     # Modify
     data.df = modify.recode_values(data=data.df, replacement_dict={current: replacement}, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Replace outlier values with NaN.  Outliers are defined using a gaussian or IQR approach.")
@@ -160,7 +161,7 @@ def remove_outliers(data, output, method, cutoff, skip, only):
     # Modify
     data.df = modify.remove_outliers(data=data.df, method=method, cutoff=cutoff, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Set the type of variables to 'binary'")
@@ -172,7 +173,7 @@ def make_binary(data, output, skip, only):
     # Modify
     data.df = modify.make_binary(data=data.df, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Set the type of variables to 'categorical'")
@@ -184,7 +185,7 @@ def make_categorical(data, output, skip, only):
     # Modify
     data.df = modify.make_categorical(data=data.df, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Set the type of variables to 'continuous'")
@@ -196,7 +197,7 @@ def make_continuous(data, output, skip, only):
     # Modify
     data.df = modify.make_continuous(data=data.df, skip=skip, only=only)
     # Save
-    data.save_data()
+    save_clarite_data(data, output)
 
 
 @modify_cli.command(help="Apply a function to each value of a variable")
@@ -215,4 +216,4 @@ def transform_variable(data, output, variable, transform, new_name):
     if new_name != variable:
         data.df = data.df.drop(variable, axis='columns')
     # Save
-    data.save_data()
+    save_clarite_data(data, output)

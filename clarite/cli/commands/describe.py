@@ -1,6 +1,6 @@
 import click
 from ...modules import describe
-from ..parameters import arg_data, OUTPUT_FILE
+from ..parameters import arg_data, arg_output
 
 
 @click.group(name='describe')
@@ -10,7 +10,7 @@ def describe_cli():
 
 @describe_cli.command(help="Report top correlations between variables")
 @arg_data
-@click.argument('output', type=OUTPUT_FILE)
+@arg_output
 @click.option('-t', '--threshold', default=0.75, help="Report correlations with R >= this value")
 def correlations(data, output, threshold):
     # Describe
@@ -23,7 +23,7 @@ def correlations(data, output, threshold):
 
 @describe_cli.command(help="Report the number of occurences of each value for each variable")
 @arg_data
-@click.argument('output', type=OUTPUT_FILE)
+@arg_output
 def freq_table(data, output):
     # Describe
     results = describe.freq_table(data.df)
@@ -42,7 +42,7 @@ def freq_table(data, output):
 
 @describe_cli.command(help="Report the percent of observations that are NA for each variable")
 @arg_data
-@click.argument('output', type=OUTPUT_FILE)
+@arg_output
 def percent_na(data, output):
     # Describe
     results = describe.percent_na(data.df)

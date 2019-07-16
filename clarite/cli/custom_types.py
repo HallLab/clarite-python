@@ -7,43 +7,20 @@ import pandas as pd
 import numpy as np
 
 
-class ClariteDataParamType(click.ParamType):
-    name = "clarite-data"
-
-    def convert(self, value, param, ctx):
-        if param is None:
-            return None
-        try:
-            # dtypes and output are None by default, but if they are specified (using is_eager) they are available here.
-            # Both are only relevant when saving data in standard format after loading it in standard format.
-            # Possible TODO: Add dtypes parameter when loading data to allow custom dtypes filename when loading
-            dtypes_filename = ctx.params.get('dtypes', None)
-            output = ctx.params.get('output', None)
-            data = ClariteData(name=value, output=output, df=None)  # df = None b/c it will be loaded from file
-            data.load_data(dtypes_filename=dtypes_filename)
-            return data
-        except ValueError as e:
-            self.fail(f"Failed to read {value} as a CLARITE dataset. "
-                      f"Has it been converted using an io function?"
-                      f"\nError: {e}",
-                      param,
-                      ctx)
-
-
 class ClariteData:
     """
-    This class manages io of various files related to the 'data' parameter in the CLI
+    This class manages loading various files related to the 'data' parameter in the CLI
     """
     def __init__(self,
                  name: str,
-                 output: Optional[str] = None,
                  df: Optional[pd.DataFrame] = None):
         """
-        Either initialize with pre-loaded data in an io function (passing df) or just a name, then call load_data
+        Either initialize with pre-loaded data in an io function (passing df) or just a name
         """
         self.name = name
-        self.output = output
         self.df = df
+        if self.df is None:
+            self.load_data()
         self.dtypes = self.get_dtypes()  # Load dtypes if a df was passed- otherwise gets set to None
 
     def describe(self):
@@ -53,7 +30,7 @@ class ClariteData:
         else:
             return f"{len(self.df):,} observations of {len(self.df.columns):,} variables"
 
-    def load_data(self, dtypes_filename: str = None):
+    def load_data(self):
         """
         Load:
             name.txt (tsv file) into a self.df
@@ -67,45 +44,16 @@ class ClariteData:
         else:
             self.df = pd.read_csv(data_file, sep="\t", index_col="ID")
 
-        # Load dtypes from file (default or specified file)
-        if dtypes_filename is None:
-            dtypes_filename = self.name + ".dtypes"
+        # Load dtypes from file
+        dtypes_filename = self.name + ".dtypes"
         dtypes_file = Path(dtypes_filename)
         if not dtypes_file.exists():
             raise ValueError(f"Could not read '{dtypes_filename}'")
-        else:
-            with dtypes_file.open('r') as f:
-                try:
-                    self.dtypes = json.load(f)
-                except json.JSONDecodeError as e:
-                    raise ValueError(f"'{dtypes_filename}' was not a valid dtypes file: {e}")
-
-    def save_data(self):
-        """
-        Save data and associated files
-        """
-        # Skip saving if there is no data
-        if len(self.df) == 0:
-            click.echo(click.style(f"No variables in {self.name}: {self.output} was not created.", fg='yellow'))
-        # Refresh dtypes in case the df was modified
-        self.dtypes = self.get_dtypes()
-        # Where to save
-        if self.output is None:
-            self.output = self.name
-        output_filename = self.output + ".txt"
-        output_file = Path(output_filename)
-        # Prepare to save dtypes
-        dtypes_filename = self.output + ".dtypes"
-        dtypes_file = Path(dtypes_filename)
-
-        # Save data
-        self.df.to_csv(output_file, sep="\t")
-        # Save dtypes
-        with dtypes_file.open('w') as f:
-            json.dump(self.dtypes, f)
-
-        # Log
-        click.echo(click.style(f"Done: Saved {self.describe()} to {self.output}", fg='green'))
+        with dtypes_file.open('r') as f:
+            try:
+                self.dtypes = json.load(f)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"'{dtypes_filename}' was not a valid dtypes file: {e}")
 
     def get_dtypes(self):
         """
@@ -140,3 +88,53 @@ class ClariteData:
             if typeinfo['type'] == 'category':
                 newtype = pd.CategoricalDtype(categories=np.array(typeinfo['categories']), ordered=typeinfo['ordered'])
             self.df[col] = self.df[col].astype(newtype)
+
+
+def save_clarite_data(data: ClariteData, output: str = None):
+    """
+    Save CLARITE data and associated files in a standard format.
+    """
+    # Use the input name as output if one isn't provided
+    if output is None:
+        output = data.name
+
+    # Skip saving if there is no data
+    if len(data.df) == 0:
+        click.echo(click.style(f"No variables to output: {output}.txt was not written.", fg='yellow'))
+
+    # Refresh dtypes in case the df was modified
+    data.dtypes = data.get_dtypes()
+
+    # Save data
+    output_filename = output + ".txt"
+    output_file = Path(output_filename)
+    data.df.to_csv(output_file, sep="\t")
+
+    # Save dtypes
+    dtypes_filename = output + ".dtypes"
+    dtypes_file = Path(dtypes_filename)
+    with dtypes_file.open('w') as f:
+        json.dump(data.dtypes, f)
+
+    # Save Log file
+    # TODO
+
+    # Log
+    click.echo(click.style(f"Done: Saved {data.describe()} to {output}", fg='green'))
+
+
+class ClariteDataParamType(click.ParamType):
+    name = "clarite-data"
+
+    def convert(self, value, param, ctx):
+        if param is None:
+            return None
+        try:
+            data = ClariteData(name=value, df=None)  # df = None b/c it will be loaded from file
+            return data
+        except ValueError as e:
+            self.fail(f"Failed to read {value} as a CLARITE dataset. "
+                      f"Has it been converted using an io function?"
+                      f"\nError: {e}",
+                      param,
+                      ctx)

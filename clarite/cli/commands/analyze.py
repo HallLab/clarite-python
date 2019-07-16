@@ -3,7 +3,7 @@ import pandas as pd
 
 from ...modules.survey import SurveyDesignSpec
 from ...modules import analyze
-from ..parameters import CLARITE_DATA, INPUT_FILE, OUTPUT_FILE
+from ..parameters import CLARITE_DATA, INPUT_FILE, arg_output
 
 
 @click.group(name='analyze')
@@ -16,7 +16,7 @@ def analyze_cli():
 @click.argument('bin-data', type=CLARITE_DATA)
 @click.argument('cat-data', type=CLARITE_DATA)
 @click.argument('cont-data', type=CLARITE_DATA)
-@click.argument('output', type=OUTPUT_FILE)
+@arg_output
 @click.option('--covariate', '-c', multiple=True, help="Covariates")
 @click.option('--covariance-calc', default='stata', type=click.Choice(['stata', 'jackknife']), help="Covariance calculation method")
 @click.option('--min-n', default=200, type=click.IntRange(0, 999999), help="Minimum number of complete cases needed to run a regression")
@@ -84,7 +84,7 @@ def ewas(phenotype, bin_data, cat_data, cont_data, output, covariate, covariance
 # TODO: Make this use an ewas result datatype
 @analyze_cli.command(help="filter out non-significant results")
 @click.argument('ewas_result_data', type=INPUT_FILE)
-@click.argument('output', type=OUTPUT_FILE)
+@arg_output
 @click.option('--fdr/--bonferroni', 'use_fdr', default=True, help="Use FDR (--fdr) or Bonferroni pvalues (--bonferroni).  FDR by default.")
 @click.option('--pvalue', '-p', type=click.FLOAT, default=0.05, help="Keep results with a pvalue <= this value (0.05 by default)")
 def get_significant(ewas_result_data, output, use_fdr, pvalue):
