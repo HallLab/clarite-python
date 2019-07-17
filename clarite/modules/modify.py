@@ -21,16 +21,18 @@ Functions used to filter and/or change some data, always taking in one set of da
 
 from typing import Optional, List, Union
 
+import click
 import numpy as np
 import pandas as pd
 
-from ..internal.utilities import _validate_skip_only
+from ..internal.utilities import _validate_skip_only, _get_dtypes, _process_colfilter, print_wrap
 
 
+@print_wrap
 def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
                            skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
-    Remove columns which have <proportion> or more values of zero (excluding NA)
+    Remove continuous variables which have <proportion> or more values of zero (excluding NA)
 
     Parameters
     ----------
@@ -51,25 +53,30 @@ def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
     Examples
     --------
     >>> import clarite
-    >>> nhanes_discovery_cont = clarite.modify.colfilter_percent_zero(nhanes_discovery_cont)
-    Removed 30 of 369 variables (8.13%) which were equal to zero in at least 90.00% of non-NA observations.
+    >>> nhanes_filtered = clarite.modify.colfilter_percent_zero(nhanes_filtered)
+    ================================================================================
+    Running colfilter_percent_zero
+    --------------------------------------------------------------------------------
+            WARNING: 36 variables need to be categorized into a type manually
+            Testing 483 of 483 continuous variables
+                    Removed 30 (6.21%) tested continuous variables which were equal to zero in at least 90.00% of non-NA observations.
     """
-    columns = _validate_skip_only(list(data), skip, only)
-    num_before = len(data.columns)
-
     percent_value = 100 * data.apply(lambda col: (col == 0).sum() / col.count())
-    kept = (percent_value < filter_percent) | ~data.columns.isin(columns)
-    num_removed = num_before - sum(kept)
+    fail_filter = percent_value >= filter_percent
 
-    print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) "
-          f"which were equal to zero in at least {filter_percent:.2f}% of non-NA observations.")
+    kept = _process_colfilter(data, skip, only,
+                              fail_filter=fail_filter,
+                              explanation=f"which were equal to zero in at least {filter_percent:.2f}% of non-NA observations.",
+                              kinds=['continuous'])
+    # Return
     return data.loc[:, kept]
 
 
+@print_wrap
 def colfilter_min_n(data: pd.DataFrame, n: int = 200,
                     skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
-    Remove columns which have less than <n> unique values (excluding NA)
+    Remove variables which have less than <n> non-NA values
 
     Parameters
     ----------
@@ -90,23 +97,34 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
     Examples
     --------
     >>> import clarite
-    >>> nhanes_discovery_bin = clarite.modify.colfilter_min_n(nhanes_discovery_bin)
-    Removed 129 of 361 variables (35.73%) which had less than 200 values
+    >>> nhanes_filtered = clarite.modify.colfilter_min_n(nhanes)
+    ================================================================================
+    Running colfilter_min_n
+    --------------------------------------------------------------------------------
+            WARNING: 36 variables need to be categorized into a type manually
+            Testing 362 of 362 binary variables
+                    Removed 12 (3.31%) tested binary variables which had less than 200 non-null values
+            Testing 47 of 47 categorical variables
+                    Removed 8 (17.02%) tested categorical variables which had less than 200 non-null values
+            Testing 483 of 483 continuous variables
+                    Removed 8 (1.66%) tested continuous variables which had less than 200 non-null values
     """
-    columns = _validate_skip_only(list(data), skip, only)
-    num_before = len(data.columns)
-
     counts = data.count()  # by default axis=0 (rows) so counts number of non-NA rows in each column
-    kept = (counts >= n) | ~data.columns.isin(columns)
-    num_removed = num_before - sum(kept)
+    fail_filter = counts < n
 
-    print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) which had less than {n} values")
+    kept = _process_colfilter(data, skip, only,
+                              fail_filter=fail_filter,
+                              explanation=f"which had less than {n} non-null values.",
+                              kinds=['binary', 'categorical', 'continuous'])
+
+    # Return
     return data.loc[:, kept]
 
 
+@print_wrap
 def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
-    Remove columns which have less than <n> occurences of each unique value
+    Remove binary and categorical variables which have less than <n> occurences of each unique value
 
     Parameters
     ----------
@@ -127,20 +145,28 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]
     Examples
     --------
     >>> import clarite
-    >>> nhanes_discovery_bin = clarite.modify.colfilter_min_cat_n(nhanes_discovery_bin)
-    Removed 159 of 232 variables (68.53%) which had a category with less than 200 values
+    >>> nhanes_filtered = clarite.modify.colfilter_min_cat_n(nhanes)
+    ================================================================================
+    Running colfilter_min_cat_n
+    --------------------------------------------------------------------------------
+            WARNING: 36 variables need to be categorized into a type manually
+            Testing 362 of 362 binary variables
+                    Removed 248 (68.51%) tested binary variables which had a category with less than 200 values
+            Testing 47 of 47 categorical variables
+                    Removed 36 (76.60%) tested categorical variables which had a category with less than 200 values
     """
-    columns = _validate_skip_only(list(data), skip, only)
-    num_before = len(data.columns)
-
     min_category_counts = data.apply(lambda col: col.value_counts().min())
-    kept = (min_category_counts >= n) | ~data.columns.isin(columns)
-    num_removed = num_before - sum(kept)
+    fail_filter = min_category_counts < n
 
-    print(f"Removed {num_removed:,} of {num_before:,} variables ({num_removed/num_before:.2%}) which had a category with less than {n} values")
+    kept = _process_colfilter(data, skip, only,
+                              fail_filter=fail_filter,
+                              explanation=f"which had a category with less than {n} values.",
+                              kinds=['binary', 'categorical'])
+    # Return
     return data.loc[:, kept]
 
 
+@print_wrap
 def rowfilter_incomplete_obs(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Remove rows containing null values
@@ -162,18 +188,23 @@ def rowfilter_incomplete_obs(data, skip: Optional[Union[str, List[str]]] = None,
     Examples
     --------
     >>> import clarite
-    >>> nhanes = clarite.modify.rowfilter_incomplete_obs(only=[phenotype] + covariates)
-    Removed 3,687 of 22,624 rows (16.30%) due to NA values in the specified columns
+    >>> nhanes_filtered = clarite.modify.rowfilter_incomplete_obs(nhanes, only=[phenotype] + covariates)
+    ================================================================================
+    Running rowfilter_incomplete_obs
+    --------------------------------------------------------------------------------
+            Removed 3,687 of 22,624 rows (16.30%) due to NA values in any of 8 columns
     """
-    columns = _validate_skip_only(list(data), skip, only)
+    columns = _validate_skip_only(data, skip, only)
 
-    keep_IDs = data[columns].isnull().sum(axis=1) == 0  # Number of NA in each row is 0
+    keep_IDs = data.loc[:, columns].isnull().sum(axis=1) == 0  # Number of NA in each row is 0
     n_removed = len(data) - sum(keep_IDs)
 
-    print(f"Removed {n_removed:,} of {len(data):,} rows ({n_removed/len(data):.2%}) due to NA values in the specified columns")
+    click.echo(f"\tRemoved {n_removed:,} of {len(data):,} rows ({n_removed/len(data):.2%}) "
+               f"due to NA values in any of {columns.sum()} columns")
     return data[keep_IDs]
 
 
+@print_wrap
 def recode_values(data, replacement_dict,
                   skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
@@ -194,14 +225,21 @@ def recode_values(data, replacement_dict,
     Examples
     --------
     >>> import clarite
-    >>> clarite.recode_values(df, {7: np.nan, 9: np.nan}, only=['SMQ077', 'DBD100'])
-    Replaced 17 values from 22,624 rows in 2 columns
-    >>> clarite.recode_values(df, {10: 12}, only=['SMQ077', 'DBD100'])
-    No occurences of replaceable values were found, so nothing was replaced.
+    >>> clarite.modify.recode_values(df, {7: np.nan, 9: np.nan}, only=['SMQ077', 'DBD100'])
+    ================================================================================
+    Running recode_values
+    --------------------------------------------------------------------------------
+            Replaced 17 values from 22,624 rows in 2 columns
+    >>> clarite.modify.recode_values(df, {10: 12}, only=['SMQ077', 'DBD100'])
+    ================================================================================
+    Running recode_values
+    --------------------------------------------------------------------------------
+            No occurences of replaceable values were found, so nothing was replaced.
     """
     # Limit columns if needed
     if skip is not None or only is not None:
-        columns = _validate_skip_only(list(data), skip, only)
+        columns = _validate_skip_only(data, skip, only)
+        columns = columns[columns].index.get_level_values(0)  # variable names where columns = True
         replacement_dict = {c: replacement_dict for c in columns}
 
     # Replace
@@ -214,18 +252,19 @@ def recode_values(data, replacement_dict,
     cols_with_changes = (diff.sum() > 0).sum()
     cells_with_changes = diff.sum().sum()
     if cells_with_changes > 0:
-        print(f"\tReplaced {cells_with_changes:,} values from {len(data):,} rows in {cols_with_changes:,} columns")
+        click.echo(f"\tReplaced {cells_with_changes:,} values from {len(data):,} rows in {cols_with_changes:,} columns")
     else:
-        print(f"\tNo occurences of replaceable values were found, so nothing was replaced.")
+        click.echo(f"\tNo occurences of replaceable values were found, so nothing was replaced.")
 
     # Return
     return result
 
 
+@print_wrap
 def remove_outliers(data, method: str = 'gaussian', cutoff=3,
                     skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
-    Remove outliers from the dataframe by replacing them with np.nan
+    Remove outliers from continuous variables by replacing them with np.nan
 
     Parameters
     ----------
@@ -244,12 +283,12 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     Examples
     --------
     >>> import clarite
-    >>> nhanes_rm_outliers = clarite.remove_outliers(nhanes, method='iqr', cutoff=1.5, only=['DR1TVB1', 'URXP07', 'SMQ077'])
+    >>> nhanes_rm_outliers = clarite.modify.remove_outliers(nhanes, method='iqr', cutoff=1.5, only=['DR1TVB1', 'URXP07', 'SMQ077'])
     Removing outliers with values < 1st Quartile - (1.5 * IQR) or > 3rd quartile + (1.5 * IQR) in 3 columns
         430 of 22,624 rows of URXP07 were outliers
         730 of 22,624 rows of DR1TVB1 were outliers
         Skipped filtering 'SMQ077' because it is a categorical variable
-    >>> nhanes_rm_outliers = clarite.remove_outliers(only=['DR1TVB1', 'URXP07'])
+    >>> nhanes_rm_outliers = clarite.modify.remove_outliers(only=['DR1TVB1', 'URXP07'])
     Removing outliers with values more than 3 standard deviations from the mean in 2 columns
         42 of 22,624 rows of URXP07 were outliers
         301 of 22,624 rows of DR1TVB1 were outliers
@@ -258,37 +297,46 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     data = data.copy(deep=True)
 
     # Which columns
-    columns = _validate_skip_only(list(data), skip, only)
+    columns = _validate_skip_only(data, skip, only)
+    is_continuous = _get_dtypes(data) == 'continuous'
+    columns = columns & is_continuous
 
     # Check cutoff and method, printing what is being done
     if cutoff <= 0:
         raise ValueError("'cutoff' must be >= 0")
     if method == 'iqr':
-        print(f"Removing outliers with values < 1st Quartile - ({cutoff} * IQR) or > 3rd quartile + ({cutoff} * IQR) in {len(columns):,} columns")
+        click.echo(f"\tRemoving outliers from {columns.sum():,} continuous variables "
+                   f"with values < 1st Quartile - ({cutoff} * IQR) or > 3rd quartile + ({cutoff} * IQR)")
     elif method == 'gaussian':
-        print(f"Removing outliers with values more than {cutoff} standard deviations from the mean in {len(columns):,} columns")
+        click.echo(f"\tRemoving outliers from {columns.sum():,} continuous variables "
+                   f"with values more than {cutoff} standard deviations from the mean")
     else:
         raise ValueError(f"'{method}' is not a supported method for outlier removal - only 'gaussian' and 'iqr'.")
 
-    # Process each column
-    for c in columns:
-        if str(data.dtypes[c]) == 'category':
-            print(f"\tSkipped filtering '{c}' because it is a categorical variable")
-            continue
-        # Calculate outliers
-        if method == 'iqr':
-            q1 = data[c].quantile(0.25)
-            q3 = data[c].quantile(0.75)
-            iqr = abs(q3 - q1)
-            bottom = q1 - (iqr * cutoff)
-            top = q3 + (iqr * cutoff)
-            outliers = (data[c] < bottom) | (data[c] > top)
-        elif method == 'gaussian':
-            outliers = (data[c]-data[c].mean()).abs() > cutoff*data[c].std()
-        # If there are any, log a message and replace them with np.nan
-        if sum(outliers) > 0:
-            print(f"\t{sum(outliers):,} of {len(data):,} rows of {c} were outliers")
-            data.loc[outliers, c] = np.nan
+    # Define outlier replacemet functions
+    def iqr_outliers(col):
+        q1 = col.quantile(0.25)
+        q3 = col.quantile(0.75)
+        iqr = abs(q3 - q1)
+        bottom = q1 - (iqr * cutoff)
+        top = q3 + (iqr * cutoff)
+        outliers = (col < bottom) | (col > top)
+        col.loc[outliers] = np.nan
+        click.echo(f"\tRemoved {outliers.sum()} IQR outliers from {col.name}")
+        return col
+
+    def gaussian_outliers(col):
+        outliers = (col - col.mean()).abs() > (cutoff * col.std())
+        col.loc[outliers] = np.nan
+        click.echo(f"\tRemoved {outliers.sum()} gaussian outliers from {col.name}")
+        return col
+
+    # Remove outliers
+    # TODO: The first column is getting thefilter applied twice?
+    if method == 'iqr':
+        data.loc[:, columns] = data.loc[:, columns].apply(iqr_outliers)
+    elif method == 'gaussian':
+        data.loc[:, columns] = data.loc[:, columns].apply(gaussian_outliers)
 
     return data
 
