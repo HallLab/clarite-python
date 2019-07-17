@@ -70,7 +70,7 @@ def correlations(data, threshold: float = 0.75):
 
 def freq_table(data):
     """
-    Return the count of each unique value for all categorical variables.  Non-categorical typed variables
+    Return the count of each unique value for all binary and categorical variables.  Other variables
     will return a single row with a value of '<Non-Categorical Values>' and the number of non-NA values.
 
     Parameters
@@ -102,6 +102,7 @@ def freq_table(data):
     # Define a function to be applied to each categorical variable
     def formatted_value_counts(var_name: str, df: pd.DataFrame):
         if str(df[var_name].dtype) == "category":
+            # Binary and categorical variables
             df = (
                 df[var_name]
                 .value_counts()
@@ -111,6 +112,7 @@ def freq_table(data):
             df["variable"] = var_name
             return df[["variable", "value", "count"]]  # reorder columns
         else:
+            # Continuous or "check" variables
             return pd.DataFrame.from_dict(
                 {
                     "variable": [var_name],

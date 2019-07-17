@@ -12,7 +12,6 @@ Functions used to process data from one form into another, such as categorizing 
      move_variables
 
 """
-from collections import Counter
 from typing import List, Optional, Union
 
 import pandas as pd
@@ -22,7 +21,7 @@ from ..internal.utilities import _validate_skip_only
 
 def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min: int = 15):
     """
-    Divide variables into binary, categorical, continuous, and ambiguous dataframes
+    Classify variables into binary, categorical, continuous, and 'check'.  Drop variables that only have NaN values.
 
     Parameters
     ----------
@@ -37,76 +36,97 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
 
     Returns
     -------
-    categorized_df: pd.DataFrame
-        DataFrame with variables that were categorized by setting the datatype
-          - binary = 'bool'
-          - categorical = 'category'
-          - continuous = numeric (several possible types)
+    result: pd.DataFrame or None
+        If inplace, returns None.  Changes the datatypes on the input DataFrame.
+        If not inplace, returns a DataFrame with variables that were categorized by setting the datatype
+          - binary = 'category' (with 2 categories)
+          - categorical = 'category' (with > 2 categories)
+          - continuous = numeric (several possible types, usually 'float64' or 'int64')
           - unknown = str
 
 
     Examples
     --------
     >>> import clarite
-    >>> nhanes = clarite.process.categorize()
-    10 of 945 variables (1.06%) had no non-NA values and are discarded.
-    33 of 945 variables (3.49%) had only one value and are discarded.
-    361 of 945 variables (38.20%) are classified as binary (2 values).
-    44 of 945 variables (4.66%) are classified as categorical (3 to 6 values).
-    461 of 945 variables (48.78%) are classified as continuous (>= 15 values).
-    36 of 945 variables (3.81%) are not classified (between 6 and 15 values).
+    >>> clarite.process.categorize(nhanes)
+    362 of 970 variables (37.32%) are classified as binary (2 unique values).
+    47 of 970 variables (4.85%) are classified as categorical (3 to 6 unique values).
+    483 of 970 variables (49.79%) are classified as continuous (>= 15 unique values).
+    42 of 970 variables (4.33%) were dropped.
+            10 variables had zero unique values (all NA).
+            32 variables had one unique value.
+    36 of 970 variables (3.71%) were not categorized and need to be set manually.
+            36 variables had between 6 and 15 unique values
+            0 variables had >= 15 values but couldn't be converted to continuous (numeric) values
     """
     # Validate parameters
     assert cat_min > 2
     assert cat_min <= cat_max
     assert cont_min > cat_max
 
-    # Create filter series
-    num_before = len(data.columns)
+    # Count the number of variables to start with
+    total_vars = len(data.columns)
+    # Get the number of unique non-na values per variable
     unique_count = data.nunique(dropna=True)
 
-    # Count classifications
-    counts = Counter()
+    # No unique non-NA values - Drop these variables
+    empty_vars = (unique_count == 0)
+    if empty_vars.sum() > 0:
+        data = data.drop(columns=empty_vars[empty_vars].index)
 
-    # Process each column
-    for col in data.columns:
-        if unique_count[col] == 0:
-            data[col] = data[col].astype(str)
-            counts['check_zero'] += 1
-        elif unique_count[col] == 1:
-            data[col] = data[col].astype(str)
-            counts['check_one'] += 1
-        elif unique_count[col] == 2:
-            if set(data[col].unique()) == {0, 1}:
-                data[col] = data[col].astype(bool)
-                counts['keep_binary'] += 1
-            else:
-                data[col] = data[col].astype(str)
-                counts['check_binary'] += 1
-        elif (unique_count[col] >= cat_min) & (unique_count[col] <= cat_max):
-            data[col] = data[col].astype('category')
-            counts['keep_categorical'] += 1
-        elif (unique_count[col] >= cont_min):
-            data[col] = pd.to_numeric(data[col])
-            counts['keep_continuous'] += 1
-        else:
-            data[col] = data[col].astype(str)
-            counts['check_other'] += 1
+    # One unique non-NA value - Drop these variables
+    constant_vars = (unique_count == 1)
+    if constant_vars.sum() > 0:
+        data = data.drop(columns=constant_vars[constant_vars].index)
 
-    # Log results
-    num_binary = counts['keep_binary']
-    num_cat = counts['keep_categorical']
-    num_cont = counts['keep_continuous']
-    num_categorized = num_binary + num_cat + num_cont
-    print(f"{num_categorized:,} of {num_before:,} were categorized:")
-    print(f"\t{num_binary:,} of {num_before:,} variables ({num_binary/num_before:.2%}) are classified as binary (2 values).")
-    print(f"\t{num_cat:,} of {num_before:,} variables ({num_cat/num_before:.2%}) are classified as categorical ({cat_min} to {cat_max} values).")
-    print(f"\t{num_cont:,} of {num_before:,} variables ({num_cont/num_before:.2%}) are classified as continuous (>= {cont_min} values).")
-    print(f"{num_before - num_categorized} of {num_before:,} were not categorized.")
-    print(f"\t{counts['check_zero']:,} of {num_before:,} variables ({counts['check_zero']/num_before:.2%}) had zero values (all NA)")
-    print(f"\t{counts['check_one']:,} of {num_before:,} variables ({counts['check_one']/num_before:.2%}) had one unique value")
-    print(f"\t{counts['check_binary']:,} of {num_before:,} variables ({counts['check_binary']/num_before:.2%}) had two unique values, but were not coded as '0' and '1'")
-    print(f"\t{counts['check_other']:,} of {num_before:,} variables ({counts['check_other']/num_before:.2%}) had between {cat_max} and {cont_min} unique values")
+    # Two unique non-NA values - Convert non-NA values to category (for binary)
+    keep_bin = (unique_count == 2)
+    if keep_bin.sum() > 0:
+        data.loc[:, keep_bin] = data.loc[:, keep_bin].apply(lambda col: col.loc[~col.isna()].astype('category'))
+
+    # Categorical - Convert non-NA values to category type
+    keep_cat = (unique_count >= cat_min) & (unique_count <= cat_max)
+    if keep_cat.sum() > 0:
+        data.loc[:, keep_cat] = data.loc[:, keep_cat].astype('category')  # NaNs are handled correctly, no need skip
+
+    # Continuous - Convert non-NA values to numeric type (even though they probably already are)
+    keep_cont = (unique_count >= cont_min)
+    check_cont = pd.Series(False, index=keep_cont.index)
+    if keep_cont.sum() > 0:
+        for col in keep_cont[keep_cont].index:
+            try:
+                data[col] = pd.to_numeric(data[col])
+            except ValueError:
+                # Couldn't convert to a number- possibly a categorical variable with string names?
+                keep_cont[col] = False
+                check_cont[col] = True
+                data[col] = data.loc[~col.isna(), col].astype(str)
+
+    # Other - Convert non-NA values to string type
+    check_other = ~empty_vars & ~constant_vars & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
+    if check_other.sum() > 0:
+        data.loc[:, check_other] = data.loc[:, check_other].apply(lambda col: col.loc[~col.isna()].astype(str))
+
+    # Log categorized results
+    print(f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
+          f"are classified as binary (2 unique values).")
+    print(f"{keep_cat.sum():,} of {total_vars:,} variables ({keep_cat.sum()/total_vars:.2%}) "
+          f"are classified as categorical ({cat_min} to {cat_max} unique values).")
+    print(f"{keep_cont.sum():,} of {total_vars:,} variables ({keep_cont.sum()/total_vars:.2%}) "
+          f"are classified as continuous (>= {cont_min} unique values).")
+
+    # Log dropped variables
+    dropped = empty_vars.sum() + constant_vars.sum()
+    print(f"{dropped:,} of {total_vars:,} variables ({dropped/total_vars:.2%}) were dropped.")
+    print(f"\t{empty_vars.sum():,} variables had zero unique values (all NA).")
+    print(f"\t{constant_vars.sum():,} variables had one unique value.")
+
+    # Log non-categorized results
+    num_not_categorized = check_other.sum() + check_cont.sum()
+    print(f"{num_not_categorized:,} of {total_vars:,} variables ({num_not_categorized/total_vars:.2%})"
+          f" were not categorized and need to be set manually.")
+    print(f"\t{check_other.sum():,} variables had between {cat_max} and {cont_min} unique values")
+    print(f"\t{check_cont.sum():,} variables had >= {cont_min} values but couldn't be converted to continuous (numeric) values")
 
     return data
 

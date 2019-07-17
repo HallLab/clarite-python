@@ -1,5 +1,8 @@
 from typing import Optional, List, Union
 
+import pandas as pd
+from pandas.api.types import is_numeric_dtype
+
 
 def _validate_skip_only(columns, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """Validate use of the 'skip' and 'only' parameters, returning a valid list of columns to filter"""
@@ -26,3 +29,14 @@ def _validate_skip_only(columns, skip: Optional[Union[str, List[str]]] = None, o
         raise ValueError("No columns available for filtering")
 
     return columns
+
+
+def _split_data_by_type(data: pd.DataFrame):
+    """Split a DataFrame into bin, cat, cont, and check"""
+    data_catbin = data.loc[:, data.dtypes == 'category']
+    data_bin = data_catbin.loc[:, data_catbin.apply(lambda col: len(col.cat.categories) == 2)]
+    data_cat = data_catbin.loc[:, data_catbin.apply(lambda col: len(col.cat.categories) > 2)]
+    data_cont = data.loc[:, data.apply(lambda col: is_numeric_dtype(col))]
+    data_check = data.loc[:, data.dtypes == 'object']
+
+    return (d if len(list(d)) > 0 else None for d in (data_bin, data_cat, data_cont, data_check))
