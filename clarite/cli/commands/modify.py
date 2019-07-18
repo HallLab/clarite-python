@@ -254,23 +254,14 @@ def merge_variables(left, right, output, how):
     save_clarite_data(result, output)
 
 
-@modify_cli.command(help="Merge rows from two different datasets into one")
+@modify_cli.command(help="Merge observations from two different datasets into one")
 @click.argument('top', type=CLARITE_DATA)
 @click.argument('bottom', type=CLARITE_DATA)
 @arg_output
-def merge_rows(top, bottom, output):
+def merge_observations(top, bottom, output):
     # Merge
-    extra = set(list(top.df)) - set(list(bottom.df))
-    missing = set(list(bottom.df)) - set(list(top.df))
-    if len(extra) > 0:
-        raise ValueError(f"Couldn't merge rows: Extra columns in the 'bottom' data: {', '.join(extra)}")
-    elif len(missing) > 0:
-        raise ValueError(f"Couldn't merge rows: Missing columns in the 'bottom' data: {', '.join(missing)}")
-    elif (top.df.dtypes != bottom.df.dtypes).any():
-        raise ValueError("Couldn't merge rows: different data types")
-    else:
-        result = pd.concat([top.df, bottom.df], verify_integrity=True, sort=False)
-        result = ClariteData(name=f"{top.name}.{bottom.name}", df=result)
+    result = modify.merge_observations(top.df, bottom.df)
+    result = ClariteData(name=f"{top.name}.{bottom.name}", df=result)
     # Save
     save_clarite_data(result, output)
 

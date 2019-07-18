@@ -14,6 +14,7 @@ Functions used to filter and/or change some data, always taking in one set of da
      make_binary
      make_categorical
      make_continuous
+     merge_observations
      merge_variables
      move_variables
      recode_values
@@ -609,6 +610,38 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
         click.echo(f"\t{check_cont.sum():,} variables had >= {cont_min} values but couldn't be converted to continuous (numeric) values")
 
     return data
+
+
+@print_wrap
+def merge_observations(top: pd.DataFrame, bottom: pd.DataFrame):
+    """
+    Merge two datasets by concatenating the observations together.
+    Both datasets must have the same columns and datatypes (including categories)
+
+    Parameters
+    ----------
+    top: pd.DataFrame
+        "top" DataFrame
+    bottom: pd.DataFrame
+        "bottom" DataFrame
+
+    Returns
+    -------
+    result: pd.DataFrame
+    """
+    # Merge
+    extra = set(list(top)) - set(list(bottom))
+    missing = set(list(bottom)) - set(list(top))
+    if len(extra) > 0:
+        raise ValueError(f"Couldn't merge observations: Extra columns in the 'bottom' data: {', '.join(extra)}")
+    elif len(missing) > 0:
+        raise ValueError(f"Couldn't merge observations: Missing columns in the 'bottom' data: {', '.join(missing)}")
+    elif (top.dtypes != bottom.dtypes).any():
+        raise ValueError("Couldn't merge observations: different data types")
+    else:
+        result = pd.concat([top, bottom], verify_integrity=True, sort=False)
+        click.echo(f"Merged observations: {len(top):,} + {len(bottom):,} = {len(result):,}")
+    return result
 
 
 @print_wrap
