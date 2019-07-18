@@ -284,14 +284,21 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     --------
     >>> import clarite
     >>> nhanes_rm_outliers = clarite.modify.remove_outliers(nhanes, method='iqr', cutoff=1.5, only=['DR1TVB1', 'URXP07', 'SMQ077'])
-    Removing outliers with values < 1st Quartile - (1.5 * IQR) or > 3rd quartile + (1.5 * IQR) in 3 columns
-        430 of 22,624 rows of URXP07 were outliers
-        730 of 22,624 rows of DR1TVB1 were outliers
-        Skipped filtering 'SMQ077' because it is a categorical variable
-    >>> nhanes_rm_outliers = clarite.modify.remove_outliers(only=['DR1TVB1', 'URXP07'])
-    Removing outliers with values more than 3 standard deviations from the mean in 2 columns
-        42 of 22,624 rows of URXP07 were outliers
-        301 of 22,624 rows of DR1TVB1 were outliers
+    ================================================================================
+    Running remove_outliers
+    --------------------------------------------------------------------------------
+            WARNING: 36 variables need to be categorized into a type manually
+            Removing outliers from 2 continuous variables with values < 1st Quartile - (1.5 * IQR) or > 3rd quartile + (1.5 * IQR)
+            Removed 0 low and 430 high IQR outliers from URXP07 (outside -153.55 to 341.25)
+            Removed 0 low and 730 high IQR outliers from DR1TVB1 (outside -0.47 to 3.48)
+    >>> nhanes_rm_outliers = clarite.modify.remove_outliers(nhanes, only=['DR1TVB1', 'URXP07'])
+    ================================================================================
+    Running remove_outliers
+    --------------------------------------------------------------------------------
+            WARNING: 36 variables need to be categorized into a type manually
+            Removing outliers from 2 continuous variables with values more than 3 standard deviations from the mean
+            Removed 0 low and 42 high gaussian outliers from URXP07 (outside -1,194.83 to 1,508.13)
+            Removed 0 low and 301 high gaussian outliers from DR1TVB1 (outside -1.06 to 4.27)
     """
     # Copy to avoid replacing in-place
     data = data.copy(deep=True)
@@ -320,23 +327,30 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
         iqr = abs(q3 - q1)
         bottom = q1 - (iqr * cutoff)
         top = q3 + (iqr * cutoff)
-        outliers = (col < bottom) | (col > top)
-        col.loc[outliers] = np.nan
-        click.echo(f"\tRemoved {outliers.sum()} IQR outliers from {col.name}")
-        return col
+        outliers_bottom = col < bottom
+        outliers_top = col > top
+        col.loc[outliers_bottom] = np.nan
+        col.loc[outliers_top] = np.nan
+        click.echo(f"\tRemoved {outliers_bottom.sum():,} low and {outliers_top.sum():,} high IQR outliers "
+                   f"from {col.name} (outside {bottom:,.2f} to {top:,.2f})")
 
     def gaussian_outliers(col):
-        outliers = (col - col.mean()).abs() > (cutoff * col.std())
-        col.loc[outliers] = np.nan
-        click.echo(f"\tRemoved {outliers.sum()} gaussian outliers from {col.name}")
-        return col
+        mean = col.mean()
+        std = col.std()
+        bottom = mean - (std * cutoff)
+        top = mean + (std * cutoff)
+        outliers_bottom = col < bottom
+        outliers_top = col > top
+        col.loc[outliers_bottom] = np.nan
+        col.loc[outliers_top] = np.nan
+        click.echo(f"\tRemoved {outliers_bottom.sum()} low and {outliers_top.sum()} high gaussian outliers "
+                   f"from {col.name} (outside {bottom:,.2f} to {top:,.2f})")
 
     # Remove outliers
-    # TODO: The first column is getting thefilter applied twice?
     if method == 'iqr':
-        data.loc[:, columns] = data.loc[:, columns].apply(iqr_outliers)
+        data.loc[:, columns].apply(iqr_outliers)
     elif method == 'gaussian':
-        data.loc[:, columns] = data.loc[:, columns].apply(gaussian_outliers)
+        data.loc[:, columns].apply(gaussian_outliers)
 
     return data
 
