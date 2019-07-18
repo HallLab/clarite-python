@@ -3,7 +3,6 @@ from typing import Optional, List, Union
 
 import click
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
 
 
 def print_wrap(func):
@@ -48,22 +47,31 @@ def _validate_skip_only(data: pd.DataFrame, skip: Optional[Union[str, List[str]]
 
 def _get_dtypes(data: pd.DataFrame):
     """Return a Series of dtypes indexed by variable name"""
-    dtypes = data.dtypes
+    # Start with all as unknown
+    dtypes = pd.Series('unknown', index=data.columns)
 
+    # Set binary and categorical
     data_catbin = data.loc[:, data.dtypes == 'category']
-    data_bin = data_catbin.loc[:, data_catbin.apply(lambda col: len(col.cat.categories) == 2)]
-    data_cat = data_catbin.loc[:, data_catbin.apply(lambda col: len(col.cat.categories) > 2)]
-    data_cont = data.loc[:, data.apply(lambda col: is_numeric_dtype(col))]
-    data_unknown = data.loc[:, data.dtypes == 'object']
+    if len(data_catbin.columns) > 0:
+        # Binary
+        bin_cols = data_catbin.apply(lambda col: len(col.cat.categories) == 2)
+        bin_cols = bin_cols[bin_cols].index
+        dtypes.loc[bin_cols] = 'binary'
+        # Categorical
+        cat_cols = data_catbin.apply(lambda col: len(col.cat.categories) > 2)
+        cat_cols = cat_cols[cat_cols].index
+        dtypes.loc[cat_cols] = 'categorical'
 
-    dtypes.loc[data_bin.columns] = 'binary'
-    dtypes.loc[data_cat.columns] = 'categorical'
-    dtypes.loc[data_cont.columns] = 'continuous'
-    dtypes.loc[data_unknown.columns] = 'unknown'
+    # Set continuous
+    cont_cols = data.dtypes.apply(lambda dt: pd.api.types.is_numeric_dtype(dt))
+    cont_cols = cont_cols[cont_cols].index
+    dtypes.loc[cont_cols] = 'continuous'
 
-    unknown_num = len(list(data_unknown))
+    # Warn if there are any unknown types
+    data_unknown = dtypes == 'unknown'
+    unknown_num = data_unknown.sum()
     if unknown_num > 0:
-        click.echo(click.style(f"\tWARNING: {unknown_num:,} variables need to be categorized into a type manually", fg='yellow'))
+        click.echo(click.style(f"WARNING: {unknown_num:,} variables need to be categorized into a type manually", fg='yellow'))
 
     return dtypes
 
@@ -76,7 +84,7 @@ def _process_colfilter(data: pd.DataFrame,
                        kinds: List[str]):  # Which variable types to apply the filter to
     """
     Log filter results, apply them to the data, and return the result.
-    Saves a lot of repetitive code.
+    Saves a lot of repetitive code in column filtering functions.
     """
     columns = _validate_skip_only(data, skip, only)
     dtypes = _get_dtypes(data)
@@ -86,10 +94,10 @@ def _process_colfilter(data: pd.DataFrame,
     for kind in kinds:
         is_kind = (dtypes == kind)
         is_tested_kind = is_kind & columns
-        click.echo(f"\tTesting {is_tested_kind.sum():,} of {is_kind.sum():,} {kind} variables")
+        click.echo(f"Testing {is_tested_kind.sum():,} of {is_kind.sum():,} {kind} variables")
         removed_kind = is_tested_kind & fail_filter
         if is_tested_kind.sum() > 0:
-            click.echo(f"\t\tRemoved {removed_kind.sum():,} ({removed_kind.sum()/is_tested_kind.sum():.2%}) "
+            click.echo(f"\tRemoved {removed_kind.sum():,} ({removed_kind.sum()/is_tested_kind.sum():.2%}) "
                        f"tested {kind} variables {explanation}")
         kept = kept & ~removed_kind
 

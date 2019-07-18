@@ -7,15 +7,18 @@ Functions used to filter and/or change some data, always taking in one set of da
   .. autosummary::
      :toctree: modules/modify
 
+     categorize
      colfilter_percent_zero
      colfilter_min_n
      colfilter_min_cat_n
-     rowfilter_incomplete_obs
-     recode_values
-     remove_outliers
      make_binary
      make_categorical
      make_continuous
+     merge_variables
+     move_variables
+     recode_values
+     remove_outliers
+     rowfilter_incomplete_obs
 
 """
 
@@ -57,9 +60,9 @@ def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
     ================================================================================
     Running colfilter_percent_zero
     --------------------------------------------------------------------------------
-            WARNING: 36 variables need to be categorized into a type manually
-            Testing 483 of 483 continuous variables
-                    Removed 30 (6.21%) tested continuous variables which were equal to zero in at least 90.00% of non-NA observations.
+    WARNING: 36 variables need to be categorized into a type manually
+    Testing 483 of 483 continuous variables
+            Removed 30 (6.21%) tested continuous variables which were equal to zero in at least 90.00% of non-NA observations.
     """
     percent_value = 100 * data.apply(lambda col: (col == 0).sum() / col.count())
     fail_filter = percent_value >= filter_percent
@@ -101,13 +104,13 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
     ================================================================================
     Running colfilter_min_n
     --------------------------------------------------------------------------------
-            WARNING: 36 variables need to be categorized into a type manually
-            Testing 362 of 362 binary variables
-                    Removed 12 (3.31%) tested binary variables which had less than 200 non-null values
-            Testing 47 of 47 categorical variables
-                    Removed 8 (17.02%) tested categorical variables which had less than 200 non-null values
-            Testing 483 of 483 continuous variables
-                    Removed 8 (1.66%) tested continuous variables which had less than 200 non-null values
+    WARNING: 36 variables need to be categorized into a type manually
+    Testing 362 of 362 binary variables
+            Removed 12 (3.31%) tested binary variables which had less than 200 non-null values
+    Testing 47 of 47 categorical variables
+            Removed 8 (17.02%) tested categorical variables which had less than 200 non-null values
+    Testing 483 of 483 continuous variables
+            Removed 8 (1.66%) tested continuous variables which had less than 200 non-null values
     """
     counts = data.count()  # by default axis=0 (rows) so counts number of non-NA rows in each column
     fail_filter = counts < n
@@ -149,11 +152,11 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]
     ================================================================================
     Running colfilter_min_cat_n
     --------------------------------------------------------------------------------
-            WARNING: 36 variables need to be categorized into a type manually
-            Testing 362 of 362 binary variables
-                    Removed 248 (68.51%) tested binary variables which had a category with less than 200 values
-            Testing 47 of 47 categorical variables
-                    Removed 36 (76.60%) tested categorical variables which had a category with less than 200 values
+    WARNING: 36 variables need to be categorized into a type manually
+    Testing 362 of 362 binary variables
+            Removed 248 (68.51%) tested binary variables which had a category with less than 200 values
+    Testing 47 of 47 categorical variables
+            Removed 36 (76.60%) tested categorical variables which had a category with less than 200 values
     """
     min_category_counts = data.apply(lambda col: col.value_counts().min())
     fail_filter = min_category_counts < n
@@ -192,15 +195,15 @@ def rowfilter_incomplete_obs(data, skip: Optional[Union[str, List[str]]] = None,
     ================================================================================
     Running rowfilter_incomplete_obs
     --------------------------------------------------------------------------------
-            Removed 3,687 of 22,624 rows (16.30%) due to NA values in any of 8 columns
+    Removed 3,687 of 22,624 observations (16.30%) due to NA values in any of 8 variables
     """
     columns = _validate_skip_only(data, skip, only)
 
     keep_IDs = data.loc[:, columns].isnull().sum(axis=1) == 0  # Number of NA in each row is 0
     n_removed = len(data) - sum(keep_IDs)
 
-    click.echo(f"\tRemoved {n_removed:,} of {len(data):,} rows ({n_removed/len(data):.2%}) "
-               f"due to NA values in any of {columns.sum()} columns")
+    click.echo(f"Removed {n_removed:,} of {len(data):,} observations ({n_removed/len(data):.2%}) "
+               f"due to NA values in any of {columns.sum()} variables")
     return data[keep_IDs]
 
 
@@ -229,12 +232,12 @@ def recode_values(data, replacement_dict,
     ================================================================================
     Running recode_values
     --------------------------------------------------------------------------------
-            Replaced 17 values from 22,624 rows in 2 columns
+    Replaced 17 values from 22,624 observations in 2 variables
     >>> clarite.modify.recode_values(df, {10: 12}, only=['SMQ077', 'DBD100'])
     ================================================================================
     Running recode_values
     --------------------------------------------------------------------------------
-            No occurences of replaceable values were found, so nothing was replaced.
+    No occurences of replaceable values were found, so nothing was replaced.
     """
     # Limit columns if needed
     if skip is not None or only is not None:
@@ -252,9 +255,9 @@ def recode_values(data, replacement_dict,
     cols_with_changes = (diff.sum() > 0).sum()
     cells_with_changes = diff.sum().sum()
     if cells_with_changes > 0:
-        click.echo(f"\tReplaced {cells_with_changes:,} values from {len(data):,} rows in {cols_with_changes:,} columns")
+        click.echo(f"Replaced {cells_with_changes:,} values from {len(data):,} observations in {cols_with_changes:,} variables")
     else:
-        click.echo(f"\tNo occurences of replaceable values were found, so nothing was replaced.")
+        click.echo(f"No occurences of replaceable values were found, so nothing was replaced.")
 
     # Return
     return result
@@ -287,16 +290,16 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     ================================================================================
     Running remove_outliers
     --------------------------------------------------------------------------------
-            WARNING: 36 variables need to be categorized into a type manually
-            Removing outliers from 2 continuous variables with values < 1st Quartile - (1.5 * IQR) or > 3rd quartile + (1.5 * IQR)
+    WARNING: 36 variables need to be categorized into a type manually
+    Removing outliers from 2 continuous variables with values < 1st Quartile - (1.5 * IQR) or > 3rd quartile + (1.5 * IQR)
             Removed 0 low and 430 high IQR outliers from URXP07 (outside -153.55 to 341.25)
             Removed 0 low and 730 high IQR outliers from DR1TVB1 (outside -0.47 to 3.48)
     >>> nhanes_rm_outliers = clarite.modify.remove_outliers(nhanes, only=['DR1TVB1', 'URXP07'])
     ================================================================================
     Running remove_outliers
     --------------------------------------------------------------------------------
-            WARNING: 36 variables need to be categorized into a type manually
-            Removing outliers from 2 continuous variables with values more than 3 standard deviations from the mean
+    WARNING: 36 variables need to be categorized into a type manually
+    Removing outliers from 2 continuous variables with values more than 3 standard deviations from the mean
             Removed 0 low and 42 high gaussian outliers from URXP07 (outside -1,194.83 to 1,508.13)
             Removed 0 low and 301 high gaussian outliers from DR1TVB1 (outside -1.06 to 4.27)
     """
@@ -312,10 +315,10 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     if cutoff <= 0:
         raise ValueError("'cutoff' must be >= 0")
     if method == 'iqr':
-        click.echo(f"\tRemoving outliers from {columns.sum():,} continuous variables "
+        click.echo(f"Removing outliers from {len(data):,} observations of {columns.sum():,} continuous variables "
                    f"with values < 1st Quartile - ({cutoff} * IQR) or > 3rd quartile + ({cutoff} * IQR)")
     elif method == 'gaussian':
-        click.echo(f"\tRemoving outliers from {columns.sum():,} continuous variables "
+        click.echo(f"Removing outliers from {len(data):,} observations of {columns.sum():,} continuous variables "
                    f"with values more than {cutoff} standard deviations from the mean")
     else:
         raise ValueError(f"'{method}' is not a supported method for outlier removal - only 'gaussian' and 'iqr'.")
@@ -355,9 +358,10 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
     return data
 
 
+@print_wrap
 def make_binary(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
-    Validate and type a dataframe of binary variables
+    Set variable types as Binary
 
     Checks that each variable has at most 2 values and converts the type to pd.Categorical
 
@@ -378,29 +382,35 @@ def make_binary(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None
     Examples
     --------
     >>> import clarite
-    >>> df = clarite.modify.make_binary(df)
-    Set 32 of 32 variables as binary, each with 4,321 observations
+    >>> nhanes = clarite.modify.make_binary(nhanes, only=['female', 'black', 'mexican', 'other_hispanic'])
+    ================================================================================
+    Running make_binary
+    --------------------------------------------------------------------------------
+    Set 4 of 970 variable(s) as binary, each with 22,624 observations
     """
     # Which columns
-    columns = _validate_skip_only(list(data), skip, only)
+    columns = _validate_skip_only(data, skip, only)
 
-    # Check the number of unique values
+    # Check the number of unique values, raising an error if any columns can't be converted
     unique_values = data.nunique()
-    num_non_binary = (unique_values[columns] > 2).sum()
+    non_binary = (unique_values != 2) & columns
+    num_non_binary = non_binary.sum()
     if num_non_binary > 0:
-        raise ValueError(f"{num_non_binary} of {len(columns)} variables did not have 2 unique values and couldn't be processed as a binary type")
-    # TODO: possibly add further validation to make sure values are 1 and 0
+        raise ValueError(f"{num_non_binary} variable(s) did not have 2 unique values and couldn't be processed as a binary type: "
+                         f"{', '.join(non_binary[non_binary].index)}")
 
     # Convert dtype
+    columns = columns[columns].index
     data = data.astype({c: 'category' for c in columns})
-    print(f"Set {len(columns):,} of {len(data.columns)} variables as binary, each with {len(data):,} observations")
+    print(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as binary, each with {len(data):,} observations")
 
     return data
 
 
+@print_wrap
 def make_categorical(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
-    Validate and type a dataframe of categorical variables
+    Set variable types as Categorical
 
     Converts the type to pd.Categorical
 
@@ -422,23 +432,26 @@ def make_categorical(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] =
     --------
     >>> import clarite
     >>> df = clarite.modify.make_categorical(df)
+    ================================================================================
+    Running make_categorical
+    --------------------------------------------------------------------------------
     Set 12 of 12 variables as categorical, each with 4,321 observations
     """
     # Which columns
-    columns = _validate_skip_only(list(data), skip, only)
-
-    # TODO: possibly add further validation
+    columns = _validate_skip_only(data, skip, only)
 
     # Convert dtype
+    columns = columns[columns].index
     data = data.astype({c: 'category' for c in columns})
-    print(f"Set {len(columns):,} of {len(data.columns)} variables as categorical, each with {len(data):,} observations")
+    print(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as categorical, each with {len(data):,} observations")
 
     return data
 
 
+@print_wrap
 def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
-    Validate and type a dataframe of continuous variables
+    Set variable types as Numeric
 
     Converts the type to numeric
 
@@ -460,15 +473,212 @@ def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = 
     --------
     >>> import clarite
     >>> df = clarite.modify.make_continuous(df)
+    ================================================================================
+    Running make_categorical
+    --------------------------------------------------------------------------------
     Set 128 of 128 variables as continuous, each with 4,321 observations
     """
     # Which columns
-    columns = _validate_skip_only(list(data), skip, only)
+    columns = _validate_skip_only(data, skip, only)
 
-    # TODO: possibly add further validation
+    # Convert dtype, ignoring errors
+    data.loc[:, columns] = data.loc[:, columns].apply(lambda col: pd.to_numeric(col, errors='ignore'))
 
-    # Convert dtype
-    data = pd.DataFrame({c: data[c] if c not in columns else pd.to_numeric(data[c]) for c in list(data)})
-    print(f"Set {len(columns):,} of {len(data.columns)} variables as continuous, each with {len(data):,} observations")
+    # Check if any variables could not be converted
+    failed_conversion = data.loc[:, columns].dtypes.apply(lambda dt: not pd.api.types.is_numeric_dtype(dt))
+    if failed_conversion.sum() > 0:
+        raise ValueError(f"{failed_conversion.sum()} variable(s) couldn't be processed as continuous (numeric) type(s): "
+                         f"{', '.join(failed_conversion[failed_conversion].index)}")
+
+    columns = columns[columns].index
+    print(f"Set {len(columns):,} of {len(data.columns):,} variables as continuous, each with {len(data):,} observations")
 
     return data
+
+
+@print_wrap
+def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min: int = 15):
+    """
+    Classify variables into binary, categorical, continuous, and 'unknown'.  Drop variables that only have NaN values.
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be processed
+    cat_min: int, default 3
+        Minimum number of unique, non-NA values for a categorical variable
+    cat_max: int, default 6
+        Maximum number of unique, non-NA values for a categorical variable
+    cont_min: int, default 15
+        Minimum number of unique, non-NA values for a continuous variable
+
+    Returns
+    -------
+    result: pd.DataFrame or None
+        If inplace, returns None.  Changes the datatypes on the input DataFrame.
+        If not inplace, returns a DataFrame with variables that were categorized by setting the datatype
+          - binary = 'category' (with 2 categories)
+          - categorical = 'category' (with > 2 categories)
+          - continuous = numeric (several possible types, usually 'float64' or 'int64')
+          - unknown = str
+
+
+    Examples
+    --------
+    >>> import clarite
+    >>> clarite.modify.categorize(nhanes)
+    362 of 970 variables (37.32%) are classified as binary (2 unique values).
+    47 of 970 variables (4.85%) are classified as categorical (3 to 6 unique values).
+    483 of 970 variables (49.79%) are classified as continuous (>= 15 unique values).
+    42 of 970 variables (4.33%) were dropped.
+            10 variables had zero unique values (all NA).
+            32 variables had one unique value.
+    36 of 970 variables (3.71%) were not categorized and need to be set manually.
+            36 variables had between 6 and 15 unique values
+            0 variables had >= 15 values but couldn't be converted to continuous (numeric) values
+    """
+    # Validate parameters
+    assert cat_min > 2
+    assert cat_min <= cat_max
+    assert cont_min > cat_max
+
+    # Count the number of variables to start with
+    total_vars = len(data.columns)
+    # Get the number of unique non-na values per variable
+    unique_count = data.nunique(dropna=True)
+
+    # No unique non-NA values - Drop these variables
+    empty_vars = (unique_count == 0)
+    if empty_vars.sum() > 0:
+        data = data.drop(columns=empty_vars[empty_vars].index)
+
+    # One unique non-NA value - Drop these variables
+    constant_vars = (unique_count == 1)
+    if constant_vars.sum() > 0:
+        data = data.drop(columns=constant_vars[constant_vars].index)
+
+    # Two unique non-NA values - Convert non-NA values to category (for binary)
+    keep_bin = (unique_count == 2)
+    if keep_bin.sum() > 0:
+        data.loc[:, keep_bin] = data.loc[:, keep_bin].apply(lambda col: col.loc[~col.isna()].astype('category'))
+
+    # Categorical - Convert non-NA values to category type
+    keep_cat = (unique_count >= cat_min) & (unique_count <= cat_max)
+    if keep_cat.sum() > 0:
+        data.loc[:, keep_cat] = data.loc[:, keep_cat].astype('category')  # NaNs are handled correctly, no need skip
+
+    # Continuous - Convert non-NA values to numeric type (even though they probably already are)
+    keep_cont = (unique_count >= cont_min)
+    check_cont = pd.Series(False, index=keep_cont.index)
+    if keep_cont.sum() > 0:
+        for col in keep_cont[keep_cont].index:
+            try:
+                data[col] = pd.to_numeric(data[col])
+            except ValueError:
+                # Couldn't convert to a number- possibly a categorical variable with string names?
+                keep_cont[col] = False
+                check_cont[col] = True
+                data[col] = data.loc[~col.isna(), col].astype(str)
+
+    # Other - Convert non-NA values to string type
+    check_other = ~empty_vars & ~constant_vars & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
+    if check_other.sum() > 0:
+        data.loc[:, check_other] = data.loc[:, check_other].apply(lambda col: col.loc[~col.isna()].astype(str))
+
+    # Log categorized results
+    print(f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
+          f"are classified as binary (2 unique values).")
+    print(f"{keep_cat.sum():,} of {total_vars:,} variables ({keep_cat.sum()/total_vars:.2%}) "
+          f"are classified as categorical ({cat_min} to {cat_max} unique values).")
+    print(f"{keep_cont.sum():,} of {total_vars:,} variables ({keep_cont.sum()/total_vars:.2%}) "
+          f"are classified as continuous (>= {cont_min} unique values).")
+
+    # Log dropped variables
+    dropped = empty_vars.sum() + constant_vars.sum()
+    print(f"{dropped:,} of {total_vars:,} variables ({dropped/total_vars:.2%}) were dropped.")
+    if dropped > 0:
+        print(f"\t{empty_vars.sum():,} variables had zero unique values (all NA).")
+        print(f"\t{constant_vars.sum():,} variables had one unique value.")
+
+    # Log non-categorized results
+    num_not_categorized = check_other.sum() + check_cont.sum()
+    print(f"{num_not_categorized:,} of {total_vars:,} variables ({num_not_categorized/total_vars:.2%})"
+          f" were not categorized and need to be set manually.")
+    if num_not_categorized > 0:
+        print(f"\t{check_other.sum():,} variables had between {cat_max} and {cont_min} unique values")
+        print(f"\t{check_cont.sum():,} variables had >= {cont_min} values but couldn't be converted to continuous (numeric) values")
+
+    return data
+
+
+@print_wrap
+def merge_variables(left: pd.DataFrame, right: pd.DataFrame, how: str = 'outer'):
+    """
+    Merge a list of dataframes with different variables side-by-side.  Keep all observations ('outer' merge) by default.
+
+    Parameters
+    ----------
+    left: pd.Dataframe
+        "left" DataFrame
+    right: pd.DataFrame
+        "right" DataFrame which uses the same index
+    how: merge method, one of {'left', 'right', 'inner', 'outer'}
+        Keep only rows present in the left data, the right data, both datasets, or either dataset.
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df = clarite.modify.merge_variables(df_bin, df_cat, how='outer')
+    """
+    return left.merge(right, left_index=True, right_index=True, how=how)
+
+
+@print_wrap
+def move_variables(left: pd.DataFrame, right: pd.DataFrame,
+                   skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+    """
+    Move one or more variables from one DataFrame to another
+
+    Parameters
+    ----------
+    left: pd.Dataframe
+        DataFrame containing the variable(s) to be moved
+    right: pd.DataFrame
+        DataFrame (which uses the same index) that the variable(s) will be moved to
+    skip: str, list or None (default is None)
+        List of variables that will *not* be moved
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be moved
+
+    Returns
+    -------
+    left: pd.DataFrame
+        The first DataFrame with the variables removed
+    right: pd.DataFrame
+        The second DataFrame with the variables added
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df_cat, df_cont = clarity.modify.move_variables(df_cat, df_cont, only=["DRD350AQ", "DRD350DQ", "DRD350GQ"])
+    Moved 3 variables.
+    >>> discovery_check, discovery_cont = clarite.modify.move_variables(discovery_check, discovery_cont)
+    Moved 39 variables.
+    """
+    # Which columns
+    columns = _validate_skip_only(list(left), skip, only)
+
+    # Add to new df
+    right = merge_variables(right, left[columns])
+
+    # Remove from original
+    left = left.drop(columns, axis='columns')
+
+    # Log
+    if len(columns) == 1:
+        print("Moved 1 variable.")
+    else:
+        print(f"Moved {len(columns)} variables.")
+
+    # Return
+    return left, right

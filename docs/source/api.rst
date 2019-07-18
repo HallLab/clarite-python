@@ -24,8 +24,4 @@ CLARITE functions are organized into several modules:
 
 -----
 
-.. automodule:: clarite.process
-
------
-
 .. automodule:: clarite.survey
