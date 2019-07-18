@@ -402,7 +402,7 @@ def make_binary(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None
     # Convert dtype
     columns = columns[columns].index
     data = data.astype({c: 'category' for c in columns})
-    print(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as binary, each with {len(data):,} observations")
+    click.echo(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as binary, each with {len(data):,} observations")
 
     return data
 
@@ -443,7 +443,7 @@ def make_categorical(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] =
     # Convert dtype
     columns = columns[columns].index
     data = data.astype({c: 'category' for c in columns})
-    print(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as categorical, each with {len(data):,} observations")
+    click.echo(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as categorical, each with {len(data):,} observations")
 
     return data
 
@@ -586,27 +586,27 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
         data.loc[:, check_other] = data.loc[:, check_other].apply(lambda col: col.loc[~col.isna()].astype(str))
 
     # Log categorized results
-    print(f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
-          f"are classified as binary (2 unique values).")
-    print(f"{keep_cat.sum():,} of {total_vars:,} variables ({keep_cat.sum()/total_vars:.2%}) "
-          f"are classified as categorical ({cat_min} to {cat_max} unique values).")
-    print(f"{keep_cont.sum():,} of {total_vars:,} variables ({keep_cont.sum()/total_vars:.2%}) "
-          f"are classified as continuous (>= {cont_min} unique values).")
+    click.echo(f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
+               f"are classified as binary (2 unique values).")
+    click.echo(f"{keep_cat.sum():,} of {total_vars:,} variables ({keep_cat.sum()/total_vars:.2%}) "
+               f"are classified as categorical ({cat_min} to {cat_max} unique values).")
+    click.echo(f"{keep_cont.sum():,} of {total_vars:,} variables ({keep_cont.sum()/total_vars:.2%}) "
+               f"are classified as continuous (>= {cont_min} unique values).")
 
     # Log dropped variables
     dropped = empty_vars.sum() + constant_vars.sum()
-    print(f"{dropped:,} of {total_vars:,} variables ({dropped/total_vars:.2%}) were dropped.")
+    click.echo(f"{dropped:,} of {total_vars:,} variables ({dropped/total_vars:.2%}) were dropped.")
     if dropped > 0:
-        print(f"\t{empty_vars.sum():,} variables had zero unique values (all NA).")
-        print(f"\t{constant_vars.sum():,} variables had one unique value.")
+        click.echo(f"\t{empty_vars.sum():,} variables had zero unique values (all NA).")
+        click.echo(f"\t{constant_vars.sum():,} variables had one unique value.")
 
     # Log non-categorized results
     num_not_categorized = check_other.sum() + check_cont.sum()
-    print(f"{num_not_categorized:,} of {total_vars:,} variables ({num_not_categorized/total_vars:.2%})"
-          f" were not categorized and need to be set manually.")
+    click.echo(f"{num_not_categorized:,} of {total_vars:,} variables ({num_not_categorized/total_vars:.2%})"
+               f" were not categorized and need to be set manually.")
     if num_not_categorized > 0:
-        print(f"\t{check_other.sum():,} variables had between {cat_max} and {cont_min} unique values")
-        print(f"\t{check_cont.sum():,} variables had >= {cont_min} values but couldn't be converted to continuous (numeric) values")
+        click.echo(f"\t{check_other.sum():,} variables had between {cat_max} and {cont_min} unique values")
+        click.echo(f"\t{check_cont.sum():,} variables had >= {cont_min} values but couldn't be converted to continuous (numeric) values")
 
     return data
 
@@ -630,7 +630,12 @@ def merge_variables(left: pd.DataFrame, right: pd.DataFrame, how: str = 'outer')
     >>> import clarite
     >>> df = clarite.modify.merge_variables(df_bin, df_cat, how='outer')
     """
-    return left.merge(right, left_index=True, right_index=True, how=how)
+    click.echo(f"{how} Merge:\n"
+               f"\tleft = {len(left):,} observations of {len(left.columns):,} variables\n"
+               f"\tright = {len(right):,} observations of {len(right.columns):,} variables")
+    result = left.merge(right, left_index=True, right_index=True, how=how)
+    click.echo(f"Kept {len(result):,} observations of {len(result.columns):,} variables.")
+    return result
 
 
 @print_wrap
@@ -676,9 +681,9 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
 
     # Log
     if len(columns) == 1:
-        print("Moved 1 variable.")
+        click.echo("Moved 1 variable.")
     else:
-        print(f"Moved {len(columns)} variables.")
+        click.echo(f"Moved {len(columns)} variables.")
 
     # Return
     return left, right

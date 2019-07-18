@@ -7,13 +7,15 @@ import pandas as pd
 
 def print_wrap(func):
     @wraps(func)
-    def wrapper_do_twice(*args, **kwargs):
+    def wrapped(*args, **kwargs):
         console_width, _ = click.get_terminal_size()
         click.echo("=" * console_width)
         click.echo(f"Running {func.__name__}")
         click.echo("-" * console_width)
-        return func(*args, **kwargs)
-    return wrapper_do_twice
+        result = func(*args, **kwargs)
+        click.echo("=" * console_width)
+        return result
+    return wrapped
 
 
 def _validate_skip_only(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
