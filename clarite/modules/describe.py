@@ -10,6 +10,7 @@ Functions that are used to gather information about some data
      correlations
      freq_table
      percent_na
+     get_types
 
 """
 
@@ -18,8 +19,10 @@ Functions that are used to gather information about some data
 import numpy as np
 import pandas as pd
 
+from ..internal.utilities import _get_dtypes
 
-def correlations(data, threshold: float = 0.75):
+
+def correlations(data: pd.DataFrame, threshold: float = 0.75):
     """
     Return variables with pearson correlation above the threshold
 
@@ -68,7 +71,7 @@ def correlations(data, threshold: float = 0.75):
     return correlation.reset_index(drop=True)
 
 
-def freq_table(data):
+def freq_table(data: pd.DataFrame):
     """
     Return the count of each unique value for all binary and categorical variables.  Other variables
     will return a single row with a value of '<Non-Categorical Values>' and the number of non-NA values.
@@ -126,7 +129,7 @@ def freq_table(data):
     ).reset_index(drop=True)
 
 
-def percent_na(data):
+def percent_na(data: pd.DataFrame):
     """
     Return the percent of observations that are NA for each variable
 
@@ -154,3 +157,30 @@ def percent_na(data):
     result = result.reset_index()
     result.columns = ['variable', 'percent_na']
     return result
+
+
+def get_types(data: pd.DataFrame):
+    """
+    Return the type of each variable
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be described
+
+    Returns
+    -------
+    result: pd.Series
+        Series listing the CLARITE type for each variable
+
+    Examples
+    --------
+    >>> import clarite
+    >>> clarite.describe.get_types(df)
+    variable    percent_na
+    SDDSRVYR                 0.00000
+    female                   0.00000
+    LBXHBC                   4.99321
+    LBXHBS                   4.98730
+    """
+    return _get_dtypes(data)
