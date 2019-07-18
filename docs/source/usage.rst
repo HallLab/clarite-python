@@ -22,9 +22,6 @@ Modify
 Plot 
   Functions that generate plots
 
-Process 
-  Functions used to combine datasets together, transfer data between datasets, or split datasets into multiple parts
-
 Survey
   Functions and classes related to handling data with a complex survey design
 
