@@ -704,7 +704,7 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
     Moved 39 variables.
     """
     # Which columns
-    columns = _validate_skip_only(list(left), skip, only)
+    columns = _validate_skip_only(left, skip, only)
 
     # Add to new df
     right = merge_variables(right, left[columns])
@@ -720,3 +720,40 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
 
     # Return
     return left, right
+
+
+@print_wrap
+def update_variable_types(data: pd.DataFrame, other: pd.DataFrame,
+                          skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+    """
+    Update variable types in a dataset using another.
+    This is primarily useful for making sure the possible categories are consistent.
+    It can be applied to one dataframe and then in the reverse order to make two dataframes have consistent types.
+    
+    Parameters
+    ----------
+    data: pd.Dataframe
+        DataFrame that will have updated types
+    other: pd.DataFrame
+        DataFrame which may supply additional possible values for datatypes
+    skip: str, list or None (default is None)
+        List of variables that will *not* be updated
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be updated
+
+    Returns
+    -------
+    data: pd.DataFrame
+        The first dataset with it's types updated as needed to include values from the other DataFrame
+    """
+    # Which columns
+    columns = _validate_skip_only(data, skip, only)
+
+    # Starting Datatypes
+    current_dts = data.dtypes.loc[columns]
+    other_dts = other.dtypes
+
+    # Iterate
+    for variable, current_dt in current_dts.iteritems():
+        other_dt = other_dts.get(variable, None)
+        print(variable, current_dt, other_dt)
