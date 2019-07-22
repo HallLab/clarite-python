@@ -159,7 +159,7 @@ def distributions(
         # Determine the number of pages
         plots_per_page = nrows * ncols
         total_pages = (len(data.columns) + (plots_per_page - 1)) // plots_per_page
-        print(f"Generating a {total_pages} page PDF for {len(data.columns):,} variables")
+        click.echo(f"Generating a {total_pages} page PDF for {len(data.columns):,} variables")
         # Starting plot space
         page_num = 1
         row_idx = 0

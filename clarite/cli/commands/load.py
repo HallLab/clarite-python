@@ -27,8 +27,8 @@ def from_tsv(input, output, index, skip, only):
     if len(data.columns) == 0:
         raise ValueError("Only one column was found- was the correct delimeter used?")
     # Process skip/only parameters
-    columns = _validate_skip_only(list(data), skip, only)
-    data = data[columns]
+    columns = _validate_skip_only(data, skip, only)
+    data = data.loc[:, columns]
     # Convert to a ClariteData object and save
     data = ClariteData(name=input, df=data)
     save_clarite_data(data, output)
@@ -51,8 +51,8 @@ def from_csv(input, output, index, skip, only):
     if len(data.columns) == 0:
         raise ValueError("Only one column was found- was the correct delimeter used?")
     # Process skip/only parameters
-    columns = _validate_skip_only(list(data), skip, only)
-    data = data[columns]
+    columns = _validate_skip_only(data, skip, only)
+    data = data.loc[:, columns]
     # Convert to a ClariteData object and save
     data = ClariteData(name=input, df=data)
     save_clarite_data(data, output)

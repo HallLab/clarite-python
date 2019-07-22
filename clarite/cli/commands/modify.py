@@ -36,20 +36,6 @@ def colfilter_percent_zero(data, output, filter_percent, skip, only):
     save_clarite_data(data, output)
 
 
-@modify_cli.command(help="Filter variables based on a minimum number of non-NA observations")
-@arg_data
-@option_output
-@click.option('-n', default=200, type=click.IntRange(min=0),
-              help="Remove variables with less than this many non-na observations")
-@option_skip
-@option_only
-def colfilter_min_n(data, output, n, skip, only):
-    # Modify
-    data.df = modify.colfilter_min_n(data=data.df, n=n, skip=skip, only=only)
-    # Save
-    save_clarite_data(data, output)
-
-
 @modify_cli.command(help="Filter variables based on a minimum number of non-NA observations per category")
 @arg_data
 @option_output
@@ -64,49 +50,16 @@ def colfilter_min_cat_n(data, output, n, skip, only):
     save_clarite_data(data, output)
 
 
-@modify_cli.command(help="Select some rows from a dataset using a simple comparison, keeping rows where the comparison is True.")
+@modify_cli.command(help="Filter variables based on a minimum number of non-NA observations")
 @arg_data
 @option_output
-@click.argument('column', type=click.STRING)
-@click.option('--value-str', 'vs', type=click.STRING, default=None, help="Compare values in the column to this string")
-@click.option('--value-int', 'vi', type=click.INT, default=None, help="Compare values in the column to this integer")
-@click.option('--value-float', 'vf', type=click.FLOAT, default=None, help="Compare values in the column to this floating point number")
-@click.option('--comparison', '-c', default='eq', type=click.Choice(['lt', 'lte', 'eq', 'gte', 'gt']),
-              help="Keep rows where the value of the column is lt (<), lte (<=), eq (==), gte (>=), or gt (>) the specified value.  Eq by default.")
-def rowfilter(data, output, column, vs, vi, vf, comparison):
-    """Load Data, keep certain rows, and save the data"""
-    # Ensure column is present
-    if column not in data.df.columns:
-        raise ValueError(f"The specified column {column} was not found in the data.")
-    # Decode value
-    values = [v for v in (vs, vi, vf) if v is not None]
-    if len(values) != 1:
-        raise ValueError("The comparison value ('--value-str', '--value-int', or '--value-float') must be specified just once.")
-    else:
-        value = values[0]
-    # Filter
-    if comparison == 'lt':
-        data.df = data.df.loc[data.df[column] < value, ]
-    elif comparison == 'lte':
-        data.df = data.df.loc[data.df[column] <= value, ]
-    elif comparison == 'eq':
-        data.df = data.df.loc[data.df[column] == value, ]
-    elif comparison == 'gt':
-        data.df = data.df.loc[data.df[column] >= value, ]
-    elif comparison == 'gte':
-        data.df = data.df.loc[data.df[column] > value, ]
-    # Save
-    save_clarite_data(data, output)
-
-
-@modify_cli.command(help="Filter out observations that are not complete cases (contain no NA values)")
-@arg_data
-@option_output
+@click.option('-n', default=200, type=click.IntRange(min=0),
+              help="Remove variables with less than this many non-na observations")
 @option_skip
 @option_only
-def rowfilter_incomplete_obs(data, output, skip, only):
+def colfilter_min_n(data, output, n, skip, only):
     # Modify
-    data.df = modify.rowfilter_incomplete_obs(data=data.df, skip=skip, only=only)
+    data.df = modify.colfilter_min_n(data=data.df, n=n, skip=skip, only=only)
     # Save
     save_clarite_data(data, output)
 
@@ -162,6 +115,53 @@ def remove_outliers(data, output, method, cutoff, skip, only):
     save_clarite_data(data, output)
 
 
+@modify_cli.command(help="Select some rows from a dataset using a simple comparison, keeping rows where the comparison is True.")
+@arg_data
+@option_output
+@click.argument('column', type=click.STRING)
+@click.option('--value-str', 'vs', type=click.STRING, default=None, help="Compare values in the column to this string")
+@click.option('--value-int', 'vi', type=click.INT, default=None, help="Compare values in the column to this integer")
+@click.option('--value-float', 'vf', type=click.FLOAT, default=None, help="Compare values in the column to this floating point number")
+@click.option('--comparison', '-c', default='eq', type=click.Choice(['lt', 'lte', 'eq', 'gte', 'gt']),
+              help="Keep rows where the value of the column is lt (<), lte (<=), eq (==), gte (>=), or gt (>) the specified value.  Eq by default.")
+def rowfilter(data, output, column, vs, vi, vf, comparison):
+    """Load Data, keep certain rows, and save the data"""
+    # Ensure column is present
+    if column not in data.df.columns:
+        raise ValueError(f"The specified column {column} was not found in the data.")
+    # Decode value
+    values = [v for v in (vs, vi, vf) if v is not None]
+    if len(values) != 1:
+        raise ValueError("The comparison value ('--value-str', '--value-int', or '--value-float') must be specified just once.")
+    else:
+        value = values[0]
+    # Filter
+    if comparison == 'lt':
+        data.df = data.df.loc[data.df[column] < value, ]
+    elif comparison == 'lte':
+        data.df = data.df.loc[data.df[column] <= value, ]
+    elif comparison == 'eq':
+        data.df = data.df.loc[data.df[column] == value, ]
+    elif comparison == 'gt':
+        data.df = data.df.loc[data.df[column] >= value, ]
+    elif comparison == 'gte':
+        data.df = data.df.loc[data.df[column] > value, ]
+    # Save
+    save_clarite_data(data, output)
+
+
+@modify_cli.command(help="Filter out observations that are not complete cases (contain no NA values)")
+@arg_data
+@option_output
+@option_skip
+@option_only
+def rowfilter_incomplete_obs(data, output, skip, only):
+    # Modify
+    data.df = modify.rowfilter_incomplete_obs(data=data.df, skip=skip, only=only)
+    # Save
+    save_clarite_data(data, output)
+
+
 @modify_cli.command(help="Set the type of variables to 'binary'")
 @arg_data
 @option_output
@@ -206,7 +206,7 @@ def make_continuous(data, output, skip, only):
 @click.argument('new_name', type=click.STRING)
 def transform_variable(data, output, variable, transform, new_name):
     # Create new variable
-    data = modify.transform(data=data, variable=variable, transform=transform, new_name=new_name)
+    data.df = modify.transform(data=data.df, variable=variable, transform=transform, new_name=new_name)
     # Save
     save_clarite_data(data, output)
 
@@ -219,16 +219,9 @@ def transform_variable(data, output, variable, transform, new_name):
 @click.option('--cont_min', default=15, help="Minimum number of unique values in a variable to make it a continuous type")
 def categorize(data, output, cat_min, cat_max, cont_min):
     # Categorize and convert to ClariteData types
-    df_bin, df_cat, df_cont, df_check = modify.categorize(data.df, cat_min=cat_min, cat_max=cat_max, cont_min=cont_min)
-    data_bin = ClariteData(data.name + "_bin", df=df_bin)
-    data_cat = ClariteData(data.name + "_cat", df=df_cat)
-    data_cont = ClariteData(data.name + "_cont", df=df_cont)
-    data_check = ClariteData(data.name + "_check", df=df_check)
+    data.df = modify.categorize(data.df, cat_min=cat_min, cat_max=cat_max, cont_min=cont_min)
     # Save Data
-    save_clarite_data(data=data_bin, output=f"{output}_bin")
-    save_clarite_data(data=data_cat, output=f"{output}_cat")
-    save_clarite_data(data=data_cont, output=f"{output}_cont")
-    save_clarite_data(data=data_check, output=f"{output}_check")
+    save_clarite_data(data=data, output=output)
 
 
 @modify_cli.command(help="Merge variables from two different datasets into one")

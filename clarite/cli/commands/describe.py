@@ -40,6 +40,18 @@ def freq_table(data, output):
     click.echo(click.style(f"Done: Saved {num_values:,} unique value counts for {num_variables:,} non-continuous variables to {output}", fg='green'))
 
 
+@describe_cli.command(help="Get the type of each variable")
+@arg_data
+@arg_output
+def get_types(data, output):
+    # Describe
+    results = describe.get_types(data.df)
+    # Save results
+    results.to_csv(output, sep="\t", header=False)
+    # Log
+    click.echo(click.style(f"Done: Saved types of {len(results)} variables to {output}", fg='green'))
+
+
 @describe_cli.command(help="Report the percent of observations that are NA for each variable")
 @arg_data
 @arg_output

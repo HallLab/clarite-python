@@ -45,7 +45,6 @@ class ClariteData:
             raise ValueError(f"Could not read '{data_filename}'")
         else:
             self.df = pd.read_csv(data_file, sep="\t", index_col="ID")
-
         # Load dtypes from file
         dtypes_filename = self.name + ".dtypes"
         dtypes_file = Path(dtypes_filename)
@@ -56,6 +55,8 @@ class ClariteData:
                 self.dtypes = json.load(f)
             except json.JSONDecodeError as e:
                 raise ValueError(f"'{dtypes_filename}' was not a valid dtypes file: {e}")
+        # Update df dtypes
+        self.set_dtypes(self.dtypes)
 
     def get_dtypes(self):
         """

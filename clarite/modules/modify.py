@@ -465,7 +465,7 @@ def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = 
                          f"{', '.join(failed_conversion[failed_conversion].index)}")
 
     columns = columns[columns].index
-    print(f"Set {len(columns):,} of {len(data.columns):,} variables as continuous, each with {len(data):,} observations")
+    click.echo(f"Set {len(columns):,} of {len(data.columns):,} variables as continuous, each with {len(data):,} observations")
 
     return data
 
@@ -765,7 +765,7 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
     Moved 39 variables.
     """
     # Which columns
-    columns = _validate_skip_only(list(left), skip, only)
+    columns = _validate_skip_only(left, skip, only)
 
     # Add to new df
     right = merge_variables(right, left[columns])
@@ -774,7 +774,7 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
     left = left.drop(columns, axis='columns')
 
     # Log
-    if len(columns) == 1:
+    if columns.sum() == 1:
         click.echo("Moved 1 variable.")
     else:
         click.echo(f"Moved {len(columns)} variables.")
@@ -832,13 +832,13 @@ def transform(data: pd.DataFrame,
             data[new_name] = data[variable].apply(transform)
         except Exception as e:
             raise ValueError(f"Couldn't apply a function named '{transform}' to '{variable}' in order to create a new '{new_name}' variable.\n\t{e}")
-        print(f"Transformed '{variable}' using '{transform}' (saved as '{new_name}').")
+        click.echo(f"Transformed '{variable}' using '{transform}' (saved as '{new_name}').")
     else:
         try:
             data.loc[new_name] = data[variable].apply(transform)
         except Exception as e:
             raise ValueError(f"Couldn't apply a function named '{transform}' to '{variable}'.\n\t{e}")
-        print(f"Transformed '{variable}' using '{transform}' (overwrote '{new_name}').")
+        click.echo(f"Transformed '{variable}' using '{transform}' (overwrote '{new_name}').")
 
     # Drop original variable if it wasn't overwritten
     if new_name != variable:

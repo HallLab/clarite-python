@@ -44,7 +44,7 @@ def from_tsv(filename: str, index_col: Optional[Union[str, int]] = 0, **kwargs):
     """
     # Load data
     data = pd.read_csv(filename, index_col=index_col, sep="\t", **kwargs)
-    print(f"Loaded {len(data):,} observations of {len(data.columns):,} variables")
+    click.echo(f"Loaded {len(data):,} observations of {len(data.columns):,} variables")
 
     # Rename index to ID
     data.index.name = "ID"
@@ -80,7 +80,7 @@ def from_csv(filename: str, index_col: Optional[Union[str, int]] = 0, **kwargs):
     """
     # Load data
     data = pd.read_csv(filename, index_col=index_col, **kwargs)
-    print(f"Loaded {len(data):,} observations of {len(data.columns):,} variables")
+    click.echo(f"Loaded {len(data):,} observations of {len(data.columns):,} variables")
 
     # Rename index to ID
     data.index.name = "ID"

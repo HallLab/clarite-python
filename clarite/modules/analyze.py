@@ -125,7 +125,7 @@ def run_regressions(phenotype: str,
         data[phenotype] = data[phenotype].cat.codes
 
     # Continuous Variables
-    print(f"\n####### Regressing {len(rv_cont)} Continuous Variables #######\n")
+    click.echo(f"\n####### Regressing {len(rv_cont)} Continuous Variables #######\n")
     for rv in rv_cont:
         # Set up the regression
         regression = Regression(variable=rv,
@@ -140,11 +140,11 @@ def run_regressions(phenotype: str,
         try:
             regression.run(min_n=min_n)
         except Exception as e:
-            print(f"{rv} = NULL due to: {e}")
+            click.echo(f"{rv} = NULL due to: {e}")
         # Save results
         result.append(regression.get_results())
 
-    print(f"\n####### Regressing {len(rv_bin)} Binary Variables #######\n")
+    click.echo(f"\n####### Regressing {len(rv_bin)} Binary Variables #######\n")
     for rv in rv_bin:
         # Set up the regression
         regression = Regression(variable=rv,
@@ -159,11 +159,11 @@ def run_regressions(phenotype: str,
         try:
             regression.run(min_n=min_n)
         except Exception as e:
-            print(f"{rv} = NULL due to: {e}")
+            click.echo(f"{rv} = NULL due to: {e}")
         # Save results
         result.append(regression.get_results())
 
-    print(f"\n####### Regressing {len(rv_cat)} Categorical Variables #######\n")
+    click.echo(f"\n####### Regressing {len(rv_cat)} Categorical Variables #######\n")
     for rv in rv_cat:
         # Set up the regression
         regression = Regression(variable=rv,
@@ -178,7 +178,7 @@ def run_regressions(phenotype: str,
         try:
             regression.run(min_n=min_n)
         except Exception as e:
-            print(f"{rv} = NULL due to: {e}")
+            click.echo(f"{rv} = NULL due to: {e}")
         # Save results
         result.append(regression.get_results())
 
@@ -187,7 +187,7 @@ def run_regressions(phenotype: str,
     result['phenotype'] = phenotype  # Add phenotype
     result = result.sort_values('pvalue').set_index(['variable', 'phenotype'])  # Sort and set index
     result = result[['variable_type', 'converged', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']]  # Sort columns
-    print("Completed EWAS\n")
+    click.echo("Completed EWAS\n")
     return result
 
 
