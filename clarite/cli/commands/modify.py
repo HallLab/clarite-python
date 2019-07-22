@@ -1,5 +1,4 @@
 import click
-import pandas as pd
 
 from ...modules import modify
 from ...internal.utilities import _validate_skip_only

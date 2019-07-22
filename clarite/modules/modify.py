@@ -613,10 +613,10 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
 
 
 @print_wrap
-def merge_observations(top: pd.DataFrame, bottom: pd.DataFrame):
+def merge_observations(top: pd.DataFrame,
+                       bottom: pd.DataFrame):
     """
-    Merge two datasets by concatenating the observations together.
-    Both datasets must have the same columns and datatypes (including categories)
+    Merge two datasets, keeping only the columns present in both.  Raise an error if a datatype conflict occurs.
 
     Parameters
     ----------
@@ -629,19 +629,33 @@ def merge_observations(top: pd.DataFrame, bottom: pd.DataFrame):
     -------
     result: pd.DataFrame
     """
-    # Merge
-    extra = set(list(top)) - set(list(bottom))
-    missing = set(list(bottom)) - set(list(top))
-    if len(extra) > 0:
-        raise ValueError(f"Couldn't merge observations: Extra columns in the 'bottom' data: {', '.join(extra)}")
-    elif len(missing) > 0:
-        raise ValueError(f"Couldn't merge observations: Missing columns in the 'bottom' data: {', '.join(missing)}")
-    elif (top.dtypes != bottom.dtypes).any():
-        raise ValueError("Couldn't merge observations: different data types")
-    else:
-        result = pd.concat([top, bottom], verify_integrity=True, sort=False)
-        click.echo(f"Merged observations: {len(top):,} + {len(bottom):,} = {len(result):,}")
-    return result
+    # Throw an error if any observation ID is repeated
+    overlapped_observations = set(top.index) & set(bottom.index)
+    if len(overlapped_observations) > 0:
+        raise ValueError(f"Can't merge: {len(overlapped_observations):,} observation IDs occur in both datasets")
+
+    # Merge data, keeping only the columns in common
+    combined = pd.concat([top, bottom], join='inner', sort=False)
+
+    # If a categorical is only in one dataframe, or the categorical has different levels, it is coerced to an object and must be changed back
+    combined = combined.astype({col: 'category' if dt == 'object' else dt for col, dt in combined.dtypes.iteritems()})
+
+    # Check datatypes for changes
+    top_dtypes = _get_dtypes(top[combined.columns])
+    bottom_dtypes = _get_dtypes(bottom[combined.columns])
+    combined_dtypes = _get_dtypes(combined)
+
+    diff_dtypes = top_dtypes != bottom_dtypes
+    diff_dtype_vars = list(diff_dtypes[diff_dtypes].index)
+    if diff_dtypes.sum() > 0:
+        raise ValueError(f"{diff_dtypes.sum():,} variables have mismatched datatypes: \n{' '.join(diff_dtype_vars)}")
+
+    diff_cats = (top_dtypes != combined_dtypes) | (bottom_dtypes != combined_dtypes)
+    diff_cats_vars = set(diff_cats[diff_cats].index) - set(diff_dtype_vars)
+    if len(diff_cats_vars) > 0:
+        raise ValueError(f"{len(diff_cats_vars):,} variables have categories present in only one dataset: \n{' '.join(diff_cats_vars)}")
+
+    return combined
 
 
 @print_wrap
@@ -704,7 +718,7 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
     Moved 39 variables.
     """
     # Which columns
-    columns = _validate_skip_only(left, skip, only)
+    columns = _validate_skip_only(list(left), skip, only)
 
     # Add to new df
     right = merge_variables(right, left[columns])
@@ -720,40 +734,3 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
 
     # Return
     return left, right
-
-
-@print_wrap
-def update_variable_types(data: pd.DataFrame, other: pd.DataFrame,
-                          skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
-    """
-    Update variable types in a dataset using another.
-    This is primarily useful for making sure the possible categories are consistent.
-    It can be applied to one dataframe and then in the reverse order to make two dataframes have consistent types.
-    
-    Parameters
-    ----------
-    data: pd.Dataframe
-        DataFrame that will have updated types
-    other: pd.DataFrame
-        DataFrame which may supply additional possible values for datatypes
-    skip: str, list or None (default is None)
-        List of variables that will *not* be updated
-    only: str, list or None (default is None)
-        List of variables that are the *only* ones to be updated
-
-    Returns
-    -------
-    data: pd.DataFrame
-        The first dataset with it's types updated as needed to include values from the other DataFrame
-    """
-    # Which columns
-    columns = _validate_skip_only(data, skip, only)
-
-    # Starting Datatypes
-    current_dts = data.dtypes.loc[columns]
-    other_dts = other.dtypes
-
-    # Iterate
-    for variable, current_dt in current_dts.iteritems():
-        other_dt = other_dts.get(variable, None)
-        print(variable, current_dt, other_dt)
