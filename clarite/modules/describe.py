@@ -9,13 +9,15 @@ Functions that are used to gather information about some data
 
      correlations
      freq_table
-     percent_na
      get_types
+     percent_na
+     summarize
 
 """
 
 # Describe - functions that are used to gather information about some data
 
+import click
 import numpy as np
 import pandas as pd
 
@@ -129,6 +131,34 @@ def freq_table(data: pd.DataFrame):
     ).reset_index(drop=True)
 
 
+def get_types(data: pd.DataFrame):
+    """
+    Return the type of each variable
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be described
+
+    Returns
+    -------
+    result: pd.Series
+        Series listing the CLARITE type for each variable
+
+    Examples
+    --------
+    >>> import clarite
+    >>> clarite.describe.get_types(df).head()
+    RIDAGEYR          continuous
+    female                binary
+    black                 binary
+    mexican               binary
+    other_hispanic        binary
+    dtype: object
+    """
+    return _get_dtypes(data)
+
+
 def percent_na(data: pd.DataFrame):
     """
     Return the percent of observations that are NA for each variable
@@ -159,9 +189,9 @@ def percent_na(data: pd.DataFrame):
     return result
 
 
-def get_types(data: pd.DataFrame):
+def summarize(data: pd.DataFrame):
     """
-    Return the type of each variable
+    Print the number of each type of variable and the number of observations
 
     Parameters
     ----------
@@ -170,17 +200,22 @@ def get_types(data: pd.DataFrame):
 
     Returns
     -------
-    result: pd.Series
-        Series listing the CLARITE type for each variable
+    result: None
 
     Examples
     --------
     >>> import clarite
-    >>> clarite.describe.get_types(df)
-    variable    percent_na
-    SDDSRVYR                 0.00000
-    female                   0.00000
-    LBXHBC                   4.99321
-    LBXHBS                   4.98730
+    >>> clarite.describe.get_types(df).head()
+    RIDAGEYR          continuous
+    female                binary
+    black                 binary
+    mexican               binary
+    other_hispanic        binary
+    dtype: object
     """
-    return _get_dtypes(data)
+    type_counts = _get_dtypes(data).value_counts()
+    click.echo(f"{len(data):,} observations of {len(data.columns):,} variables\n"
+               f"\t{type_counts.get('binary', 0):,} Binary Variables\n"
+               f"\t{type_counts.get('categorical', 0):,} Categorical Variables\n"
+               f"\t{type_counts.get('continuous', 0):,} Continuous Variables\n"
+               f"\t{type_counts.get('unknown', 0):,} Unknown-Type Variables\n")
