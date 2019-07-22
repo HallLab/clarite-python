@@ -171,21 +171,22 @@ def colfilter(data, skip: Optional[Union[str, List[str]]] = None, only: Optional
     Examples
     --------
     >>> import clarite
-    >>> female_logBMI = clarite.modify.colfilter(nhanes, only=['logBMI', 'female'])
+    >>> female_logBMI = clarite.modify.colfilter(nhanes, only=['BMXBMI', 'female'])
     ================================================================================
-    Running colfilter_min_cat_n
+    Running colfilter
     --------------------------------------------------------------------------------
-    WARNING: 36 variables need to be categorized into a type manually
-    Testing 362 of 362 binary variables
-            Removed 248 (68.51%) tested binary variables which had a category with less than 200 values
-    Testing 47 of 47 categorical variables
-            Removed 36 (76.60%) tested categorical variables which had a category with less than 200 values
+    Keeping 2 of 945 variables:
+            0 of 0 binary variables
+            0 of 0 categorical variables
+            2 of 945 continuous variables
+            0 of 0 unknown variables
+    ================================================================================
     """
     boolean_keep = _validate_skip_only(data, skip, only)
     dtypes = _get_dtypes(data)
     click.echo(f"Keeping {boolean_keep.sum():,} of {len(data.columns):,} variables:")
 
-    for kind in ['binary', 'categorical', 'continuous']:
+    for kind in ['binary', 'categorical', 'continuous', 'unknown']:
         is_kind = (dtypes == kind)
         is_kept = is_kind & boolean_keep
         click.echo(f"\t{is_kept.sum():,} of {is_kind.sum():,} {kind} variables")
