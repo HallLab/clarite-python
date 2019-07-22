@@ -209,13 +209,7 @@ def make_continuous(data, output, skip, only):
 @click.argument('new_name', type=click.STRING)
 def transform_variable(data, output, variable, transform, new_name):
     # Create new variable
-    try:
-        data.df[new_name] = data.df[variable].apply(transform)
-    except Exception:
-        raise ValueError(f"Couldn't apply a function named '{transform}'' to '{variable}'' in order to create a new '{new_name}' variable.")
-    # Drop old variable
-    if new_name != variable:
-        data.df = data.df.drop(variable, axis='columns')
+    data = modify.transform(data=data, variable=variable, transform=transform, new_name=new_name)
     # Save
     save_clarite_data(data, output)
 
