@@ -685,7 +685,10 @@ def merge_observations(top: pd.DataFrame,
     combined = pd.concat([top, bottom], join='inner', sort=False)
 
     # If a categorical is only in one dataframe, or the categorical has different levels, it is coerced to an object and must be changed back
-    combined = combined.astype({col: 'category' if dt == 'object' else dt for col, dt in combined.dtypes.iteritems()})
+    # Exclude cases where either variable was an object originally
+    combined = combined.astype({col: 'category'
+                                if (dt == 'object') & (top.dtypes[col] != 'object') & (bottom.dtypes[col] != 'object')
+                                else dt for col, dt in combined.dtypes.iteritems()})
 
     # Check datatypes for changes
     top_dtypes = _get_dtypes(top[combined.columns])
