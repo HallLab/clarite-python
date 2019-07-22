@@ -3,7 +3,7 @@ import pandas as pd
 
 from ...modules.survey import SurveyDesignSpec
 from ...modules import analyze
-from ..parameters import CLARITE_DATA, INPUT_FILE, EWAS_RESULT, arg_output
+from ..parameters import CLARITE_DATA, INPUT_FILE, EWAS_RESULT, arg_data, arg_output
 from ..custom_types import save_clarite_ewas
 
 
@@ -14,9 +14,7 @@ def analyze_cli():
 
 @analyze_cli.command(help="Run an EWAS analysis")
 @click.argument('phenotype', type=click.STRING)
-@click.argument('bin-data', type=CLARITE_DATA)
-@click.argument('cat-data', type=CLARITE_DATA)
-@click.argument('cont-data', type=CLARITE_DATA)
+@arg_data
 @arg_output
 @click.option('--covariate', '-c', multiple=True, help="Covariates")
 @click.option('--covariance-calc', default='stata', type=click.Choice(['stata', 'jackknife']), help="Covariance calculation method")
@@ -31,13 +29,11 @@ def analyze_cli():
 @click.option('--weight', '-w', type=click.STRING, default=None,
               help="Name of a survey weight column found in the survey data.  This option can't be used with --weights-file")
 @click.option('--single-cluster', type=click.Choice(['error', 'scaled', 'centered', 'certainty']), default='error', help="How to handle singular clusters")
-def ewas(phenotype, bin_data, cat_data, cont_data, output, covariate, covariance_calc, min_n,
+def ewas(phenotype, data, output, covariate, covariance_calc, min_n,
          survey_data, strata, cluster, nested, weights_file, weight, single_cluster):
     """Run EWAS and add corrected pvalues"""
     # Keep just the data from the loaded CLARITE_DATA arguments/options
-    bin_data = bin_data.df
-    cat_data = cat_data.df
-    cont_data = cont_data.df
+    data = data.df
     # Make covariates into a list
     covariates = list(covariate)
     # Load optional survey data
@@ -60,25 +56,25 @@ def ewas(phenotype, bin_data, cat_data, cont_data, output, covariate, covariance
         weights = None
     # Remove variables with missing weights
     if type(weights) == dict:
-        missing_weights_bin = set(list(bin_data)) - set([phenotype] + covariates) - set(weights.keys())
-        for v in missing_weights_bin:
-            click.echo(click.style(f"\tSkipping binary variable '{v}' because it wasn't listed in the weights file", fg='yellow'))
-            bin_data = bin_data.drop(v, axis='columns')
-        missing_weights_cat = set(list(cat_data)) - set([phenotype] + covariates) - set(weights.keys())
-        for v in missing_weights_cat:
-            click.echo(click.style(f"\tSkipping categorical variable '{v}' because it wasn't listed in the weights file", fg='yellow'))
-            cat_data = cat_data.drop(v, axis='columns')
-        missing_weights_cont = set(list(cont_data)) - set([phenotype] + covariates) - set(weights.keys())
-        for v in missing_weights_cont:
-            click.echo(click.style(f"\tSkipping continuous variable '{v}' because it wasn't listed in the weights file", fg='yellow'))
-            cont_data = cont_data.drop(v, axis='columns')
+        missing_weights = set(list(data)) - set([phenotype] + covariates) - set(weights.keys())
+        for v in missing_weights:
+            click.echo(click.style(f"\tWARNING: Skipping variable '{v}' because it wasn't listed in the weights file", fg='yellow'))
+            data = data.drop(v, axis='columns')
     # Run ewas
-    result = analyze.ewas(phenotype=phenotype, covariates=covariates, bin_df=bin_data, cat_df=cat_data, cont_df=cont_data,
+    result = analyze.ewas(phenotype=phenotype, covariates=covariates, data=data,
                           survey_design_spec=sd, cov_method=covariance_calc, min_n=min_n)
-    # Add corrected pvalues
-    analyze.add_corrected_pvalues(result)
     # Save
     save_clarite_ewas(result, output)
+
+
+@analyze_cli.command(help="Get FDR-corrected and Bonferroni-corrected pvalues")
+@click.argument('ewas_result', type=EWAS_RESULT)
+@arg_output
+def add_corrected_pvals(ewas_result, output):
+    _, data = ewas_result
+    analyze.add_corrected_pvalues(data)
+    # Save result
+    save_clarite_ewas(data, output)
 
 
 @analyze_cli.command(help="filter out non-significant results")
