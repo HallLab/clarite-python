@@ -170,7 +170,9 @@ class ClariteEwasResultParamType(click.ParamType):
             # Load data
             data = pd.read_csv(value+".txt", sep="\t", index_col=['variable', 'phenotype'])
             # Check columns
-            if list(data) != analyze.result_columns + analyze.corrected_pvalue_columns:
+            cols_original = analyze.result_columns
+            cols_with_corrected_pvals = analyze.result_columns + analyze.corrected_pvalue_columns
+            if (list(data) != cols_original) & (list(data) != cols_with_corrected_pvals):
                 raise ValueError(f"{value} was not a valid EWAS result file.")
             return (value, data)  # tuple to include name
         except ValueError as e:
