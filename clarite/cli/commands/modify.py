@@ -1,7 +1,6 @@
 import click
 
 from ...modules import modify
-from ...internal.utilities import _validate_skip_only
 from ..parameters import arg_data, arg_output, option_output, option_skip, option_only, CLARITE_DATA, OUTPUT_FILE
 from ..custom_types import ClariteData, save_clarite_data
 
@@ -11,16 +10,14 @@ def modify_cli():
     pass
 
 
-@modify_cli.command(help="Remove some columns from a dataset")
+@modify_cli.command(help="Remove some variables from a dataset")
 @arg_data
 @option_output
 @option_skip
 @option_only
 def colfilter(data, output, skip, only):
-    """Load Data, remove some columns, and save the data"""
-    # Process skip/only parameters
-    columns = _validate_skip_only(list(data.df), skip, only)
-    data.df = data.df[columns]
+    """Load Data, remove some variables, and save the data"""
+    data.df = modify.colfilter(data.df, skip=skip, only=only)
     # Save
     save_clarite_data(data, output)
 

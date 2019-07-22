@@ -8,6 +8,7 @@ Functions used to filter and/or change some data, always taking in one set of da
      :toctree: modules/modify
 
      categorize
+     colfilter
      colfilter_percent_zero
      colfilter_min_n
      colfilter_min_cat_n
@@ -146,6 +147,50 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
         click.echo(f"\t{check_cont.sum():,} variables had >= {cont_min} values but couldn't be converted to continuous (numeric) values")
 
     return data
+
+
+@print_wrap
+def colfilter(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+    """
+    Remove some variables (skip) or keep only certain variables (only)
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be processed and returned
+    skip: str, list or None (default is None)
+        List of variables to remove
+    only: str, list or None (default is None)
+        List of variables to keep
+
+    Returns
+    -------
+    data: pd.DataFrame
+        The filtered DataFrame
+
+    Examples
+    --------
+    >>> import clarite
+    >>> female_logBMI = clarite.modify.colfilter(nhanes, only=['logBMI', 'female'])
+    ================================================================================
+    Running colfilter_min_cat_n
+    --------------------------------------------------------------------------------
+    WARNING: 36 variables need to be categorized into a type manually
+    Testing 362 of 362 binary variables
+            Removed 248 (68.51%) tested binary variables which had a category with less than 200 values
+    Testing 47 of 47 categorical variables
+            Removed 36 (76.60%) tested categorical variables which had a category with less than 200 values
+    """
+    boolean_keep = _validate_skip_only(data, skip, only)
+    dtypes = _get_dtypes(data)
+    click.echo(f"Keeping {boolean_keep.sum():,} of {len(data.columns):,} variables:")
+
+    for kind in ['binary', 'categorical', 'continuous']:
+        is_kind = (dtypes == kind)
+        is_kept = is_kind & boolean_keep
+        click.echo(f"\t{is_kept.sum():,} of {is_kind.sum():,} {kind} variables")
+
+    return data.loc[:, boolean_keep]
 
 
 @print_wrap
@@ -574,6 +619,7 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
 
     return data
 
+
 @print_wrap
 def rowfilter_incomplete_obs(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
@@ -751,7 +797,7 @@ def transform(data: pd.DataFrame,
     variable: str
         Variable to apply the transformation to
     transform: str
-        Name of the transformation (should be a built-in Numpy function)
+        Name of the transformation (Python function or NumPy ufunc to apply)
     new_name: str or None
         Name of the transformed variable
 
@@ -767,8 +813,12 @@ def transform(data: pd.DataFrame,
     ================================================================================
     Running transform
     --------------------------------------------------------------------------------
-    Set 128 of 128 variables as continuous, each with 4,321 observations
+    Transformed 'BMXBMI' using 'log' (saved as 'logBMI').
     """
+    # Copy to avoid replacing in-place
+    data = data.copy(deep=True)
+
+    # Check for potential errors
     dtype = _get_dtypes(data).get(variable, None)
     if dtype is None:
         raise ValueError(f"The variable ('{variable}') was not found in the data")
@@ -776,12 +826,21 @@ def transform(data: pd.DataFrame,
         raise ValueError(f"The variable ('{variable}') was {dtype}: transformations may only be applied to continuous variables")
 
     # Create new variable
-    try:
-        data.df[new_name] = data.df[variable].apply(transform)
-    except Exception:
-        raise ValueError(f"Couldn't apply a function named '{transform}'' to '{variable}'' in order to create a new '{new_name}' variable.")
-    # Drop old variable
+    if new_name not in data:
+        try:
+            data[new_name] = data[variable].apply(transform)
+        except Exception as e:
+            raise ValueError(f"Couldn't apply a function named '{transform}' to '{variable}' in order to create a new '{new_name}' variable.\n\t{e}")
+        print(f"Transformed '{variable}' using '{transform}' (saved as '{new_name}').")
+    else:
+        try:
+            data.loc[new_name] = data[variable].apply(transform)
+        except Exception as e:
+            raise ValueError(f"Couldn't apply a function named '{transform}' to '{variable}'.\n\t{e}")
+        print(f"Transformed '{variable}' using '{transform}' (overwrote '{new_name}').")
+
+    # Drop original variable if it wasn't overwritten
     if new_name != variable:
-        data.df = data.df.drop(variable, axis='columns')
+        data = data.drop(variable, axis='columns')
 
     return data
