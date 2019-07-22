@@ -1,5 +1,6 @@
 from typing import Optional, List
 
+import click
 import numpy as np
 import pandas as pd
 import patsy
@@ -71,7 +72,7 @@ class Regression(object):
         non_varying_covars = list(unique_values[unique_values <= 1].index.values)
 
         if len(non_varying_covars) > 0:
-            click.echo(f"WARNING: {self.variable} has non-varying covariates(s): {', '.join(non_varying_covars)}")
+            click.echo(click.style(f"WARNING: {self.variable} has non-varying covariates(s): {', '.join(non_varying_covars)}", fg='yellow'))
         return varying_covars
 
     def run(self, min_n):
