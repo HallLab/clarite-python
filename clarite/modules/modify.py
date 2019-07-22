@@ -98,7 +98,7 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
     # Two unique non-NA values - Convert non-NA values to category (for binary)
     keep_bin = (unique_count == 2)
     if keep_bin.sum() > 0:
-        data.loc[:, keep_bin] = data.loc[:, keep_bin].apply(lambda col: col.loc[~col.isna()].astype('category'))
+        data.loc[:, keep_bin] = data.loc[:, keep_bin].astype('category')
 
     # Categorical - Convert non-NA values to category type
     keep_cat = (unique_count >= cat_min) & (unique_count <= cat_max)
