@@ -9,17 +9,22 @@ Functions that are used to gather information about some data
 
      correlations
      freq_table
+     get_types
      percent_na
+     summarize
 
 """
 
 # Describe - functions that are used to gather information about some data
 
+import click
 import numpy as np
 import pandas as pd
 
+from ..internal.utilities import _get_dtypes
 
-def correlations(data, threshold: float = 0.75):
+
+def correlations(data: pd.DataFrame, threshold: float = 0.75):
     """
     Return variables with pearson correlation above the threshold
 
@@ -68,9 +73,9 @@ def correlations(data, threshold: float = 0.75):
     return correlation.reset_index(drop=True)
 
 
-def freq_table(data):
+def freq_table(data: pd.DataFrame):
     """
-    Return the count of each unique value for all categorical variables.  Non-categorical typed variables
+    Return the count of each unique value for all binary and categorical variables.  Other variables
     will return a single row with a value of '<Non-Categorical Values>' and the number of non-NA values.
 
     Parameters
@@ -102,6 +107,7 @@ def freq_table(data):
     # Define a function to be applied to each categorical variable
     def formatted_value_counts(var_name: str, df: pd.DataFrame):
         if str(df[var_name].dtype) == "category":
+            # Binary and categorical variables
             df = (
                 df[var_name]
                 .value_counts()
@@ -111,6 +117,7 @@ def freq_table(data):
             df["variable"] = var_name
             return df[["variable", "value", "count"]]  # reorder columns
         else:
+            # Continuous or "check" variables
             return pd.DataFrame.from_dict(
                 {
                     "variable": [var_name],
@@ -124,7 +131,35 @@ def freq_table(data):
     ).reset_index(drop=True)
 
 
-def percent_na(data):
+def get_types(data: pd.DataFrame):
+    """
+    Return the type of each variable
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be described
+
+    Returns
+    -------
+    result: pd.Series
+        Series listing the CLARITE type for each variable
+
+    Examples
+    --------
+    >>> import clarite
+    >>> clarite.describe.get_types(df).head()
+    RIDAGEYR          continuous
+    female                binary
+    black                 binary
+    mexican               binary
+    other_hispanic        binary
+    dtype: object
+    """
+    return _get_dtypes(data)
+
+
+def percent_na(data: pd.DataFrame):
     """
     Return the percent of observations that are NA for each variable
 
@@ -152,3 +187,35 @@ def percent_na(data):
     result = result.reset_index()
     result.columns = ['variable', 'percent_na']
     return result
+
+
+def summarize(data: pd.DataFrame):
+    """
+    Print the number of each type of variable and the number of observations
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be described
+
+    Returns
+    -------
+    result: None
+
+    Examples
+    --------
+    >>> import clarite
+    >>> clarite.describe.get_types(df).head()
+    RIDAGEYR          continuous
+    female                binary
+    black                 binary
+    mexican               binary
+    other_hispanic        binary
+    dtype: object
+    """
+    type_counts = _get_dtypes(data).value_counts()
+    click.echo(f"{len(data):,} observations of {len(data.columns):,} variables\n"
+               f"\t{type_counts.get('binary', 0):,} Binary Variables\n"
+               f"\t{type_counts.get('categorical', 0):,} Categorical Variables\n"
+               f"\t{type_counts.get('continuous', 0):,} Continuous Variables\n"
+               f"\t{type_counts.get('unknown', 0):,} Unknown-Type Variables\n")

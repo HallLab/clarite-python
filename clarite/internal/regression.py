@@ -1,5 +1,6 @@
 from typing import Optional, List
 
+import click
 import numpy as np
 import pandas as pd
 import patsy
@@ -71,14 +72,14 @@ class Regression(object):
         non_varying_covars = list(unique_values[unique_values <= 1].index.values)
 
         if len(non_varying_covars) > 0:
-            print(f"WARNING: {self.variable} has non-varying covariates(s): {', '.join(non_varying_covars)}")
+            click.echo(click.style(f"WARNING: {self.variable} has non-varying covariates(s): {', '.join(non_varying_covars)}", fg='yellow'))
         return varying_covars
 
     def run(self, min_n):
         """Run the regression and update self with the results"""
         # Check for a minimum amount of data
         if len(self.data) < min_n:
-            print(f"{self.variable} = NULL due to: too few complete obervations ({len(self.data)} < {min_n})")
+            click.echo(f"{self.variable} = NULL due to: too few complete obervations ({len(self.data)} < {min_n})")
             return
         self.varying_covariates = self.check_covars()
 

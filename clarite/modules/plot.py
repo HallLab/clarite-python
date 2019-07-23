@@ -159,7 +159,7 @@ def distributions(
         # Determine the number of pages
         plots_per_page = nrows * ncols
         total_pages = (len(data.columns) + (plots_per_page - 1)) // plots_per_page
-        print(f"Generating a {total_pages} page PDF for {len(data.columns):,} variables")
+        click.echo(f"Generating a {total_pages} page PDF for {len(data.columns):,} variables")
         # Starting plot space
         page_num = 1
         row_idx = 0
@@ -176,7 +176,7 @@ def distributions(
                 plt.suptitle(f"Page {page_num}")
             # Plot non-NA values and record the number of those separately (otherwise they can cause issues with generating a KDE)
             ax = plt.subplot2grid((nrows, ncols), (row_idx, col_idx))
-            if str(data.dtypes[variable]) == "category":
+            if str(data.dtypes[variable]) == "category":  # binary and categorical
                 sns.countplot(data.loc[~data[variable].isna(), variable], ax=ax)
             else:
                 if continuous_kind == "count":
