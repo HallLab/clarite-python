@@ -54,12 +54,6 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
     -------
     result: pd.DataFrame or None
         If inplace, returns None.  Changes the datatypes on the input DataFrame.
-        If not inplace, returns a DataFrame with variables that were categorized by setting the datatype
-          - binary = 'category' (with 2 categories)
-          - categorical = 'category' (with > 2 categories)
-          - continuous = numeric (several possible types, usually 'float64' or 'int64')
-          - unknown = str
-
 
     Examples
     --------

@@ -19,7 +19,7 @@ The :code:`--help` option will show documentation when run with any command or c
    Commands:
      analyze
      describe
-     io
+     load
      modify
      plot
 
@@ -29,8 +29,8 @@ The :code:`--help` option will show documentation when run with any command or c
 .. click:: clarite.cli:describe_cli
     :prog: clarite-cli describe
     :show-nested:
-.. click:: clarite.cli:io_cli
-    :prog: clarite-cli io
+.. click:: clarite.cli:load_cli
+    :prog: clarite-cli load
     :show-nested:
 .. click:: clarite.cli:modify_cli
     :prog: clarite-cli modify
