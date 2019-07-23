@@ -12,4 +12,4 @@ CLARITE
 CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures
 
 * Free software: 3-clause BSD license
-* Documentation: https://HallLab.github.io/clarite-python.
+* Documentation: https://www.hall-lab.org/clarite-python/.

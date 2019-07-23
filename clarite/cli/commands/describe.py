@@ -1,6 +1,6 @@
 import click
-from ...modules import describe, io
-from ..parameters import input_file, output_file
+from ...modules import describe
+from ..parameters import arg_data, arg_output
 
 
 @click.group(name='describe')
@@ -9,14 +9,12 @@ def describe_cli():
 
 
 @describe_cli.command(help="Report top correlations between variables")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
+@arg_data
+@arg_output
 @click.option('-t', '--threshold', default=0.75, help="Report correlations with R >= this value")
 def correlations(data, output, threshold):
-    # Load data
-    data = io.load_data(data)
     # Describe
-    results = describe.correlations(data, threshold)
+    results = describe.correlations(data.df, threshold)
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
@@ -24,13 +22,11 @@ def correlations(data, output, threshold):
 
 
 @describe_cli.command(help="Report the number of occurences of each value for each variable")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
+@arg_data
+@arg_output
 def freq_table(data, output):
-    # Load data
-    data = io.load_data(data)
     # Describe
-    results = describe.freq_table(data)
+    results = describe.freq_table(data.df)
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
@@ -44,14 +40,24 @@ def freq_table(data, output):
     click.echo(click.style(f"Done: Saved {num_values:,} unique value counts for {num_variables:,} non-continuous variables to {output}", fg='green'))
 
 
-@describe_cli.command(help="Report the percent of observations that are NA for each variable")
-@click.argument('data', type=input_file)
-@click.argument('output', type=output_file)
-def percent_na(data, output):
-    # Load data
-    data = io.load_data(data)
+@describe_cli.command(help="Get the type of each variable")
+@arg_data
+@arg_output
+def get_types(data, output):
     # Describe
-    results = describe.percent_na(data)
+    results = describe.get_types(data.df)
+    # Save results
+    results.to_csv(output, sep="\t", header=False)
+    # Log
+    click.echo(click.style(f"Done: Saved types of {len(results)} variables to {output}", fg='green'))
+
+
+@describe_cli.command(help="Report the percent of observations that are NA for each variable")
+@arg_data
+@arg_output
+def percent_na(data, output):
+    # Describe
+    results = describe.percent_na(data.df)
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log

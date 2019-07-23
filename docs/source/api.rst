@@ -12,7 +12,7 @@ CLARITE functions are organized into several modules:
 
 -----
 
-.. automodule:: clarite.io
+.. automodule:: clarite.load
 
 -----
 
@@ -21,10 +21,6 @@ CLARITE functions are organized into several modules:
 -----
 
 .. automodule:: clarite.plot
-
------
-
-.. automodule:: clarite.process
 
 -----
 
