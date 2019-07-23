@@ -2,6 +2,15 @@
 Release History
 ===============
 
+v0.7.0 (2019-07-23)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Improvements to the CLI and printed log messages.
+* The functions from the 'Process' module were put into the 'Modify' module.
+* Datasets are no longer split apart when categorizing.
+
 v0.6.0 (2019-07-11)
 -------------------
 
