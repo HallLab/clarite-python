@@ -8,8 +8,6 @@ OUTPUT_FILE = click.Path(file_okay=True, dir_okay=False, writable=True)
 
 # Frequently used output parameters
 arg_output = click.argument('output', type=OUTPUT_FILE)
-option_output = click.option('--output', type=OUTPUT_FILE, default=None,
-                             help='Output name.  By default the input name is used (the original data is overwritten).')
 
 # Standard datatypes that use multiple files together
 CLARITE_DATA = ClariteDataParamType()  # Instantiate it to use as a type in arguments/options
