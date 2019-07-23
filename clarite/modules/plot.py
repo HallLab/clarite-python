@@ -23,6 +23,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
 from statsmodels.api import qqplot
+import click
 import numpy as np
 import pandas as pd
 
