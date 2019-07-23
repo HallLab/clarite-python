@@ -409,7 +409,7 @@ def make_categorical(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] =
     ================================================================================
     Running make_categorical
     --------------------------------------------------------------------------------
-    Set 12 of 12 variables as categorical, each with 4,321 observations
+    Set 12 of 12 variable(s) as categorical, each with 4,321 observations
     """
     # Which columns
     columns = _validate_skip_only(data, skip, only)
@@ -450,7 +450,7 @@ def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = 
     ================================================================================
     Running make_categorical
     --------------------------------------------------------------------------------
-    Set 128 of 128 variables as continuous, each with 4,321 observations
+    Set 128 of 128 variable(s) as continuous, each with 4,321 observations
     """
     # Which columns
     columns = _validate_skip_only(data, skip, only)
@@ -465,7 +465,7 @@ def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = 
                          f"{', '.join(failed_conversion[failed_conversion].index)}")
 
     columns = columns[columns].index
-    click.echo(f"Set {len(columns):,} of {len(data.columns):,} variables as continuous, each with {len(data):,} observations")
+    click.echo(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as continuous, each with {len(data):,} observations")
 
     return data
 
