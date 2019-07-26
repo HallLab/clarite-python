@@ -43,10 +43,10 @@ def process_skip_only(ctx, param, value):
                 # Assume this is the name of a variable
                 as_strings += 1
                 result.append(v)
-        click.echo('-' * console_width)
+        click.echo("-" * (console_width - 1) + "\n")
         click.echo(f"--{option_name}: {as_strings} variables specified directly")
         for filename, num in as_files.items():
-            click.echo(f"\t{num:,} variables loaded from {filename}")
+            click.echo(f"\t{num:,} variables loaded from '{filename}'")
         return result
 
 
