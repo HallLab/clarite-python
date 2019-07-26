@@ -44,13 +44,13 @@ def process_skip_only(ctx, param, value):
                 as_strings += 1
                 result.append(v)
         click.echo("-" * (console_width - 1) + "\n")
-        click.echo(f"--{option_name}: {as_strings} variables specified directly")
+        click.echo(f"--{option_name}: {as_strings} variable(s) specified directly")
         for filename, num in as_files.items():
-            click.echo(f"\t{num:,} variables loaded from '{filename}'")
+            click.echo(f"\t{num:,} variable(s) loaded from '{filename}'")
         return result
 
 
 option_skip = click.option('-s', '--skip', type=click.STRING, multiple=True, callback=process_skip_only,
-                           help="variables to skip")
+                           help="variables to skip.  Either individual names, or a file containing one name per line.")
 option_only = click.option('-o', '--only', type=click.STRING, multiple=True, callback=process_skip_only,
-                           help="variables to process, skipping all others")
+                           help="variables to process, skipping all others.  Either individual names, or a file containing one name per line.")
