@@ -22,7 +22,6 @@ EWAS_RESULT = ClariteEwasResultParamType()
 def process_skip_only(ctx, param, value):
     # Value is a tuple of passed inputs (for each --skip or --only)
     option_name = param.name
-    console_width, _ = click.get_terminal_size()
     if len(value) == 0:
         # No values passed
         return None
@@ -43,7 +42,7 @@ def process_skip_only(ctx, param, value):
                 # Assume this is the name of a variable
                 as_strings += 1
                 result.append(v)
-        click.echo("-" * (console_width - 1) + "\n")
+        click.echo("-" * 80)
         click.echo(f"--{option_name}: {as_strings} variable(s) specified directly")
         for filename, num in as_files.items():
             click.echo(f"\t{num:,} variable(s) loaded from '{filename}'")

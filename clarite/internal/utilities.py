@@ -8,12 +8,11 @@ import pandas as pd
 def print_wrap(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
-        console_width, _ = click.get_terminal_size()
-        click.echo("=" * (console_width - 1) + "\n")
+        click.echo("=" * 80)
         click.echo(f"Running {func.__name__}")
-        click.echo("-" * (console_width - 1) + "\n")
+        click.echo("-" * 80)
         result = func(*args, **kwargs)
-        click.echo("=" * (console_width - 1) + "\n")
+        click.echo("=" * 80)
         return result
     return wrapped
 
