@@ -1,3 +1,4 @@
+from pathlib import Path
 import click
 
 from .custom_types import ClariteDataParamType, ClariteEwasResultParamType
@@ -19,10 +20,34 @@ EWAS_RESULT = ClariteEwasResultParamType()
 
 # Skip/Only handling
 def process_skip_only(ctx, param, value):
+    # Value is a tuple of passed inputs (for each --skip or --only)
+    option_name = param.name
+    console_width, _ = click.get_terminal_size()
     if len(value) == 0:
+        # No values passed
         return None
     else:
-        return list(value)
+        result = []
+        as_files = {}
+        as_strings = 0
+        for v in value:
+            p = Path(v)
+            if p.exists() and p.is_file():
+                # Try loading a list of variables
+                with p.open('r') as f:
+                    file_result = [v.strip() for v in f.readlines()]
+                    file_result = [v for v in file_result if v != ""]  # skip blank lines
+                    as_files[v] = len(file_result)
+                    result += file_result
+            else:
+                # Assume this is the name of a variable
+                as_strings += 1
+                result.append(v)
+        click.echo('-' * console_width)
+        click.echo(f"--{option_name}: {as_strings} variables specified directly")
+        for filename, num in as_files.items():
+            click.echo(f"\t{num:,} variables loaded from {filename}")
+        return result
 
 
 option_skip = click.option('-s', '--skip', type=click.STRING, multiple=True, callback=process_skip_only,
