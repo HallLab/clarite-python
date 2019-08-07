@@ -82,22 +82,26 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
     # No unique non-NA values - Drop these variables
     empty_vars = (unique_count == 0)
     if empty_vars.sum() > 0:
-        data = data.drop(columns=empty_vars[empty_vars].index)
+        columns = list(empty_vars[empty_vars].index)
+        data = data.drop(columns=columns)
 
     # One unique non-NA value - Drop these variables
     constant_vars = (unique_count == 1)
     if constant_vars.sum() > 0:
-        data = data.drop(columns=constant_vars[constant_vars].index)
+        columns = list(constant_vars[constant_vars].index)
+        data = data.drop(columns=columns)
 
     # Two unique non-NA values - Convert non-NA values to category (for binary)
     keep_bin = (unique_count == 2)
     if keep_bin.sum() > 0:
-        data.loc[:, keep_bin] = data.loc[:, keep_bin].astype('category')
+        columns = list(keep_bin[keep_bin].index)
+        data = data.astype({c:'category' for c in columns})
 
     # Categorical - Convert non-NA values to category type
     keep_cat = (unique_count >= cat_min) & (unique_count <= cat_max)
     if keep_cat.sum() > 0:
-        data.loc[:, keep_cat] = data.loc[:, keep_cat].astype('category')  # NaNs are handled correctly, no need skip
+        columns = list(keep_cat[keep_cat].index)
+        data = data.astype({c:'category' for c in columns})  # NaNs are handled correctly, no need skip
 
     # Continuous - Convert non-NA values to numeric type (even though they probably already are)
     keep_cont = (unique_count >= cont_min)
@@ -115,7 +119,9 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
     # Other - Convert non-NA values to string type
     check_other = ~empty_vars & ~constant_vars & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
     if check_other.sum() > 0:
-        data.loc[:, check_other] = data.loc[:, check_other].apply(lambda col: col.loc[~col.isna()].astype(str))
+        columns = list(check_other[check_other].index)
+        for c in columns:
+            data.loc[~data[c].isna(), c] = data.loc[~data[c].isna(), c].astype(str)
 
     # Log categorized results
     click.echo(f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
