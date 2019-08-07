@@ -95,13 +95,13 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
     keep_bin = (unique_count == 2)
     if keep_bin.sum() > 0:
         columns = list(keep_bin[keep_bin].index)
-        data = data.astype({c:'category' for c in columns})
+        data = data.astype({c: 'category' for c in columns})
 
     # Categorical - Convert non-NA values to category type
     keep_cat = (unique_count >= cat_min) & (unique_count <= cat_max)
     if keep_cat.sum() > 0:
         columns = list(keep_cat[keep_cat].index)
-        data = data.astype({c:'category' for c in columns})  # NaNs are handled correctly, no need skip
+        data = data.astype({c: 'category' for c in columns})  # NaNs are handled correctly, no need skip
 
     # Continuous - Convert non-NA values to numeric type (even though they probably already are)
     keep_cont = (unique_count >= cont_min)
