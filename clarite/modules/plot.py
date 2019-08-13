@@ -286,11 +286,12 @@ def manhattan(
 
     # Parameter Validation - EWAS Results
     for df_idx, df in enumerate(dfs.values()):
-        if list(df) != result_columns + corrected_pvalue_columns:
-            raise ValueError(
-                f"This plot may only be created for EWAS results with corrected p-values added. "
-                f"DataFrame {df_idx + 1} of {len(dfs)} did not have the expected columns."
-            )
+        for col in result_columns + corrected_pvalue_columns:
+            if col not in list(df):
+                raise ValueError(
+                    f"This plot may only be created for EWAS results with corrected p-values added. "
+                    f"DataFrame {df_idx + 1} of {len(dfs)} was missing the '{col}' column."
+                )
 
     # Create a dataframe of pvalues indexed by variable name
     df = (
