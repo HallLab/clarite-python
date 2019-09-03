@@ -1,6 +1,7 @@
 import re
 
 import pytest
+import pandas as pd
 
 from clarite import modify
 
@@ -98,4 +99,20 @@ def test_remove_outliers(plantTraits):
 def test_categorize(plantTraits, capfd):
     # TODO
     modify.categorize(plantTraits)
+    return
+
+
+def test_transform(plantTraits, capfd):
+    """Test a log10 transform"""
+    df = pd.DataFrame({
+        'a': [10, 100, 1000],
+        'b': [100, 1000, 10000],
+        'c': [True, False, True]
+    })
+
+    result = modify.transform(df, 'log10', skip=['c'])
+
+    assert all(result['a'] == [1, 2, 3])
+    assert all(result['b'] == [2, 3, 4])
+    assert all(result['c'] == [True, False, True])
     return

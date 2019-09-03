@@ -788,9 +788,9 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
 
 @print_wrap
 def transform(data: pd.DataFrame,
-              variable: str,
-              transform: str,
-              new_name: Optional[str] = None):
+              transform_method: str,
+              skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None
+              ):
     """
     Apply a transformation function to a variable
 
@@ -798,53 +798,51 @@ def transform(data: pd.DataFrame,
     ----------
     data: pd.DataFrame or pd.Series
         Data to be processed
-    variable: str
-        Variable to apply the transformation to
-    transform: str
+    transform_method: str
         Name of the transformation (Python function or NumPy ufunc to apply)
-    new_name: str or None
-        Name of the transformed variable
+    skip: str, list or None (default is None)
+        List of variables that will *not* be transformed
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be transformed
 
     Returns
     -------
     data: pd.DataFrame
-        DataFrame with a new transformed variable replacing the original
+        DataFrame with variables that have been transformed
 
     Examples
     --------
     >>> import clarite
-    >>> df = clarite.modify.transform(df, 'BMXBMI', 'log', 'logBMI')
+    >>> df = clarite.modify.transform(df, 'log', only=['BMXBMI'])
     ================================================================================
     Running transform
     --------------------------------------------------------------------------------
-    Transformed 'BMXBMI' using 'log' (saved as 'logBMI').
+    Transformed 'BMXBMI' using 'log'.
     """
     # Copy to avoid replacing in-place
     data = data.copy(deep=True)
 
+    # Which columns
+    columns = _validate_skip_only(data, skip, only)
+    transform_variables = list(data.loc[:, columns])
+
     # Check for potential errors
-    dtype = _get_dtypes(data).get(variable, None)
-    if dtype is None:
-        raise ValueError(f"The variable ('{variable}') was not found in the data")
-    elif dtype != 'continuous':
-        raise ValueError(f"The variable ('{variable}') was {dtype}: transformations may only be applied to continuous variables")
+    dtypes = _get_dtypes(data)
+    for variable in transform_variables:
+        dtype = dtypes.get(variable, None)
+        if dtype is None:
+            raise ValueError(f"The variable ('{variable}') was not found in the data")
+        elif dtype != 'continuous':
+            raise ValueError(f"The variable ('{variable}') was {dtype}: "
+                             f"transformations may only be applied to continuous variables")
 
-    # Create new variable
-    if new_name not in data:
+    # Transform each variable
+    for variable in transform_variables:
         try:
-            data[new_name] = data[variable].apply(transform)
+            data.loc[:, variable] = data.loc[:, variable].apply(transform_method)
         except Exception as e:
-            raise ValueError(f"Couldn't apply a function named '{transform}' to '{variable}' in order to create a new '{new_name}' variable.\n\t{e}")
-        click.echo(f"Transformed '{variable}' using '{transform}' (saved as '{new_name}').")
-    else:
-        try:
-            data.loc[new_name] = data[variable].apply(transform)
-        except Exception as e:
-            raise ValueError(f"Couldn't apply a function named '{transform}' to '{variable}'.\n\t{e}")
-        click.echo(f"Transformed '{variable}' using '{transform}' (overwrote '{new_name}').")
+            raise ValueError(f"Couldn't apply a function named '{transform_method}' to '{variable}'.\n\t{e}")
 
-    # Drop original variable if it wasn't overwritten
-    if new_name != variable:
-        data = data.drop(variable, axis='columns')
+        click.echo(f"Transformed '{variable}' using '{transform_method}'")
 
     return data

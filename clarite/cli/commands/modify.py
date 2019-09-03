@@ -201,12 +201,13 @@ def make_continuous(data, output, skip, only):
 @modify_cli.command(help="Apply a function to each value of a variable")
 @arg_data
 @arg_output
-@click.argument('variable', type=click.STRING)
-@click.argument('transform', type=click.STRING)
-@click.argument('new_name', type=click.STRING)
-def transform_variable(data, output, variable, transform, new_name):
+@click.argument('transform_method', type=click.STRING)
+@option_skip
+@option_only
+def transform_variable(data, output, transform_method, skip, only):
     # Create new variable
-    data.df = modify.transform(data=data.df, variable=variable, transform=transform, new_name=new_name)
+    data.df = modify.transform(data=data.df, transform_method=transform_method,
+                               skip=skip, only=only)
     # Save
     save_clarite_data(data, output)
 
