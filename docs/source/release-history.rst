@@ -2,6 +2,20 @@
 Release History
 ===============
 
+v0.8.0 (2019-09-03)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Allow file input in the command line for skip/only
+* Make the manhattan plot function less restrictive of the data passed into it
+* Use skip/only in the transform function
+
+Fixes
+^^^^^
+* Categorization would silently fail if there was only one variable of a given type
+
+
 v0.7.0 (2019-07-23)
 -------------------
 
