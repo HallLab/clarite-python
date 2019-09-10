@@ -170,18 +170,18 @@ def percent_na(data: pd.DataFrame):
 
     Returns
     -------
-    result: pd.Series
-        Series listing percent NA for each variable
+    result: pd.DataFrame
+        DataFrame listing percent NA for each variable
 
     Examples
     --------
     >>> import clarite
     >>> clarite.describe.percent_na(df)
-    variable    percent_na
-    SDDSRVYR                 0.00000
-    female                   0.00000
-    LBXHBC                   4.99321
-    LBXHBS                   4.98730
+       variable  percent_na
+    0  SDDSRVYR     0.00000
+    1    female     0.00000
+    2    LBXHBC     4.99321
+    3    LBXHBS     4.98730
     """
     result = 100 * (1 - (data.count() / data.apply(len)))
     result = result.reset_index()
