@@ -6,6 +6,7 @@ CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures
 .. toctree::
    :maxdepth: 2
 
+   Github Repo <https://github.com/HallLab/clarite-python>
    motivation
    installation
    usage
