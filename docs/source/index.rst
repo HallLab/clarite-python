@@ -10,6 +10,7 @@ CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures
    motivation
    installation
    usage
+   example
    complex_surveys
 
 API Reference
