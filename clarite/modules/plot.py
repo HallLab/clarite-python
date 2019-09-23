@@ -38,6 +38,7 @@ def histogram(
     column: str,
     figsize: Tuple[int, int] = (12, 5),
     title: Optional[str] = None,
+    figure: Optional[plt.figure] = None,
     **kwargs,
 ):
     """
@@ -53,6 +54,8 @@ def histogram(
         The figure size of the resulting plot
     title: string or None, default None
         The title used for the plot
+    figure: matplotlib Figure or None, default None
+        Pass in an existing figure to plot to that instead of creating a new one (ignoring figsize)
     **kwargs:
         Other keyword arguments to pass to the distplot function of Seaborn
 
@@ -73,7 +76,10 @@ def histogram(
     if column not in data.columns:
         raise ValueError("'column' must be an existing column in the DataFrame")
 
-    _, ax = plt.subplots(figsize=figsize)
+    if figure is None:
+        _, ax = plt.subplots(figsize=figsize)
+    else:
+        ax = figure.subplots()
     ax.set_title(title)
     sns.distplot(data.loc[~data[column].isna(), column], ax=ax, **kwargs)
 
@@ -241,6 +247,7 @@ def manhattan(
     figsize: Tuple[int, int] = (12, 6),
     dpi: int = 300,
     title: Optional[str] = None,
+    figure: Optional[plt.figure] = None,
     colors: List[str] = ["#53868B", "#4D4D4D"],
     background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
     filename: Optional[str] = None,
@@ -264,6 +271,8 @@ def manhattan(
         The figure dots-per-inch
     title: string or None, default None
         The title used for the plot
+    figure: matplotlib Figure or None, default None
+        Pass in an existing figure to plot to that instead of creating a new one (ignoring figsize and dpi)
     colors: List(string, string), default ["#53868B", "#4D4D4D"]
         A list of colors to use for alternating categories (must be same length as 'background_colors')
     background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
@@ -327,9 +336,12 @@ def manhattan(
     )  # sorted category/variable number plus category offset
 
     # Create Plot and structures to hold category info
-    fig, axes = plt.subplots(
-        len(dfs), 1, figsize=figsize, dpi=dpi, sharex=True, sharey=True
-    )
+    if figure is None:
+        figure, axes = plt.subplots(
+            len(dfs), 1, figsize=figsize, dpi=dpi, sharex=True, sharey=True
+        )
+    else:
+        axes = figure.subplots(len(dfs), 1, sharex=True, sharey=True)
     x_labels = []
     x_labels_pos = []
     foreground_rectangles = [list() for c in colors]
@@ -466,7 +478,7 @@ def manhattan(
         )
 
     # Title
-    fig.suptitle(title, fontsize=20)
+    figure.suptitle(title, fontsize=20)
 
     # Save
     if filename is not None:
