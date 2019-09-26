@@ -37,7 +37,7 @@ setup(
     name='clarite',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description="CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures",
+    description="CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures",
     long_description=readme,
     author="Hall Lab",
     author_email='mah546@psu.edu',

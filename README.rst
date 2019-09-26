@@ -9,7 +9,7 @@ CLARITE
         :target: https://pypi.python.org/pypi/clarite
 
 
-CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures
+CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
 
 * Free software: 3-clause BSD license
 * Documentation: https://www.hall-lab.org/clarite-python/.

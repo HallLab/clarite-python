@@ -186,7 +186,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'clarite', 'CLARITE Documentation',
-     author, 'clarite', 'CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures',
+     author, 'clarite', 'CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures',
      'Miscellaneous'),
 ]
 

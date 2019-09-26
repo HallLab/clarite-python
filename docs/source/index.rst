@@ -1,7 +1,7 @@
 CLARITE Documentation
 =====================
 
-CLeaning to Anlaysis: Reproducibility-based Interface for Traits and Exposures
+CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
 
 .. toctree::
    :maxdepth: 2
