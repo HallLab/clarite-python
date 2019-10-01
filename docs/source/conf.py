@@ -119,7 +119,7 @@ html_static_path = ['_static']
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_logo = 'clarite_logo.png'
+html_logo = '_static/clarite_logo.png'
 html_theme_options = {
     'logo_only': True,
 }
