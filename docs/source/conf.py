@@ -114,7 +114,13 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'logo': 'clarite_logo.png',
+    'github_user': 'HallLab',
+    'github_repo': 'clarite-python',
+    'github_button': True,
+    'extra_nav_links': {'Hall Lab Homepage': "https://www.hall-lab.org"}
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
