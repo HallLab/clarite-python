@@ -8,6 +8,7 @@ CLARITE
 .. image:: https://img.shields.io/pypi/v/clarite.svg
         :target: https://pypi.python.org/pypi/clarite
 
+.. image:: docs/source/_static/clarite_logo.png
 
 CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
 

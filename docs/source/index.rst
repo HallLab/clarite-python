@@ -6,7 +6,7 @@ CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
 .. toctree::
    :maxdepth: 2
 
-   Hall Lab Homepage <https://hall-lab.org>
+   Hall Lab Homepage <https://www.hall-lab.org>
    CLARITE Github Repo <https://github.com/HallLab/clarite-python>
    motivation
    installation
