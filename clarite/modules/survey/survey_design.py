@@ -79,7 +79,7 @@ class SurveyDesignSpec:
                     raise KeyError(f"weights key for '{var_name}' ('{weight_name}') was not found in the survey_df")
         elif type(self.weights) == "str":
             if self.weights not in self.survey_df:
-                raise KeyError(f"weights ('{weight_name}') was not found in the survey_df")
+                raise KeyError(f"the weight ('{self.weights}') was not found in the survey_df")
 
         if self.single_cluster not in {'error', 'scaled', 'certainty', 'centered'}:
             raise ValueError(f"if provided, 'single_cluster' must be one of 'error', 'scaled', 'certainty', or 'centered'.")
