@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import statsmodels
+from statsmodels.genmod import generalized_linear_model
 
 
 class SurveyModel(object):
@@ -39,7 +39,7 @@ class SurveyModel(object):
         self.init_args = dict(init_args)
         self.fit_args = dict(fit_args)
 
-        if self.model is statsmodels.genmod.generalized_linear_model.GLM:
+        if self.model is generalized_linear_model.GLM:
             self.glm_flag = True
         else:
             self.glm_flag = False

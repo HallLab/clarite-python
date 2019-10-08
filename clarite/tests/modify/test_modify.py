@@ -66,24 +66,79 @@ def test_merge(plantTraits):
     assert all(df == plantTraits)
 
 
-def test_colfilter_percent_zero(plantTraits):
-    # TODO
-    return
+def test_colfilter_percent_zero(plantTraits, capfd):
+    result = modify.colfilter_percent_zero(plantTraits)
+    out, err = capfd.readouterr()
+    assert out == "================================================================================\n"\
+                  "Running colfilter_percent_zero\n"\
+                  "--------------------------------------------------------------------------------\n"\
+                  "Testing 31 of 31 continuous variables\n"\
+                  "\tRemoved 7 (22.58%) tested continuous variables which were equal to zero in at least 90.00% of non-NA observations.\n"\
+                  "================================================================================\n"
+    assert err == ""
+    assert result.shape == (136, 24)
 
 
-def test_colfilter_min_n(plantTraits):
-    # TODO
-    return
+def test_colfilter_min_n(plantTraits, capfd):
+    n = len(plantTraits)
+    plantTraits['test'] = ([None] + [True] * 2 + [False] * (n-3))
+    plantTraits = modify.make_binary(data=plantTraits, only=['test'])
+    result = modify.colfilter_min_n(plantTraits, n=n)
+    out, err = capfd.readouterr()
+    assert out == "================================================================================\n"\
+                  "Running make_binary\n"\
+                  "--------------------------------------------------------------------------------\n"\
+                  "Set 1 of 32 variable(s) as binary, each with 136 observations\n"\
+                  "================================================================================\n"\
+                  "================================================================================\n"\
+                  "Running colfilter_min_n\n"\
+                  "--------------------------------------------------------------------------------\n"\
+                  "Testing 1 of 1 binary variables\n"\
+                  "\tRemoved 1 (100.00%) tested binary variables which had less than 136 non-null values.\n"\
+                  "Testing 0 of 0 categorical variables\n"\
+                  "Testing 31 of 31 continuous variables\n"\
+                  "\tRemoved 19 (61.29%) tested continuous variables which had less than 136 non-null values.\n" \
+                  "================================================================================\n"
+    assert err == ""
+    assert result.shape == (136, 12)
 
 
-def test_colfilter_min_cat_n(plantTraits):
-    # TODO
-    return
+def test_colfilter_min_cat_n(plantTraits, capfd):
+    plantTraits['test'] = (['cat1'] * 2 + ['cat2'] * 6 + ['cat3'] * (len(plantTraits)-8))
+    plantTraits['test2'] = (['cat1'] * 3 + ['cat2'] * 6 + ['cat3'] * (len(plantTraits) - 9))
+    plantTraits = modify.make_categorical(data=plantTraits, only=['test', 'test2'])
+    result = modify.colfilter_min_cat_n(plantTraits, n=3)
+    out, err = capfd.readouterr()
+    assert out == "================================================================================\n"\
+                  "Running make_categorical\n"\
+                  "--------------------------------------------------------------------------------\n"\
+                  "Set 2 of 33 variable(s) as categorical, each with 136 observations\n"\
+                  "================================================================================\n"\
+                  "================================================================================\n"\
+                  "Running colfilter_min_cat_n\n"\
+                  "--------------------------------------------------------------------------------\n"\
+                  "Testing 0 of 0 binary variables\n"\
+                  "Testing 2 of 2 categorical variables\n"\
+                  "\tRemoved 1 (50.00%) tested categorical variables which had a category with less than 3 values.\n"\
+                  "================================================================================\n"
+    assert err == ""
+    assert result.shape == (136, 32)
 
 
-def test_rowfilter_incomplete_obs(plantTraits):
-    # TODO
-    return
+def test_rowfilter_incomplete_obs(plantTraits, capfd):
+    col_names = list(plantTraits)[:4]
+    plantTraits.iloc[0, 0] = None
+    plantTraits.iloc[2, 5:7] = None
+    result = modify.rowfilter_incomplete_obs(plantTraits, only=col_names)
+
+    out, err = capfd.readouterr()
+    assert out == "================================================================================\n"\
+                  "Running rowfilter_incomplete_obs\n" \
+                  "--------------------------------------------------------------------------------\n" \
+                  "Removed 45 of 136 observations (33.09%) due to NA values in any of 4 variables\n" \
+                  "================================================================================\n"
+    assert err == ""
+    assert result.shape == (91, 31)
 
 
 def test_recode_values(plantTraits):
