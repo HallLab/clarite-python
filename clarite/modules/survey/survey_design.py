@@ -212,7 +212,7 @@ class SurveyDesign(object):
         # Record inputs
         # Note: Currently allowed combinations of parameters:
         #        * Strata, Clusters (weights assumed to be 1)
-        #        * Strata, Clustes, Weight
+        #        * Strata, Clusters, Weight
         # Note: Not Currently allowed combinations of parameters:
         #        * FPC (not allowed to be provided- further testing and documentation needed)
         #        * Weight only (further testing needed to confirm correctness)
