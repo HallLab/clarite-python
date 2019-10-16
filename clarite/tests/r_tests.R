@@ -55,6 +55,13 @@ fpc <- add_id_col(fpc)
 fpc$y <- fpc$x + (fpc$stratid * 2) + (fpc$psuid * 0.5) 
 write.csv(fpc, 'fpc_data.csv')
 
+# No weights
+glm_result_fpcnoweights <- glm(y~x, data=fpc)
+ewas_result_fpcnoweights <- ewas(d=fpc, cont_vars="x", cat_vars=NULL, y="y", regression_family="gaussian", min_n=1)
+write.csv(ewas_result_fpcnoweights, 'fpc_noweights.csv')
+print("fpc: No Weights")
+compare_ewas(glm_result_fpcnoweights, ewas_result_fpcnoweights, "x")
+
 # Test without specifying fpc
 withoutfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, data=fpc, nest=TRUE)
 glm_result_withoutfpc <- svyglm(y~x, design=withoutfpc)
@@ -79,10 +86,21 @@ compare_ewas(glm_result_withfpc, ewas_result_withfpc, "x")
 # api Test data #
 #################
 data(api)
+apipop <- add_id_col(apipop)
+write.csv(apipop, 'apipop_data.csv')
 apistrat <- add_id_col(apistrat)
 write.csv(apistrat, 'apistrat_data.csv')
 apiclus1 <- add_id_col(apiclus1)
 write.csv(apiclus1, 'apiclus1_data.csv')
+
+# Full population no weights
+glm_result_apipop <- glm(y~x, data=apipop)
+ewas_result_apipop <- ewas(d=apipop, cont_vars="ell", cat_vars=NULL,
+                           cont_covars = c("meals", "mobility"), cat_covars = NULL,
+                           y="api00", regression_family="gaussian", min_n=1)
+print("api: apipop for ell")
+compare_ewas(glm_result_apipop, ewas_result_apipop, "ell")
+write.csv(ewas_result_apipop, 'api_apipop_result.csv')
 
 # stratified sample (no clusters) with fpc
 dstrat <- svydesign(id=~1, strata=~stype, weights=~pw, data=apistrat, fpc=~fpc)
@@ -93,7 +111,7 @@ ewas_result_apistrat <- ewas(d=apistrat, cont_vars = "ell", cat_vars = NULL,
                              weights="pw", ids=NULL, strata="stype", fpc="fpc", min_n = 1)
 print("api: apistrat for ell")
 compare_ewas(glm_result_apistrat, ewas_result_apistrat, "ell")
-write.csv(ewas_result_apistrat, 'api_dstrat_result.csv')
+write.csv(ewas_result_apistrat, 'api_apistrat_result.csv')
 
 # one-stage cluster sample (no strata) with fpc
 dclus1 <- svydesign(id=~dnum, weights=~pw, data=apiclus1, fpc=~fpc)
