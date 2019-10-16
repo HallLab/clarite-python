@@ -7,6 +7,10 @@ install.packages("C:/Users/jrm5100/Documents/Code/clarite", repos=NULL, type="so
 library('survey')
 library('clarite')
 
+####################
+# Useful Functions #
+####################
+
 add_id_col <- function(df){
   df$ID <- 1:nrow(df)
   df <- df[,c("ID",setdiff(names(df),"ID"))]
@@ -33,7 +37,7 @@ compare_ewas <- function(glm_result, ewas_result, variable){
   if(!(glm_pval == ewas_pval)){
     stop(paste("Variable", variable, "pval:", glm_pval, "in glm vs", ewas_pval, "in ewas", sep=" "))
   }
-  print(paste(variable, "Matches", sep=" "))
+  print(paste("    ", variable, " Matches", sep=""))
 }
 
 # Change to the output folder
@@ -53,39 +57,54 @@ write.csv(fpc, 'fpc_data.csv')
 
 # Test without specifying fpc
 withoutfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, data=fpc, nest=TRUE)
-glm_result <- svyglm(y~x, design=withoutfpc)
-ewas_result <- ewas(d=fpc, cont_vars = "x", cat_vars = NULL,
-                    y="y", regression_family="gaussian",
-                    weights="weight", ids="psuid", strata="stratid", nest=TRUE, min_n = 1)
-write.csv(ewas_result, 'fpc_withoutfpc_result.csv')
+glm_result_withoutfpc <- svyglm(y~x, design=withoutfpc)
+ewas_result_withoutfpc <- ewas(d=fpc, cont_vars = "x", cat_vars = NULL,
+                               y="y", regression_family="gaussian",
+                               weights="weight", ids="psuid", strata="stratid", nest=TRUE, min_n = 1)
+write.csv(ewas_result_withoutfpc, 'fpc_withoutfpc_result.csv')
 print("fpc: Without FPC")
-compare_ewas(glm_result, ewas_result, "x")
+compare_ewas(glm_result_withoutfpc, ewas_result_withoutfpc, "x")
 
 # Test with specifying fpc
 withfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, fpc=~Nh, data=fpc, nest=TRUE)
-glm_result <- svyglm(y~x, design=withfpc)
-ewas_result <- ewas(d=fpc, cont_vars = "x", cat_vars = NULL,
-                    y="y", regression_family="gaussian",
-                    weights="weight", ids="psuid", strata="stratid", fpc="Nh", nest=TRUE, min_n = 1)
-write.csv(ewas_result, 'fpc_withfpc_result.csv')
+glm_result_withfpc <- svyglm(y~x, design=withfpc)
+ewas_result_withfpc <- ewas(d=fpc, cont_vars = "x", cat_vars = NULL,
+                            y="y", regression_family="gaussian",
+                            weights="weight", ids="psuid", strata="stratid", fpc="Nh", nest=TRUE, min_n = 1)
+write.csv(ewas_result_withfpc, 'fpc_withfpc_result.csv')
 print("fpc: With FPC")
-compare_ewas(glm_result, ewas_result, "x")
+compare_ewas(glm_result_withfpc, ewas_result_withfpc, "x")
 
 #################
 # api Test data #
 #################
 data(api)
-write.csv(api, 'api_data.csv')
+apistrat <- add_id_col(apistrat)
+write.csv(apistrat, 'apistrat_data.csv')
+apiclus1 <- add_id_col(apiclus1)
+write.csv(apiclus1, 'apiclus1_data.csv')
 
-# stratified sample (no clusters)
+# stratified sample (no clusters) with fpc
 dstrat <- svydesign(id=~1, strata=~stype, weights=~pw, data=apistrat, fpc=~fpc)
-result <- svyglm(api00~ell+meals+mobility, design=dstrat)
-write.csv(summary(result)$coefficients, 'api_dstrat_result.csv')
+glm_result_apistrat <- svyglm(api00~ell+meals+mobility, design=dstrat)
+ewas_result_apistrat <- ewas(d=apistrat, cont_vars = "ell", cat_vars = NULL,
+                             cont_covars = c("meals", "mobility"), cat_covars = NULL,
+                             y="api00", regression_family="gaussian",
+                             weights="pw", ids=NULL, strata="stype", fpc="fpc", min_n = 1)
+print("api: apistrat for ell")
+compare_ewas(glm_result_apistrat, ewas_result_apistrat, "ell")
+write.csv(ewas_result_apistrat, 'api_dstrat_result.csv')
 
-# one-stage cluster sample
+# one-stage cluster sample (no strata) with fpc
 dclus1 <- svydesign(id=~dnum, weights=~pw, data=apiclus1, fpc=~fpc)
-result <- svyglm(api00~ell+meals+mobility, design=dclus1)
-write.csv(summary(result)$coefficients, 'api_dclus1_result.csv')
+glm_result_apiclus1 <- svyglm(api00~ell+meals+mobility, design=dclus1)
+ewas_result_apiclus1 <- ewas(d=apiclus1, cont_vars = "ell", cat_vars = NULL,
+                             cont_covars = c("meals", "mobility"), cat_covars = NULL,
+                             y="api00", regression_family="gaussian",
+                             weights="pw", ids="dnum", fpc="fpc", min_n = 1)
+print("api: apiclus1 for ell")
+compare_ewas(glm_result_apiclus1, ewas_result_apiclus1, "ell")
+write.csv(ewas_result_apiclus1, 'api_apiclus1_result.csv')
 
 ####################
 # nhanes Test data #
