@@ -4,8 +4,7 @@
 
 library(devtools)
 install.packages('survey')
-#install_github('HallLab/clarite')
-install.packages("C:/Users/jrm5100/Documents/Code/clarite", repos=NULL, type="source")
+install_github('HallLab/clarite')
 library('survey')
 library('clarite')
 
@@ -104,7 +103,7 @@ write.csv(fpc, 'fpc_data.csv')
 # No weights
 glm_result_fpcnoweights <- rbind(get_glm_result("x", glm(y~x, data=fpc), use_weights=FALSE))
 ewas_result_fpcnoweights <- ewas(d=fpc, cont_vars="x", cat_vars=NULL, y="y", regression_family="gaussian", min_n=1)
-write.csv(ewas_result_fpcnoweights, 'fpc_noweights.csv')
+write.csv(ewas_result_fpcnoweights, 'fpc_noweights_result.csv')
 compare_ewas("fpc: No Weights", glm_result_fpcnoweights, ewas_result_fpcnoweights)
 
 # Test without specifying fpc
@@ -313,11 +312,11 @@ write.csv(nhanes_lonely, 'nhanes_lonely_data.csv')
 get_lonely_glm_results <- function(setting){
   options(survey.lonely.psu=setting)
   dnhanes_lonely <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely)
-  glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_lonely_certainty)
+  glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely))
   glm_result_nhanes_lonely <- rbind(
-    get_glm_result("race", glm_nhanes_lonely, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_lonely)),
-    get_glm_result("agecat", glm_nhanes_lonely, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_lonely)),
-    get_glm_result("RIAGENDR", glm_nhanes_lonely, svyglm(HI_CHOL~race+agecat, design=dnhanes_lonely))
+    get_glm_result("race", glm_nhanes_lonely, svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely))),
+    get_glm_result("agecat", glm_nhanes_lonely, svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely))),
+    get_glm_result("RIAGENDR", glm_nhanes_lonely, svyglm(HI_CHOL~race+agecat, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely)))
   )
   return(glm_result_nhanes_lonely)
 }
