@@ -209,7 +209,7 @@ write.csv(ewas_result_apiclus1, 'api_apiclus1_result.csv')
 compare_ewas("api: apiclus1", glm_result_apiclus1, ewas_result_apiclus1)
 
 ####################
-# nhanes Test data #
+# NHANES Test data #
 ####################
 # A data frame with 8591 observations on the following 7 variables.
 # SDMVPSU - Primary sampling units
@@ -248,9 +248,105 @@ ewas_result_nhanes_noweights <- rbind(
        cont_covars = NULL, cat_covars = c("race", "agecat"),
        y="HI_CHOL", regression_family="gaussian", min_n=1)
 )
-write.csv(ewas_result_nhanes_noweights, 'ewas_noweights_result.csv')
+write.csv(ewas_result_nhanes_noweights, 'nahanes_noweights_result.csv')
 compare_ewas("nhanes: noweights", glm_result_nhanes_noweights, ewas_result_nhanes_noweights)
 
 
-# Cluster, Strata, Weights
-design <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes)
+# Full design: cluster, strata, weights
+dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes)
+glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete)
+glm_result_nhanes_complete <- rbind(
+  get_glm_result("race", glm_nhanes_complete, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_complete)),
+  get_glm_result("agecat", glm_nhanes_complete, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_complete)),
+  get_glm_result("RIAGENDR", glm_nhanes_complete, svyglm(HI_CHOL~race+agecat, design=dnhanes_complete))
+)
+ewas_result_nhanes_complete <- rbind(
+  ewas(d=nhanes, cont_vars=NULL, cat_vars="race",
+       cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
+       y="HI_CHOL", regression_family="gaussian", min_n=1,
+       weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
+  ewas(d=nhanes, cont_vars=NULL, cat_vars="agecat",
+       cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
+       y="HI_CHOL", regression_family="gaussian", min_n=1,
+       weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
+  ewas(d=nhanes, cont_vars=NULL, cat_vars="RIAGENDR",
+       cont_covars = NULL, cat_covars = c("race", "agecat"),
+       y="HI_CHOL", regression_family="gaussian", min_n=1,
+       weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE)
+)
+write.csv(ewas_result_nhanes_complete, 'nahanes_complete_result.csv')
+compare_ewas("nhanes: complete", glm_result_nhanes_complete, ewas_result_nhanes_complete)
+
+# Weights Only
+dnhanes_weightsonly <- svydesign(id=~1, weights=~WTMEC2YR, data=nhanes)
+glm_nhanes_weightsonly <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_weightsonly)
+glm_result_nhanes_weightsonly <- rbind(
+  get_glm_result("race", glm_nhanes_weightsonly, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_weightsonly)),
+  get_glm_result("agecat", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_weightsonly)),
+  get_glm_result("RIAGENDR", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+agecat, design=dnhanes_weightsonly))
+)
+ewas_result_nhanes_weightsonly <- rbind(
+  ewas(d=nhanes, cont_vars=NULL, cat_vars="race",
+       cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
+       y="HI_CHOL", regression_family="gaussian", min_n=1,
+       weights="WTMEC2YR"),
+  ewas(d=nhanes, cont_vars=NULL, cat_vars="agecat",
+       cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
+       y="HI_CHOL", regression_family="gaussian", min_n=1,
+       weights="WTMEC2YR"),
+  ewas(d=nhanes, cont_vars=NULL, cat_vars="RIAGENDR",
+       cont_covars = NULL, cat_covars = c("race", "agecat"),
+       y="HI_CHOL", regression_family="gaussian", min_n=1,
+       weights="WTMEC2YR")
+)
+write.csv(ewas_result_nhanes_weightsonly, 'nahanes_weightsonly_result.csv')
+compare_ewas("nhanes: weights only", glm_result_nhanes_weightsonly, ewas_result_nhanes_weightsonly)
+
+#################
+# NHANES Lonely #
+#################
+# Lonely PSU (only one PSU in a stratum) - simulate by changing a stratum to a new number in one row
+nhanes_lonely <- nhanes
+nhanes_lonely[1, "SDMVSTRA"] <- 90 # existing numbers are 75 through 89
+write.csv(nhanes_lonely, 'nhanes_lonely_data.csv')
+
+get_lonely_glm_results <- function(setting){
+  options(survey.lonely.psu=setting)
+  dnhanes_lonely <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely)
+  glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_lonely_certainty)
+  glm_result_nhanes_lonely <- rbind(
+    get_glm_result("race", glm_nhanes_lonely, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_lonely)),
+    get_glm_result("agecat", glm_nhanes_lonely, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_lonely)),
+    get_glm_result("RIAGENDR", glm_nhanes_lonely, svyglm(HI_CHOL~race+agecat, design=dnhanes_lonely))
+  )
+  return(glm_result_nhanes_lonely)
+}
+get_lonely_ewas_results <- function(setting){
+  options(survey.lonely.psu=setting)
+  ewas_result_nhanes_lonely <- rbind(
+    ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="race",
+         cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
+         y="HI_CHOL", regression_family="gaussian", min_n=1,
+         weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
+    ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="agecat",
+         cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
+         y="HI_CHOL", regression_family="gaussian", min_n=1,
+         weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
+    ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="RIAGENDR",
+         cont_covars = NULL, cat_covars = c("race", "agecat"),
+         y="HI_CHOL", regression_family="gaussian", min_n=1,
+         weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE)
+  )
+  return(ewas_result_nhanes_lonely)
+}
+# Certainty
+glm_result_nhanes_certainty <- get_lonely_glm_results("certainty")
+ewas_result_nhanes_certainty <- get_lonely_ewas_results("certainty")
+write.csv(ewas_result_nhanes_certainty, 'nahanes_certainty_result.csv')
+compare_ewas("nhanes lonely: certainty", glm_result_nhanes_certainty, ewas_result_nhanes_certainty)
+
+# Adjust
+glm_result_nhanes_adjust <- get_lonely_glm_results("adjust")
+ewas_result_nhanes_adjust <- get_lonely_ewas_results("adjust")
+write.csv(ewas_result_nhanes_adjust, 'nahanes_adjust_result.csv')
+compare_ewas("nhanes lonely: adjust", glm_result_nhanes_adjust, ewas_result_nhanes_adjust)
