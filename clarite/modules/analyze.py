@@ -65,6 +65,10 @@ def ewas(
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
     Running EWAS on a continuous variable
     """
+    # Covariates must be a list
+    if type(covariates) != list:
+        raise ValueError("'covariates' must be specified as a list.  Use an empty list ([]) if there aren't any.")
+
     # Make sure the index of each dataset is not a multiindex and give it a consistent name
     if isinstance(data.index, pd.core.index.MultiIndex):
         raise ValueError(f"Data must not have a multiindex")
