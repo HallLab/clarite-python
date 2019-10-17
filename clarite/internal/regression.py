@@ -67,6 +67,9 @@ class Regression(object):
         self.pvalue = np.nan
 
     def check_covars(self):
+        # No varying covariates if there aren't any
+        if len(self.covariates) == 0:
+            return []
         unique_values = self.data[self.covariates].nunique()
         varying_covars = list(unique_values[unique_values > 1].index.values)
         non_varying_covars = list(unique_values[unique_values <= 1].index.values)
@@ -115,15 +118,15 @@ class Regression(object):
     def get_results(self):
         """Return a dictionary of the results"""
         return {
-            'variable': self.variable,
-            'variable_type': self.variable_kind,
-            'converged': self.converged,
+            'Variable': self.variable,
+            'Variable_type': self.variable_kind,
+            'Converged': self.converged,
             'N': self.N,
-            'beta': self.beta,
+            'Beta': self.beta,
             'SE': self.SE,
-            'var_pvalue': self.var_pvalue,
+            'Variable_pvalue': self.var_pvalue,
             'LRT_pvalue': self.LRT_pvalue,
-            'diff_AIC': self.diff_AIC,
+            'Diff_AIC': self.diff_AIC,
             'pvalue': self.pvalue
         }
 

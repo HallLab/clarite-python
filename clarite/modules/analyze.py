@@ -188,9 +188,10 @@ def run_regressions(phenotype: str,
 
     # Gather All Results
     result = pd.DataFrame(result)
-    result['phenotype'] = phenotype  # Add phenotype
-    result = result.sort_values('pvalue').set_index(['variable', 'phenotype'])  # Sort and set index
-    result = result[['variable_type', 'converged', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']]  # Sort columns
+    result['Phenotype'] = phenotype  # Add phenotype
+    result = result.sort_values('pvalue').set_index(['Variable', 'Phenotype'])  # Sort and set index
+    result = result[['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
+                     'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
     click.echo("Completed EWAS\n")
     return result
 
@@ -202,7 +203,7 @@ def add_corrected_pvalues(ewas_result):
     Parameters
     ----------
     ewas_result: pd.DataFrame
-        EWAS results DataFrame with these columns: ['variable_type', 'converged', N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+        EWAS results DataFrame with these columns: ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue']
 
     Returns
     -------
