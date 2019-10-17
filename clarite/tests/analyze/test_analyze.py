@@ -1,48 +1,48 @@
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import clarite
 
-DATA_PATH = Path(__file__).parent / 'data'
+DATA_PATH = Path(__file__).parent.parent / 'r_test_output'
 
 
-def test_simple_ewas(capfd):
+def load_r_results(filename):
+    """Load R results and convert column names to match python results"""
+    r_result = pd.read_csv(filename)
+    r_result = r_result.rename(columns={'pval': 'pvalue', 'phenotype': 'Phenotype'})
+    r_result = r_result.set_index(['Variable', 'Phenotype'])
+    return r_result
+
+
+def compare_result(r_result, python_result):
+    merged = pd.merge(left=r_result, right=python_result,
+                      left_index=True, right_index=True,
+                      how="inner", suffixes=("_r", "_python"))
+    try:
+        assert len(merged) == len(r_result) == len(python_result)
+    except AssertionError:
+        raise ValueError(f"R Results have {len(r_result):,} rows,"
+                         f" Python results have {len(python_result):,} rows,"
+                         f" merged data has {len(merged):,} rows")
+    # Close-enough equality of numeric values
+    for var in ["N", "Beta", "SE", "Variable_pvalue", "LRT_pvalue", "Diff_AIC", "pvalue"]:
+        try:
+            assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True)
+        except AssertionError:
+            raise ValueError(f"{var}: R ({merged[f'{var}_r']}) != Python ({merged[f'{var}_python']})")
+    # Both converged
+    assert all(merged["Converged_r"] == merged["Converged_python"])
+
+
+def test_fpc_noweights():
     # Load the data
-    df = clarite.load.from_tsv(DATA_PATH / "nhanes_test.txt", index_col='SEQN')
-    out, err = capfd.readouterr()
-    assert out == "Loaded 5,932 observations of 42 variables\n"
-    assert err == ""
-
-    # Separate weight/survey info from the actual variables
-    df_survey = df[['WTINT2YR', 'WTMEC2YR', 'SDMVPSU', 'SDMVSTRA', 'WTSH2YR']]
-    df = df[[c for c in list(df) if c not in list(df_survey)]]
-
-    # Categorize and recombine
-    data = clarite.modify.categorize(df)
-    phenotype = "LBDBCDSI"
-    covariates = ["RIDAGEYR", "female", "mexican", "other_hisp", "black", "asian", "other_eth"]
-    _ = clarite.analyze.ewas(phenotype, covariates, data)
-    out, err = capfd.readouterr()
-    assert out == "================================================================================\n"\
-                  "Running categorize\n"\
-                  "--------------------------------------------------------------------------------\n"\
-                  "29 of 37 variables (78.38%) are classified as binary (2 unique values).\n"\
-                  "1 of 37 variables (2.70%) are classified as categorical (3 to 6 unique values).\n"\
-                  "7 of 37 variables (18.92%) are classified as continuous (>= 15 unique values).\n"\
-                  "0 of 37 variables (0.00%) were dropped.\n"\
-                  "0 of 37 variables (0.00%) were not categorized and need to be set manually.\n"\
-                  "================================================================================\n"\
-                  "Running EWAS on a continuous variable\n"\
-                  "\n"\
-                  "####### Regressing 5 Continuous Variables #######\n"\
-                  "\n"\
-                  "\n"\
-                  "####### Regressing 23 Binary Variables #######\n"\
-                  "\n"\
-                  "MCQ170K = NULL due to: too few complete obervations (153 < 200)\n"\
-                  "MCQ170L = NULL due to: too few complete obervations (104 < 200)\n"\
-                  "\n"\
-                  "####### Regressing 1 Categorical Variables #######\n"\
-                  "\n"\
-                  "Completed EWAS\n"\
-                  "\n"
-    assert err == ""
+    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "fpc_noweights_result.csv")
+    # Process data
+    df = clarite.modify.make_continuous(df, only=["x", "y"])
+    df = df.drop(columns=["stratid", "psuid", "weight", "nh", "Nh"])
+    python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, min_n=1)
+    # Compare
+    compare_result(r_result, python_result)
