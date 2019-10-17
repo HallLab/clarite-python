@@ -98,12 +98,12 @@ data(fpc)
 fpc <- add_id_col(fpc)
 # Add an outcome variable
 fpc$y <- fpc$x + (fpc$stratid * 2) + (fpc$psuid * 0.5) 
-write.csv(fpc, 'fpc_data.csv')
+write.csv(fpc, 'fpc_data.csv', row.names=FALSE)
 
 # No weights
 glm_result_fpcnoweights <- rbind(get_glm_result("x", glm(y~x, data=fpc), use_weights=FALSE))
 ewas_result_fpcnoweights <- ewas(d=fpc, cont_vars="x", cat_vars=NULL, y="y", regression_family="gaussian", min_n=1)
-write.csv(ewas_result_fpcnoweights, 'fpc_noweights_result.csv')
+write.csv(ewas_result_fpcnoweights, 'fpc_noweights_result.csv', row.names=FALSE)
 compare_ewas("fpc: No Weights", glm_result_fpcnoweights, ewas_result_fpcnoweights)
 
 # Test without specifying fpc
@@ -112,7 +112,7 @@ glm_result_withoutfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withoutfpc
 ewas_result_withoutfpc <- ewas(d=fpc, cont_vars = "x", cat_vars = NULL,
                                y="y", regression_family="gaussian",
                                weights="weight", ids="psuid", strata="stratid", nest=TRUE, min_n = 1)
-write.csv(ewas_result_withoutfpc, 'fpc_withoutfpc_result.csv')
+write.csv(ewas_result_withoutfpc, 'fpc_withoutfpc_result.csv', row.names=FALSE)
 compare_ewas("fpc: Without FPC", glm_result_withoutfpc, ewas_result_withoutfpc)
 
 # Test with specifying fpc
@@ -121,7 +121,7 @@ glm_result_withfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc)))
 ewas_result_withfpc <- ewas(d=fpc, cont_vars = "x", cat_vars = NULL,
                             y="y", regression_family="gaussian",
                             weights="weight", ids="psuid", strata="stratid", fpc="Nh", nest=TRUE, min_n = 1)
-write.csv(ewas_result_withfpc, 'fpc_withfpc_result.csv')
+write.csv(ewas_result_withfpc, 'fpc_withfpc_result.csv', row.names=FALSE)
 compare_ewas("fpc: With FPC", glm_result_withfpc, ewas_result_withfpc)
 
 #################
@@ -130,11 +130,11 @@ compare_ewas("fpc: With FPC", glm_result_withfpc, ewas_result_withfpc)
 # one outcome (api00) and 3 continuous variables (ell, meals, mobility)
 data(api)
 apipop <- add_id_col(apipop)
-write.csv(apipop, 'apipop_data.csv')
+write.csv(apipop, 'apipop_data.csv', row.names=FALSE)
 apistrat <- add_id_col(apistrat)
-write.csv(apistrat, 'apistrat_data.csv')
+write.csv(apistrat, 'apistrat_data.csv', row.names=FALSE)
 apiclus1 <- add_id_col(apiclus1)
-write.csv(apiclus1, 'apiclus1_data.csv')
+write.csv(apiclus1, 'apiclus1_data.csv', row.names=FALSE)
 
 # Full population no weights
 glm_apipop <- glm(api00~ell+meals+mobility, data=apipop)
@@ -154,7 +154,7 @@ ewas_result_apipop <- rbind(
        cont_covars = c("ell", "meals"), cat_covars = NULL,
        y="api00", regression_family="gaussian", min_n=1)
 )
-write.csv(ewas_result_apipop, 'api_apipop_result.csv')
+write.csv(ewas_result_apipop, 'api_apipop_result.csv', row.names=FALSE)
 compare_ewas("api: apipop", glm_result_apipop, ewas_result_apipop)
 
 # stratified sample (no clusters) with fpc
@@ -179,7 +179,7 @@ ewas_result_apistrat <- rbind(
        y="api00", regression_family="gaussian", min_n=1,
        weights="pw", ids=NULL, strata="stype", fpc="fpc")
 )
-write.csv(ewas_result_apistrat, 'api_apistrat_result.csv')
+write.csv(ewas_result_apistrat, 'api_apistrat_result.csv', row.names=FALSE)
 compare_ewas("api: apistrat", glm_result_apistrat, ewas_result_apistrat)
 
 # one-stage cluster sample (no strata) with fpc
@@ -204,7 +204,7 @@ ewas_result_apiclus1 <- rbind(
        y="api00", regression_family="gaussian", min_n=1,
        weights="pw", ids="dnum", strata=NULL, fpc="fpc")
 )
-write.csv(ewas_result_apiclus1, 'api_apiclus1_result.csv')
+write.csv(ewas_result_apiclus1, 'api_apiclus1_result.csv', row.names=FALSE)
 compare_ewas("api: apiclus1", glm_result_apiclus1, ewas_result_apiclus1)
 
 ####################
@@ -226,7 +226,7 @@ nhanes <- add_id_col(nhanes)
 nhanes$race <- as.factor(nhanes$race)
 nhanes$agecat <- as.factor(nhanes$agecat)
 nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)
-write.csv(nhanes, 'nhanes_data.csv')
+write.csv(nhanes, 'nhanes_data.csv', row.names=FALSE)
 
 
 # Full population no weights
@@ -247,7 +247,7 @@ ewas_result_nhanes_noweights <- rbind(
        cont_covars = NULL, cat_covars = c("race", "agecat"),
        y="HI_CHOL", regression_family="gaussian", min_n=1)
 )
-write.csv(ewas_result_nhanes_noweights, 'nahanes_noweights_result.csv')
+write.csv(ewas_result_nhanes_noweights, 'nahanes_noweights_result.csv', row.names=FALSE)
 compare_ewas("nhanes: noweights", glm_result_nhanes_noweights, ewas_result_nhanes_noweights)
 
 
@@ -273,7 +273,7 @@ ewas_result_nhanes_complete <- rbind(
        y="HI_CHOL", regression_family="gaussian", min_n=1,
        weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE)
 )
-write.csv(ewas_result_nhanes_complete, 'nahanes_complete_result.csv')
+write.csv(ewas_result_nhanes_complete, 'nahanes_complete_result.csv', row.names=FALSE)
 compare_ewas("nhanes: complete", glm_result_nhanes_complete, ewas_result_nhanes_complete)
 
 # Weights Only
@@ -298,7 +298,7 @@ ewas_result_nhanes_weightsonly <- rbind(
        y="HI_CHOL", regression_family="gaussian", min_n=1,
        weights="WTMEC2YR")
 )
-write.csv(ewas_result_nhanes_weightsonly, 'nahanes_weightsonly_result.csv')
+write.csv(ewas_result_nhanes_weightsonly, 'nahanes_weightsonly_result.csv', row.names=FALSE)
 compare_ewas("nhanes: weights only", glm_result_nhanes_weightsonly, ewas_result_nhanes_weightsonly)
 
 #################
@@ -307,7 +307,7 @@ compare_ewas("nhanes: weights only", glm_result_nhanes_weightsonly, ewas_result_
 # Lonely PSU (only one PSU in a stratum) - simulate by changing a stratum to a new number in one row
 nhanes_lonely <- nhanes
 nhanes_lonely[1, "SDMVSTRA"] <- 90 # existing numbers are 75 through 89
-write.csv(nhanes_lonely, 'nhanes_lonely_data.csv')
+write.csv(nhanes_lonely, 'nhanes_lonely_data.csv', row.names=FALSE)
 
 get_lonely_glm_results <- function(setting){
   options(survey.lonely.psu=setting)
@@ -341,11 +341,11 @@ get_lonely_ewas_results <- function(setting){
 # Certainty
 glm_result_nhanes_certainty <- get_lonely_glm_results("certainty")
 ewas_result_nhanes_certainty <- get_lonely_ewas_results("certainty")
-write.csv(ewas_result_nhanes_certainty, 'nahanes_certainty_result.csv')
+write.csv(ewas_result_nhanes_certainty, 'nahanes_certainty_result.csv', row.names=FALSE)
 compare_ewas("nhanes lonely: certainty", glm_result_nhanes_certainty, ewas_result_nhanes_certainty)
 
 # Adjust
 glm_result_nhanes_adjust <- get_lonely_glm_results("adjust")
 ewas_result_nhanes_adjust <- get_lonely_ewas_results("adjust")
-write.csv(ewas_result_nhanes_adjust, 'nahanes_adjust_result.csv')
+write.csv(ewas_result_nhanes_adjust, 'nahanes_adjust_result.csv', row.names=FALSE)
 compare_ewas("nhanes lonely: adjust", glm_result_nhanes_adjust, ewas_result_nhanes_adjust)
