@@ -122,7 +122,7 @@ class SurveyDesignSpec:
 
         # Update index to remove missing, negative, or zero weights
         if weights is not None:
-            weights = weights[~weights.isna() & weights > 0]
+            weights = weights[~weights.isna() & (weights > 0)]
             n_removed = len(index) - len(weights)
             if n_removed > 0:
                 click.echo(click.style(f"WARNING: {regression_variable} - {n_removed} observation(s) "
