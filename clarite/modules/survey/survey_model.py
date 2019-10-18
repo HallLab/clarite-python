@@ -100,7 +100,7 @@ class SurveyModel(object):
         jdata = d_hat.groupby(axis=0, level='clust').apply(sum)
 
         # Add strata label to jdata
-        jdata = pd.merge(jdata, self.design.strat_for_clust[jdata.index].rename('strat'), left_index=True, right_index=True)\
+        jdata = pd.merge(jdata, self.design.strat_for_clust.loc[jdata.index].rename('strat'), left_index=True, right_index=True)\
                   .set_index('strat', append=True)
 
         def center_strata(data, single_cluster, pop_mean):
