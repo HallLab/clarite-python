@@ -21,6 +21,8 @@ class SurveyDesignSpec:
         Whether or not the clusters are nested in the strata (The same cluster IDs are repeated in different strata)
     weights: string or dictionary(string:string)
         The name of the weights variable in the survey_df, or a dictionary mapping variable names to weight names
+    fpc: string or None
+        The name of the variable in the survey_df that contains the finite population correction information
     single_cluster: str
         Setting controlling variance calculation in single-cluster strata
         'error': default, throw an error
@@ -39,6 +41,7 @@ class SurveyDesignSpec:
                                          cluster="SDMVPSU",
                                          nest=True,
                                          weights=weights_replication,
+                                         fpc=None,
                                          single_cluster='scaled')
     """
     def __init__(self,
@@ -47,6 +50,7 @@ class SurveyDesignSpec:
                  cluster: Optional[str] = None,
                  nest: bool = False,
                  weights: Union[str, Dict[str, str]] = None,
+                 fpc: Optional[str] = None,
                  single_cluster: Optional[str] = 'error'):
 
         # Validate index
@@ -60,6 +64,7 @@ class SurveyDesignSpec:
         self.cluster = cluster
         self.nest = nest
         self.weights = weights
+        self.fpc = fpc
         self.single_cluster = single_cluster
 
         self.validate_params()
@@ -80,6 +85,14 @@ class SurveyDesignSpec:
         elif type(self.weights) == "str":
             if self.weights not in self.survey_df:
                 raise KeyError(f"the weight ('{self.weights}') was not found in the survey_df")
+
+        if self.fpc is not None:
+            if self.fpc not in self.survey_df:
+                raise KeyError(f"fpc key ('{self.fpc}') was not found in the survey_df")
+            # FPC must be the same for all samples within a strata
+            # TODO: Check that ^
+            # Number of samples in a strata must not exceed fpc value
+            # TODO: Check that ^
 
         if self.single_cluster not in {'error', 'scaled', 'certainty', 'centered'}:
             raise ValueError(f"if provided, 'single_cluster' must be one of 'error', 'scaled', 'certainty', or 'centered'.")
@@ -143,7 +156,15 @@ class SurveyDesignSpec:
         else:
             cluster = None
 
-        return SurveyDesign(strata=strata, cluster=cluster, weights=weights, nest=self.nest, single_cluster=self.single_cluster), index
+        # Get fpc array
+        if self.fpc is not None:
+            fpc = self.survey_df[self.fpc]
+            fpc = fpc.loc[index]
+        else:
+            fpc = None
+
+        return SurveyDesign(strata=strata, cluster=cluster, weights=weights, fpc=fpc,
+                            nest=self.nest, single_cluster=self.single_cluster), index
 
 
 class SurveyDesign(object):
@@ -229,9 +250,6 @@ class SurveyDesign(object):
             self.has_weights = True
         if fpc is not None:
             self.has_fpc = True
-            raise NotImplementedError(f"Providing fpc is not yet supported")
-        if not self.has_strata or not self.has_clusters:
-            raise NotImplementedError(f"In this version of clarite, both strata and clusters must be provided.")
 
         strata, cluster, self.weights, self.fpc = self._check_args(strata, cluster, weights, fpc)
 
@@ -289,8 +307,7 @@ class SurveyDesign(object):
                     fpc: Optional[pd.Series] = None):
         """
         Minor error checking to make sure user supplied any of
-        strata, cluster, or weights. For unspecified subgroup labels
-        an array of ones is created
+        strata, cluster, or weights.
 
         Parameters
         ----------
@@ -299,7 +316,7 @@ class SurveyDesign(object):
             of ones is constructed
         cluster : pd.Series or None
             Cluster for each observation. If none, an array
-            of ones is constructed
+            of sequential values is constructed
         weights : pd.Series or None
             The weight for each observation. If none, an array
             of ones is constructed
@@ -307,7 +324,7 @@ class SurveyDesign(object):
             The finite population correction for each observation.
             If none, an array of zeros is constructed.
             If < 1, treated as sampling weights and use directly
-            Otherwise, treat as cluster population size and convert to sampling weights as (number of obs in cluster) / fpc
+            Otherwise, treat as strata population size and convert to sampling weights as (number of obs in strata)/fpc
 
         Returns
         -------
@@ -323,7 +340,7 @@ class SurveyDesign(object):
         # At least one must be defined
         if all([x is None for x in (strata, cluster, weights)]):
             raise ValueError("""At least one of strata, cluster, rep_weights, and weights
-                             musts not be None""")
+                             must not be None""")
 
         # Get corrected index information for creating replacements for None
         index = [x.index for x in (strata, cluster, weights) if x is not None][0]
@@ -339,7 +356,7 @@ class SurveyDesign(object):
         else:
             strata = strata.rename('strata')
         if cluster is None:
-            cluster = pd.Series(np.ones(n), index=index, name='cluster')
+            cluster = pd.Series(np.arange(n), index=index, name='cluster')
         else:
             cluster = cluster.rename('cluster')
         if weights is None:
@@ -352,13 +369,13 @@ class SurveyDesign(object):
             fpc = fpc.rename('fpc')
             if not all(fpc <= 1):
                 # Assume these are actual population size, and convert to a fraction
-                combined = pd.merge(cluster, fpc, left_index=True, right_index=True)
-                sampled_cluster_size = combined.groupby('cluster')['fpc'].transform('size')
-                fpc = fpc/sampled_cluster_size
+                combined = pd.merge(strata, fpc, left_index=True, right_index=True)
+                sampled_strata_size = combined.groupby('strata')['fpc'].transform('size')
+                fpc = sampled_strata_size/fpc
                 try:
                     assert all((fpc >= 0) & (fpc <= 1))
                 except AssertionError:
-                    raise ValueError("Error processing FPC- either provide sampling fractions or cluster population sizes")
+                    raise ValueError("Error processing FPC- either provide sampling fractions or strata population sizes")
         return strata, cluster, weights, fpc
 
     def get_jackknife_rep_weights(self, dropped_clust):

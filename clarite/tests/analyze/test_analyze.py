@@ -34,15 +34,132 @@ def compare_result(r_result, python_result):
     # Both converged
     assert all(merged["Converged_r"] == merged["Converged_python"])
 
+###############
+# fpc Dataset #
+###############
+# continuous: ["x", "y"]
+# --------------
+# weights = "weight"
+# strata = "stratid"
+# cluster = "psuid"
+# fpc = "Nh"
+# nest = True
+
 
 def test_fpc_noweights():
+    """Test the fpc dataset with no survey info"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col='ID')
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "fpc_noweights_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["x", "y"])
-    df = df.drop(columns=["stratid", "psuid", "weight", "nh", "Nh"])
+    df = clarite.modify.colfilter(df, only=["x", "y"])
     python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, min_n=1)
+    # Compare
+    compare_result(r_result, python_result)
+
+
+def test_fpc_withoutfpc():
+    """Use a survey design specifying weights, cluster, strata"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "fpc_withoutfpc_result.csv")
+    # Process data
+    df = clarite.modify.make_continuous(df, only=["x", "y"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata="stratid", nest=True)
+    df = clarite.modify.colfilter(df, only=["x", "y"])
+    python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1)
+    # Compare
+    compare_result(r_result, python_result)
+
+
+def test_fpc_withfpc():
+    """Use a survey design specifying weights, cluster, strata, fpc"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "fpc_withfpc_result.csv")
+    # Process data
+    df = clarite.modify.make_continuous(df, only=["x", "y"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata="stratid",
+                                             fpc="Nh", nest=True)
+    df = clarite.modify.colfilter(df, only=["x", "y"])
+    python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1)
+    # Compare
+    compare_result(r_result, python_result)
+
+###############
+# api Dataset #
+###############
+# continuous: ["api00", "ell", "meals", "mobility"]  (there are others, but they weren't tested in R)
+# --------------
+# weights = "pw"
+# strata = "stype"
+# cluster = "dnum"
+# fpc = "fpc"
+# nest = False
+
+
+def test_api_noweights():
+    """Test the api dataset with no survey info"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "apipop_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "api_apipop_result.csv")
+    # Process data
+    df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
+    df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"], data=df, min_n=1),
+        ], axis=0)
+    # Compare
+    print(python_result)
+    compare_result(r_result, python_result)
+
+
+def test_api_stratified():
+    """Test the api dataset with weights, strata, and fpc"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "apistrat_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "api_apistrat_result.csv")
+    # Process data
+    df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="pw", cluster=None, strata="stype", fpc="fpc")
+    df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
+                             data=df, survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"],
+                             data=df, survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
+                             data=df, survey_design_spec=design, min_n=1),
+    ], axis=0)
+    # Compare
+    compare_result(r_result, python_result)
+
+
+def test_api_cluster():
+    """Test the api dataset with weights, clusters, and fpc"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "apiclus1_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "api_apiclus1_result.csv")
+    # Process data
+    df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="pw", cluster="dnum", strata=None, fpc="fpc")
+    df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
+                             data=df, survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"],
+                             data=df, survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
+                             data=df, survey_design_spec=design, min_n=1),
+    ], axis=0)
     # Compare
     compare_result(r_result, python_result)
