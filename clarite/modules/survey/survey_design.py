@@ -89,10 +89,6 @@ class SurveyDesignSpec:
         if self.fpc is not None:
             if self.fpc not in self.survey_df:
                 raise KeyError(f"fpc key ('{self.fpc}') was not found in the survey_df")
-            # FPC must be the same for all samples within a strata
-            # TODO: Check that ^
-            # Number of samples in a strata must not exceed fpc value
-            # TODO: Check that ^
 
         if self.single_cluster not in {'error', 'scaled', 'certainty', 'centered'}:
             raise ValueError(f"if provided, 'single_cluster' must be one of 'error', 'scaled', 'certainty', or 'centered'.")
@@ -369,13 +365,19 @@ class SurveyDesign(object):
             fpc = fpc.rename('fpc')
             if not all(fpc <= 1):
                 # Assume these are actual population size, and convert to a fraction
-                combined = pd.merge(strata, fpc, left_index=True, right_index=True)
-                sampled_strata_size = combined.groupby('strata')['fpc'].transform('size')
-                fpc = sampled_strata_size/fpc
+                if self.has_strata:
+                    # Divide the sampled strata size by the fpc
+                    combined = pd.merge(strata, fpc, left_index=True, right_index=True)
+                    sampled_strata_size = combined.groupby('strata')['fpc'].transform('size')
+                    fpc = sampled_strata_size/fpc
+                elif self.has_clusters and not self.has_strata:
+                    # Clustered sampling: Divide sampled clusters by the fpc
+                    sampled_cluster_size = len(cluster.unique())
+                    fpc = sampled_cluster_size/fpc
                 try:
                     assert all((fpc >= 0) & (fpc <= 1))
                 except AssertionError:
-                    raise ValueError("Error processing FPC- either provide sampling fractions or strata population sizes")
+                    raise ValueError("Error processing FPC- invalid values")
         return strata, cluster, weights, fpc
 
     def get_jackknife_rep_weights(self, dropped_clust):

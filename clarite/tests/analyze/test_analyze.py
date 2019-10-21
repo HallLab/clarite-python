@@ -90,6 +90,22 @@ def test_fpc_withfpc():
     # Compare
     compare_result(r_result, python_result)
 
+
+def test_fpc_withfpc_nostrata():
+    """Use a survey design specifying weights, cluster, strata, fpc"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "fpc_nostrat_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "fpc_withfpc_nostrat_result.csv")
+    # Process data
+    df = clarite.modify.make_continuous(df, only=["x", "y"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata=None,
+                                             fpc="Nh", nest=True)
+    df = clarite.modify.colfilter(df, only=["x", "y"])
+    python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1)
+    # Compare
+    compare_result(r_result, python_result)
+
 ###############
 # api Dataset #
 ###############
@@ -117,7 +133,6 @@ def test_api_noweights():
         clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"], data=df, min_n=1),
         ], axis=0)
     # Compare
-    print(python_result)
     compare_result(r_result, python_result)
 
 
@@ -161,5 +176,37 @@ def test_api_cluster():
         clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
                              data=df, survey_design_spec=design, min_n=1),
     ], axis=0)
+    # Compare
+    compare_result(r_result, python_result)
+
+##################
+# NHANES Dataset #
+##################
+# A data frame with 8591 observations on the following 7 variables.
+# SDMVPSU - Primary sampling units
+# SDMVSTRA - Sampling strata
+# WTMEC2YR - Sampling weights
+# HI_CHOL - Binary: 1 for total cholesterol over 240mg/dl, 0 under 240mg/dl
+# race - Categorical (1=Hispanic, 2=non-Hispanic white, 3=non-Hispanic black, 4=other)
+# agecat  - Categorical Age group(0,19] (19,39] (39,59] (59,Inf]
+# RIAGENDR - Binary: Gender: 1=male, 2=female
+
+
+def test_nhanes_noweights():
+    """Test the nhanes dataset with no survey info"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_noweights_result.csv")
+    # Process data
+    df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
+    df = clarite.modify.make_categorical(df, only=["race", "agecat"])
+    df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    df = clarite.modify.rowfilter_incomplete_obs(df)
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df, min_n=1),
+        ], axis=0)
     # Compare
     compare_result(r_result, python_result)
