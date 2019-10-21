@@ -37,7 +37,11 @@ def ewas(
         cov_method: Optional[str] = 'stata',
         min_n: Optional[int] = 200):
     """
-    Run an EWAS on a phenotype
+    Run an EWAS on a phenotype.
+
+    Note:
+      * Binary variables are treated as continuous, with values of 0 and 1.
+      * The results of a likelihood ratio test are used for categorical variables, so no Beta values or SE are reported.
 
     Parameters
     ----------

@@ -337,7 +337,10 @@ def make_binary(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None
     """
     Set variable types as Binary
 
-    Checks that each variable has at most 2 values and converts the type to pd.Categorical
+    Checks that each variable has at most 2 values and converts the type to pd.Categorical.
+
+    Note: When these variables are used in regression, they are ordered by value.
+    For example, Sex (Male=1, Female=2) will encode "Male" as 0 and "Female" as 1 during the EWAS regression step.
 
     Parameters
     ----------
