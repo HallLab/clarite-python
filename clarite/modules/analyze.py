@@ -128,10 +128,6 @@ def run_regressions(phenotype: str,
     """Run a regressions on variables"""
     result = []
 
-    # Must ensure phenotype is numerical for logistic regression
-    if pheno_kind == "binary" or pheno_kind == "categorical":
-        data[phenotype] = data[phenotype].cat.codes
-
     # Continuous Variables
     click.echo(f"\n####### Regressing {len(rv_cont)} Continuous Variables #######\n")
     for rv in rv_cont:
