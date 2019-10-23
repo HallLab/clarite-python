@@ -180,7 +180,7 @@ class SurveyModel(object):
             self.init_args["weights"] = weights
         self.params = self._get_params(y, X)
 
-        if self.design.has_strata or self.design.has_clusters:
+        if self.design.has_strata or self.design.has_clusters or self.design.has_weights:
             # Calculate stderr based on covariance
             if self.cov_method == 'jackknife':
                 self.vcov = self._jackknife_vcov(X, y)

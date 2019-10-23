@@ -233,7 +233,7 @@ class Regression(object):
         self.SE = model.stderr[rv_idx]
         tval = np.abs(self.beta / self.SE)  # T statistic is the absolute value of beta / SE
         # Get degrees of freedom
-        if model.design.has_clusters or model.design.has_strata:
+        if model.design.has_clusters or model.design.has_strata or model.design.has_weights:
             dof = self.survey_design.get_dof(X)
         else:
             dof = model.result.df_model
@@ -262,7 +262,7 @@ class Regression(object):
             self.converged = True
         # Calculate Results
         dof = self.survey_design.get_dof(X)
-        if model.design.has_strata or model.design.has_clusters:
+        if model.design.has_strata or model.design.has_clusters or model.design.has_weights:
             # Calculate pvalue using vcov
             lr_pvalue = regTermTest(full_model=model, restricted_model=model_restricted, ddf=dof, X_names=X.columns, var_name=self.variable)
         else:
