@@ -36,7 +36,7 @@ def compare_result(r_result, python_result, bin_vars=None):
             # Same in both
             try:
                 assert np.allclose(merged_bin[f"{var}_r"], merged_bin[f"{var}_python"],
-                                   atol=1e-03, equal_nan=True)
+                                   atol=1e-02, equal_nan=True)
             except AssertionError:
                 raise ValueError(f"{var}: R ({merged_bin[f'{var}_r']}) != Python ({merged_bin[f'{var}_python']})")
         for var in ["Beta", "SE", "Variable_pvalue"]:
@@ -48,7 +48,7 @@ def compare_result(r_result, python_result, bin_vars=None):
                 raise ValueError(f"Binary Variable Test for {var}: "
                                  f"R ({merged_bin[f'{var}_r']}) is not None or "
                                  f"Python ({merged_bin[f'{var}_python']}) is None")
-        for var in ["LRT_pvalue", "Diff_AIC"]:
+        for var in ["LRT_pvalue"]:
             # Value in R, Nan in Python
             try:
                 assert not (merged_bin[f'{var}_r'].isna()).any()
@@ -57,10 +57,26 @@ def compare_result(r_result, python_result, bin_vars=None):
                 raise ValueError(f"Binary Variable Test for {var}: "
                                  f"R ({merged_bin[f'{var}_r']}) is None or "
                                  f"Python ({merged_bin[f'{var}_python']}) is not None")
+        for var in ["Diff_AIC"]:
+            # Value is possible in R, must be Nan in Python
+            try:
+                assert (merged_bin[f'{var}_python'].isna()).all()
+            except AssertionError:
+                raise ValueError(f"Binary Variable Test for {var}: "
+                                 f"Python ({merged_bin[f'{var}_python']}) is not None")
     # Close-enough equality of numeric values for continuous and categorical variables
-    for var in ["N", "Beta", "SE", "Variable_pvalue", "LRT_pvalue", "Diff_AIC", "pvalue"]:
+    for var in ["N", "Beta", "SE", "Variable_pvalue", "LRT_pvalue", "pvalue"]:
         try:
             assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True)
+        except AssertionError:
+            raise ValueError(f"{var}: R ({merged[f'{var}_r']}) != Python ({merged[f'{var}_python']})")
+    for var in ["Diff_AIC"]:
+        # R value are all Nan or are all close to Python results
+        all_nan_r = merged[f'{var}_r'].isna().all()
+        all_notnan_python = not merged[f'{var}_python'].isna().any()
+        aic_okay = (all_nan_r & all_notnan_python)  # R doesn't report AIC b/c of quasibinomial, python does
+        try:
+            assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True) | aic_okay
         except AssertionError:
             raise ValueError(f"{var}: R ({merged[f'{var}_r']}) != Python ({merged[f'{var}_python']})")
 
@@ -237,9 +253,34 @@ def test_nhanes_noweights():
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     df = clarite.modify.rowfilter_incomplete_obs(df)
     python_result = pd.concat([
-        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df, min_n=1),
-        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df, min_n=1),
-        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df),
+        ], axis=0)
+    # Compare
+    compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
+
+
+def test_nhanes_fulldesign():
+    """Test the nhanes dataset with the full survey design"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col='ID')
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_complete_result.csv")
+    # Process data
+    df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
+    df = clarite.modify.make_categorical(df, only=["race", "agecat"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
+                                             fpc=None, nest=True)
+    df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    df = clarite.modify.rowfilter_incomplete_obs(df)
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design),
         ], axis=0)
     # Compare
     compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
