@@ -15,7 +15,8 @@ def load_r_results(filename):
     return r_result
 
 
-def compare_result(r_result, python_result):
+def compare_result(r_result, python_result, bin_vars=None):
+    """Binary variables must be specified, since there are expected differences"""
     merged = pd.merge(left=r_result, right=python_result,
                       left_index=True, right_index=True,
                       how="inner", suffixes=("_r", "_python"))
@@ -25,7 +26,38 @@ def compare_result(r_result, python_result):
         raise ValueError(f"R Results have {len(r_result):,} rows,"
                          f" Python results have {len(python_result):,} rows,"
                          f" merged data has {len(merged):,} rows")
-    # Close-enough equality of numeric values
+    # Binary Variables
+    if bin_vars is not None:
+        # Separate bin variables from others
+        notbin_vars = list(set(merged.index.get_level_values('Variable')) - set(bin_vars))
+        merged_bin = merged.loc[bin_vars]
+        merged = merged.loc[notbin_vars]
+        for var in ["N", "pvalue"]:
+            # Same in both
+            try:
+                assert np.allclose(merged_bin[f"{var}_r"], merged_bin[f"{var}_python"],
+                                   atol=1e-03, equal_nan=True)
+            except AssertionError:
+                raise ValueError(f"{var}: R ({merged_bin[f'{var}_r']}) != Python ({merged_bin[f'{var}_python']})")
+        for var in ["Beta", "SE", "Variable_pvalue"]:
+            # Value in python, Nan in R
+            try:
+                assert (merged_bin[f'{var}_r'].isna()).all()
+                assert not (merged_bin[f'{var}_python'].isna()).any()
+            except AssertionError:
+                raise ValueError(f"Binary Variable Test for {var}: "
+                                 f"R ({merged_bin[f'{var}_r']}) is not None or "
+                                 f"Python ({merged_bin[f'{var}_python']}) is None")
+        for var in ["LRT_pvalue", "Diff_AIC"]:
+            # Value in R, Nan in Python
+            try:
+                assert not (merged_bin[f'{var}_r'].isna()).any()
+                assert (merged_bin[f'{var}_python'].isna()).all()
+            except AssertionError:
+                raise ValueError(f"Binary Variable Test for {var}: "
+                                 f"R ({merged_bin[f'{var}_r']}) is None or "
+                                 f"Python ({merged_bin[f'{var}_python']}) is not None")
+    # Close-enough equality of numeric values for continuous and categorical variables
     for var in ["N", "Beta", "SE", "Variable_pvalue", "LRT_pvalue", "Diff_AIC", "pvalue"]:
         try:
             assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True)
@@ -192,8 +224,6 @@ def test_api_cluster():
 # agecat  - Categorical Age group(0,19] (19,39] (39,59] (59,Inf]
 # RIAGENDR - Binary: Gender: 1=male, 2=female
 
-# TODO: Update these to force comparison
-# Currently results are different in some cases, possibly because the outcome is binomial
 
 def test_nhanes_noweights():
     """Test the nhanes dataset with no survey info"""
@@ -212,6 +242,4 @@ def test_nhanes_noweights():
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df, min_n=1),
         ], axis=0)
     # Compare
-    print(python_result)
-    print(r_result)
-    #compare_result(r_result, python_result, bin_vars=["RIAGENDR"])
+    compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
