@@ -22,9 +22,11 @@ class SurveyDesignSpec:
     weights: string or dictionary(string:string)
         The name of the weights variable in the survey_df, or a dictionary mapping variable names to weight names
     fpc: string or None
-        The name of the variable in the survey_df that contains the finite population correction information
+        The name of the variable in the survey_df that contains the finite population correction information.
+        This reduces variance when a substantial portion of the population is sampled.
+        May be specified as the total population size, or the fraction of the population that was sampled.
     single_cluster: str
-        Setting controlling variance calculation in single-cluster strata
+        Setting controlling variance calculation in single-cluster ('lonely psu') strata
         'error': default, throw an error
         'scaled': use the average value of other strata
         'centered': use the average of all observations
@@ -60,38 +62,80 @@ class SurveyDesignSpec:
 
         # Store parameters
         self.survey_df = survey_df
-        self.strata = strata
-        self.cluster = cluster
         self.nest = nest
-        self.weights = weights
-        self.fpc = fpc
-        self.single_cluster = single_cluster
 
-        self.validate_params()
+        # Defaults
+        # Strata
+        self.strata = None
+        self.strata_name = None
+        self.has_strata = False
+        # Cluster
+        self.cluster = None
+        self.cluster_name = None
+        self.has_cluster = False
+        # Weight
+        self.weights = None
+        self.weight_names = None
+        self.weight_name = None
+        self.single_weight = False
+        self.multi_weight = False
+        # FPC
+        self.fpc = None
+        self.fpc_name = None
+        self.has_fpc = False
 
-    def validate_params(self):
-        if self.strata is not None:
-            if self.strata not in self.survey_df:
-                raise KeyError(f"strata key ('{self.strata}') was not found in the survey_df")
+        # Load Strata
+        if strata is not None:
+            self.strata_name = strata
+            self.has_strata = True
+            if self.strata_name not in self.survey_df:
+                raise KeyError(f"strata key ('{self.strata_name}') was not found in the survey_df")
+            else:
+                self.strata = self.survey_df[self.strata_name]
 
-        if self.cluster is not None:
-            if self.cluster not in self.survey_df:
-                raise KeyError(f"cluster key ('{self.cluster}') was not found in the survey_df")
+        # Load Clusters (PSUs)
+        if cluster is not None:
+            self.cluster_name = cluster
+            self.has_cluster = True
+            if self.cluster_name not in self.survey_df:
+                raise KeyError(f"cluster key ('{self.cluster_name}') was not found in the survey_df")
+            else:
+                self.cluster = self.survey_df[self.cluster_name]
 
-        if type(self.weights) == "dict":
-            for var_name, weight_name in self.weights.items():
-                if weight_name not in self.survey_df:
-                    raise KeyError(f"weights key for '{var_name}' ('{weight_name}') was not found in the survey_df")
-        elif type(self.weights) == "str":
-            if self.weights not in self.survey_df:
-                raise KeyError(f"the weight ('{self.weights}') was not found in the survey_df")
+        # Load FPC
+        if fpc is not None:
+            self.fpc_name = fpc
+            self.has_fpc = True
+            if self.fpc_name not in self.survey_df:
+                raise KeyError(f"fpc key ('{self.fpc_name}') was not found in the survey_df")
+            else:
+                self.fpc = self.survey_df[self.fpc_name]
 
-        if self.fpc is not None:
-            if self.fpc not in self.survey_df:
-                raise KeyError(f"fpc key ('{self.fpc}') was not found in the survey_df")
+        # Load Weights
+        if weights is not None:
+            if type(weights) == dict:
+                self.multi_weight = True
+                self.weight_names = weights
+                self.weights = dict()
+                for var_name, weight_name in self.weights.items():
+                    if weight_name not in self.survey_df:
+                        raise KeyError(f"weights key for '{var_name}' ('{weight_name}') was not found in the survey_df")
+                    else:
+                        self.weights[var_name] = self.survey_df[weight_name]
+            elif type(weights) == str:
+                self.single_weight = True
+                self.weight_name = weights
+                if self.weight_name not in self.survey_df:
+                    raise KeyError(f"the weight ('{self.weight_name}') was not found in the survey_df")
+                else:
+                    self.weights = self.survey_df[self.weight_name]
 
-        if self.single_cluster not in {'error', 'scaled', 'certainty', 'centered'}:
-            raise ValueError(f"if provided, 'single_cluster' must be one of 'error', 'scaled', 'certainty', or 'centered'.")
+        # Load single_cluster
+        if single_cluster not in {'error', 'scaled', 'certainty', 'centered'}:
+            raise ValueError(f"if provided, 'single_cluster' must be one of "
+                             f"'error', 'scaled', 'certainty', or 'centered'.")
+        else:
+            self.single_cluster = single_cluster
 
     def get_survey_design(self, regression_variable: Optional[str] = None, index: Optional[pd.Index] = None):
         """
@@ -111,21 +155,22 @@ class SurveyDesignSpec:
         index: pd.Index
             Index corresponding to all data in the design- limited by the input index or weights that are na or zero
         """
+        # Return all observations if a subset index is not specified
         if index is None:
             index = self.survey_df.index
 
         # Get weights array
-        if type(self.weights) == str:
-            weights = self.survey_df[self.weights]
-            weights = weights.loc[index]
-        elif type(self.weights) == dict:
+        if self.single_weight:
+            weights = self.weights.loc[index]
+        elif self.multi_weight:
             if regression_variable is None:
-                raise ValueError("This SurveyDesignSpec uses variable-specific weights- a variable name is required to create a SurveyDesign object.")
-            elif regression_variable not in self.weights:
-                raise KeyError(f"The regression variable ({regression_variable}) was not found in the SurveyDesignSpec")
+                raise ValueError("This SurveyDesignSpec uses variable-specific weights- "
+                                 "a variable name is required to create a SurveyDesign object.")
+            elif regression_variable not in self.weight_names:
+                raise KeyError(f"The regression variable ({regression_variable}) "
+                               f"was not found in the SurveyDesignSpec")
             else:
-                weights = self.survey_df[self.weights[regression_variable]]
-                weights = weights.loc[index]
+                weights = self.weights[regression_variable].loc[index]
         else:
             weights = None
 
@@ -139,23 +184,20 @@ class SurveyDesignSpec:
                 index = weights.index
 
         # Get strata array
-        if self.strata is not None:
-            strata = self.survey_df[self.strata]
-            strata = strata.loc[index]
+        if self.has_strata:
+            strata = self.strata.loc[index]
         else:
             strata = None
 
         # Get cluster array
-        if self.cluster is not None:
-            cluster = self.survey_df[self.cluster]
-            cluster = cluster.loc[index]
+        if self.has_cluster:
+            cluster = self.cluster.loc[index]
         else:
             cluster = None
 
         # Get fpc array
-        if self.fpc is not None:
-            fpc = self.survey_df[self.fpc]
-            fpc = fpc.loc[index]
+        if self.has_fpc:
+            fpc = self.fpc.loc[index]
         else:
             fpc = None
 
@@ -165,8 +207,7 @@ class SurveyDesignSpec:
 
 class SurveyDesign(object):
     """
-    Description of a survey design, used by most methods
-    implemented in this module.
+    Description of a survey design
 
     Parameters
     -------
