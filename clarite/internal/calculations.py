@@ -73,4 +73,4 @@ def _saddle(x, lam):
     if np.abs(hatzeta) < 1e-04:
         return np.nan
     else:
-        return 1-stats.norm.cdf(w + np.log(v/w)/w)
+        return stats.norm.sf(w + np.log(v/w)/w)
