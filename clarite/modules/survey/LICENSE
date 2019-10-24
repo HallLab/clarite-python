@@ -1,0 +1,8 @@
+The files in this folder are based on a branch of statsmodels that was never merged.
+
+Initial version copied from https://github.com/jarvmiller/statsmodels/tree/jarvisM_branch/statsmodels/survey
+Author: Jarvis Miller
+License: Modified BSD (3-clause)
+
+This has been tested to work in most single-stage sampling scenarios.
+It will likely be rewritten and expanded in the future, and ideally will be added to StatsModels and removed from CLARITE.

@@ -268,24 +268,24 @@ compare_ewas("nhanes: noweights", glm_result_nhanes_noweights, ewas_result_nhane
 
 # Full design: cluster, strata, weights
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes)
-glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=quasibinomial(link="logit"))
+glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))
 glm_result_nhanes_complete <- rbind(
-  get_glm_result("race", glm_nhanes_complete, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_complete, family=quasibinomial(link="logit"))),
-  get_glm_result("agecat", glm_nhanes_complete, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_complete, family=quasibinomial(link="logit"))),
-  get_glm_result("RIAGENDR", glm_nhanes_complete, svyglm(HI_CHOL~race+agecat, design=dnhanes_complete, family=quasibinomial(link="logit")))
+  get_glm_result("race", glm_nhanes_complete, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))),
+  get_glm_result("agecat", glm_nhanes_complete, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))),
+  get_glm_result("RIAGENDR", glm_nhanes_complete, svyglm(HI_CHOL~race+agecat, design=dnhanes_complete, family=binomial(link="logit")))
 )
 ewas_result_nhanes_complete <- rbind(
   ewas(d=nhanes, cont_vars=NULL, cat_vars="race",
        cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
-       y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+       y="HI_CHOL", regression_family="binomial", min_n=1,
        weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
   ewas(d=nhanes, cont_vars=NULL, cat_vars="agecat",
        cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
-       y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+       y="HI_CHOL", regression_family="binomial", min_n=1,
        weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
   ewas(d=nhanes, cont_vars=NULL, cat_vars="RIAGENDR",
        cont_covars = NULL, cat_covars = c("race", "agecat"),
-       y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+       y="HI_CHOL", regression_family="binomial", min_n=1,
        weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE)
 )
 write.csv(ewas_result_nhanes_complete, 'nhanes_complete_result.csv', row.names=FALSE)
@@ -293,24 +293,24 @@ compare_ewas("nhanes: complete", glm_result_nhanes_complete, ewas_result_nhanes_
 
 # Weights Only
 dnhanes_weightsonly <- svydesign(id=~1, weights=~WTMEC2YR, data=nhanes)
-glm_nhanes_weightsonly <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_weightsonly, family=quasibinomial(link="logit"))
+glm_nhanes_weightsonly <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"))
 glm_result_nhanes_weightsonly <- rbind(
-  get_glm_result("race", glm_nhanes_weightsonly, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_weightsonly, family=quasibinomial(link="logit"))),
-  get_glm_result("agecat", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_weightsonly, family=quasibinomial(link="logit"))),
-  get_glm_result("RIAGENDR", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+agecat, design=dnhanes_weightsonly, family=quasibinomial(link="logit")))
+  get_glm_result("race", glm_nhanes_weightsonly, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"))),
+  get_glm_result("agecat", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"))),
+  get_glm_result("RIAGENDR", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+agecat, design=dnhanes_weightsonly, family=binomial(link="logit")))
 )
 ewas_result_nhanes_weightsonly <- rbind(
   ewas(d=nhanes, cont_vars=NULL, cat_vars="race",
        cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
-       y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+       y="HI_CHOL", regression_family="binomial", min_n=1,
        weights="WTMEC2YR"),
   ewas(d=nhanes, cont_vars=NULL, cat_vars="agecat",
        cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
-       y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+       y="HI_CHOL", regression_family="binomial", min_n=1,
        weights="WTMEC2YR"),
   ewas(d=nhanes, cont_vars=NULL, cat_vars="RIAGENDR",
        cont_covars = NULL, cat_covars = c("race", "agecat"),
-       y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+       y="HI_CHOL", regression_family="binomial", min_n=1,
        weights="WTMEC2YR")
 )
 write.csv(ewas_result_nhanes_weightsonly, 'nhanes_weightsonly_result.csv', row.names=FALSE)
@@ -319,19 +319,28 @@ compare_ewas("nhanes: weights only", glm_result_nhanes_weightsonly, ewas_result_
 #################
 # NHANES Lonely #
 #################
-# Lonely PSU (only one PSU in a stratum) - simulate by changing a stratum to a new number in one row
+# Lonely PSU (only one PSU in a stratum)
 nhanes_lonely <- nhanes
-nhanes_lonely[1, "SDMVSTRA"] <- 90 # existing numbers are 75 through 89
+# Make Lonely PSUs by dropping some rows
+nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==81) & (nhanes_lonely$SDMVPSU!=1)),]
+nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==82) & (nhanes_lonely$SDMVPSU!=1)),]
+nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==83) & (nhanes_lonely$SDMVPSU!=1)),]
+nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==84) & (nhanes_lonely$SDMVPSU!=1)),]
+nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==85) & (nhanes_lonely$SDMVPSU!=1)),]
+nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==86) & (nhanes_lonely$SDMVPSU!=1)),]
+nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==87) & (nhanes_lonely$SDMVPSU!=1)),]
+print(paste("Removed", nrow(nhanes) - nrow(nhanes_lonely), "rows to make lonely PSUs", sep=" "))
+# Save data
 write.csv(nhanes_lonely, 'nhanes_lonely_data.csv', row.names=FALSE)
 
 get_lonely_glm_results <- function(setting){
   options(survey.lonely.psu=setting)
   dnhanes_lonely <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely)
-  glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, family=quasibinomial(link="logit")))
+  glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, family=binomial(link="logit")))
   glm_result_nhanes_lonely <- rbind(
-    get_glm_result("race", glm_nhanes_lonely, svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, family=quasibinomial(link="logit")))),
-    get_glm_result("agecat", glm_nhanes_lonely, svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, family=quasibinomial(link="logit")))),
-    get_glm_result("RIAGENDR", glm_nhanes_lonely, svyglm(HI_CHOL~race+agecat, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, family=quasibinomial(link="logit"))))
+    get_glm_result("race", glm_nhanes_lonely, svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, family=binomial(link="logit")))),
+    get_glm_result("agecat", glm_nhanes_lonely, svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, family=binomial(link="logit")))),
+    get_glm_result("RIAGENDR", glm_nhanes_lonely, svyglm(HI_CHOL~race+agecat, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, family=binomial(link="logit"))))
   )
   return(glm_result_nhanes_lonely)
 }
@@ -340,15 +349,15 @@ get_lonely_ewas_results <- function(setting){
   ewas_result_nhanes_lonely <- rbind(
     ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="race",
          cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
-         y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+         y="HI_CHOL", regression_family="binomial", min_n=1,
          weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
     ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="agecat",
          cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
-         y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+         y="HI_CHOL", regression_family="binomial", min_n=1,
          weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
     ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="RIAGENDR",
          cont_covars = NULL, cat_covars = c("race", "agecat"),
-         y="HI_CHOL", regression_family="quasibinomial", min_n=1,
+         y="HI_CHOL", regression_family="binomial", min_n=1,
          weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE)
   )
   return(ewas_result_nhanes_lonely)
