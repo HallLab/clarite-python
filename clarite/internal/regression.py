@@ -204,10 +204,7 @@ class Regression(object):
         self.SE = model.stderr[rv_idx]
         tval = np.abs(self.beta / self.SE)  # T statistic is the absolute value of beta / SE
         # Get degrees of freedom
-        if model.design.has_clusters or model.design.has_strata:
-            dof = self.survey_design.get_dof(X)
-        else:
-            dof = model.result.df_model
+        dof = self.survey_design.get_dof(X)
         self.var_pvalue = scipy.stats.t.sf(tval, df=dof)*2  # Two-sided t-test
         self.pvalue = self.var_pvalue
 
@@ -233,10 +230,7 @@ class Regression(object):
         self.SE = model.stderr[rv_idx]
         tval = np.abs(self.beta / self.SE)  # T statistic is the absolute value of beta / SE
         # Get degrees of freedom
-        if model.design.has_clusters or model.design.has_strata or model.design.has_weights:
-            dof = self.survey_design.get_dof(X)
-        else:
-            dof = model.result.df_model
+        dof = self.survey_design.get_dof(X)
         self.var_pvalue = scipy.stats.t.sf(tval, df=dof)*2  # Two-sided t-test
         self.pvalue = self.var_pvalue
 
@@ -262,14 +256,7 @@ class Regression(object):
             self.converged = True
         # Calculate Results
         dof = self.survey_design.get_dof(X)
-        if model.design.has_strata or model.design.has_clusters or model.design.has_weights:
-            # Calculate pvalue using vcov
-            lr_pvalue = regTermTest(full_model=model, restricted_model=model_restricted, ddf=dof, X_names=X.columns, var_name=self.variable)
-        else:
-            # Calculate using llf from model results
-            lrdf = (model_restricted.result.df_resid - model.result.df_resid)
-            lrstat = -2*(model_restricted.result.llf - model.result.llf)
-            lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
+        lr_pvalue = regTermTest(full_model=model, restricted_model=model_restricted, ddf=dof, X_names=X.columns, var_name=self.variable)
         # Gather Other Results
         self.LRT_pvalue = lr_pvalue
         self.pvalue = self.LRT_pvalue
