@@ -41,8 +41,11 @@ def ewas(
     Run an EWAS on a phenotype.
 
     Note:
-      * Binary variables are treated as continuous, with values of 0 and 1.
+      * Binary variables are treated as continuous features, with values of 0 and 1.
       * The results of a likelihood ratio test are used for categorical variables, so no Beta values or SE are reported.
+      * The regression family is automatically selected based on the type of the phenotype.
+        * Continuous phenotypes use gaussian regression
+        * Binary phenotypes use binomial regression (the larger of the two values is counted as "success")
 
     Parameters
     ----------
@@ -109,8 +112,21 @@ def ewas(
         raise ValueError(f"The phenotype ('{phenotype}') has an unknown type.")
     elif pheno_kind == 'categorical':
         raise NotImplementedError("Categorical Phenotypes are not yet supported.")
+    elif pheno_kind == 'continuous':
+        click.echo(f"Running EWAS on a Continuous Outcome (family = Gaussian)")
+    elif pheno_kind == 'binary':
+        # Set phenotype categories so that the higher number is a success
+        categories = sorted(data[phenotype].unique(), reverse=True)
+        cat_type = pd.api.types.CategoricalDtype(categories=categories, ordered=True)
+        data[phenotype] = data[phenotype].astype(cat_type)
+        click.echo(click.style(f"Running EWAS on a Binary Outcome (family = Binomial)\n"
+                               f"\t(Success = '{categories[0]}', Failure = '{categories[1]}')", fg='green'))
     else:
-        click.echo(f"Running EWAS on a {pheno_kind} variable")
+        raise ValueError(f"The phenotype's type could not be determined.  Please report this error.")
+
+    # Print the survey design
+    if survey_design_spec is not None:
+        click.echo(click.style(f"Using a Survey Design:\n{survey_design_spec}", fg='green'))
 
     # Run Regressions
     return run_regressions(phenotype, covariates, data, rv_bin, rv_cat, rv_cont, pheno_kind, min_n, survey_design_spec, cov_method)
