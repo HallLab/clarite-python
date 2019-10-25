@@ -46,6 +46,7 @@ def ewas(
       * The regression family is automatically selected based on the type of the phenotype.
         * Continuous phenotypes use gaussian regression
         * Binary phenotypes use binomial regression (the larger of the two values is counted as "success")
+      * Categorical variables run with a survey design will not report Diff_AIC
 
     Parameters
     ----------
@@ -182,6 +183,7 @@ def run_regressions(phenotype: str,
         except Exception as e:
             click.echo(f"{rv} = NULL due to: {e}")
         # Save results
+        print(regression.get_results())
         result.append(regression.get_results())
 
     click.echo(f"\n####### Regressing {len(rv_cat)} Categorical Variables #######\n")

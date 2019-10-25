@@ -234,11 +234,9 @@ compare_ewas("api: apiclus1", glm_result_apiclus1, ewas_result_apiclus1)
 
 data(nhanes)
 nhanes <- add_id_col(nhanes)
-nhanes[nhanes$RIAGENDR==1, "RIAGENDR"] <- 0
-nhanes[nhanes$RIAGENDR==2, "RIAGENDR"] <- 1
 # Update types (all previous tests were using continuous)
 # Don't update binary outcome (HI_CHOL) since outcome must be continuous
-#nhanes$HI_CHOL <- as.factor(nhanes$HI_CHOL)
+nhanes$HI_CHOL <- as.factor(nhanes$HI_CHOL)
 nhanes$race <- as.factor(nhanes$race)
 nhanes$agecat <- as.factor(nhanes$agecat)
 nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)

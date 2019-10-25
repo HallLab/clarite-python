@@ -35,8 +35,9 @@ def compare_result(r_result, python_result, bin_vars=None):
         for var in ["N", "pvalue"]:
             # Same in both
             try:
+                # Very generous tolerance requirement because R uses a LRT and python doesn't
                 assert np.allclose(merged_bin[f"{var}_r"], merged_bin[f"{var}_python"],
-                                   atol=1e-02, equal_nan=True)
+                                   atol=1e-01, equal_nan=True)
             except AssertionError:
                 raise ValueError(f"{var}: R ({merged_bin[f'{var}_r']}) != Python ({merged_bin[f'{var}_python']})")
         for var in ["Beta", "SE", "Variable_pvalue"]:
@@ -67,18 +68,18 @@ def compare_result(r_result, python_result, bin_vars=None):
     # Close-enough equality of numeric values for continuous and categorical variables
     for var in ["N", "Beta", "SE", "Variable_pvalue", "LRT_pvalue", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True)#, atol=1e-03)
+            assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True, atol=1e-03)
         except AssertionError:
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_r']}\n"
                              f"{merged[f'{var}_python']}")
     for var in ["Diff_AIC"]:
-        # R value are all Nan or are all close to Python results
-        all_nan_r = merged[f'{var}_r'].isna().all()
-        all_notnan_python = not merged[f'{var}_python'].isna().any()
-        aic_okay = (all_nan_r & all_notnan_python)  # R doesn't report AIC b/c of quasibinomial, python does
+        # Pass if R result is NaN (quasibinomial) or Python result is NaN (survey data used)
+        either_nan = merged[[f'{var}_r', f'{var}_python']].isna().any(axis=1)
         try:
-            assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True) | aic_okay
+            # Value must be close when both exist or both are NaN
+            assert np.allclose(merged.loc[~either_nan, f"{var}_r"],
+                               merged.loc[~either_nan, f"{var}_python"], equal_nan=True)
         except AssertionError:
             raise ValueError(f"{var}: R ({merged[f'{var}_r']}) != Python ({merged[f'{var}_python']})")
 
@@ -309,7 +310,7 @@ def test_nhanes_weightsonly():
                              survey_design_spec=design),
         ], axis=0)
     # Compare
-    #compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
+    compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
 
 
 def test_nhanes_lonely_certain():

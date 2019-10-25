@@ -260,4 +260,6 @@ class Regression(object):
         # Gather Other Results
         self.LRT_pvalue = lr_pvalue
         self.pvalue = self.LRT_pvalue
-        self.diff_AIC = model.result.aic - model_restricted.result.aic
+        # Don't report AIC values for weighted categorical analysis since they may be incorrect
+        #self.diff_AIC = model.result.aic - model_restricted.result.aic
+        self.diff_AIC = np.nan
