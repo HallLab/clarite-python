@@ -117,7 +117,7 @@ class SurveyDesignSpec:
                 self.multi_weight = True
                 self.weight_names = weights
                 self.weights = dict()
-                for var_name, weight_name in self.weights.items():
+                for var_name, weight_name in weights.items():
                     if weight_name not in self.survey_df:
                         raise KeyError(f"weights key for '{var_name}' ('{weight_name}') was not found in the survey_df")
                     else:

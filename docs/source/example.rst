@@ -1,4 +1,3 @@
-
 Example Analysis
 ================
 
@@ -19,7 +18,6 @@ next two cycles (2003-2004 and 2005-2006) are assigned to a
     import numpy as np
     from scipy import stats
     import clarite
-    
 
 .. code:: ipython3
 
@@ -31,11 +29,12 @@ Load Data
 
 .. code:: ipython3
 
-    data_main_table_over18 = "../../data/NHANES_99-06/MainTable_keepvar_over18.tsv"
-    data_main_table = "../../data/NHANES_99-06/MainTable.csv"
-    data_var_description = "../../data/NHANES_99-06/VarDescription.csv"
-    data_var_categories = "../../data/NHANES_99-06/VarCat_nopf.txt"
-    output = "results_Python/results_weighted"
+    data_folder = "../../../../data/NHANES_99-06/"
+    data_main_table_over18 = data_folder + "MainTable_keepvar_over18.tsv"
+    data_main_table = data_folder + "MainTable.csv"
+    data_var_description = data_folder + "VarDescription.csv"
+    data_var_categories = data_folder + "VarCat_nopf.txt"
+    output = "."
 
 Data of all samples with age >= 18
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -95,7 +94,7 @@ Data of all samples with age >= 18
       </thead>
       <tbody>
         <tr>
-          <td>2</td>
+          <th>2</th>
           <td>77</td>
           <td>0</td>
           <td>0</td>
@@ -105,7 +104,7 @@ Data of all samples with age >= 18
           <td>1.0</td>
         </tr>
         <tr>
-          <td>5</td>
+          <th>5</th>
           <td>49</td>
           <td>0</td>
           <td>0</td>
@@ -115,7 +114,7 @@ Data of all samples with age >= 18
           <td>NaN</td>
         </tr>
         <tr>
-          <td>6</td>
+          <th>6</th>
           <td>19</td>
           <td>1</td>
           <td>0</td>
@@ -125,7 +124,7 @@ Data of all samples with age >= 18
           <td>2.0</td>
         </tr>
         <tr>
-          <td>7</td>
+          <th>7</th>
           <td>59</td>
           <td>1</td>
           <td>1</td>
@@ -135,7 +134,7 @@ Data of all samples with age >= 18
           <td>NaN</td>
         </tr>
         <tr>
-          <td>10</td>
+          <th>10</th>
           <td>43</td>
           <td>0</td>
           <td>1</td>
@@ -197,31 +196,31 @@ Variable Descriptions
       </thead>
       <tbody>
         <tr>
-          <td>LBXHBC</td>
+          <th>LBXHBC</th>
           <td>Hepatitis A, B, C and D</td>
           <td>laboratory</td>
           <td>Hepatitis B core antibody</td>
         </tr>
         <tr>
-          <td>LBDHBG</td>
+          <th>LBDHBG</th>
           <td>Hepatitis A, B, C and D</td>
           <td>laboratory</td>
           <td>Hepatitis B surface antigen</td>
         </tr>
         <tr>
-          <td>LBDHCV</td>
+          <th>LBDHCV</th>
           <td>Hepatitis A, B, C and D</td>
           <td>laboratory</td>
           <td>Hepatitis C antibody (confirmed)</td>
         </tr>
         <tr>
-          <td>LBDHD</td>
+          <th>LBDHD</th>
           <td>Hepatitis A, B, C and D</td>
           <td>laboratory</td>
           <td>Hepatitis D (anti-HDV)</td>
         </tr>
         <tr>
-          <td>LBXHBS</td>
+          <th>LBXHBS</th>
           <td>Hepatitis B Surface Antibody</td>
           <td>laboratory</td>
           <td>Hepatitis B Surface Antibody</td>
@@ -265,7 +264,7 @@ were computed from the 2-year weights prior to loading them here.
 
 .. code:: ipython3
 
-    survey_design_discovery = pd.read_csv("weights/weights_discovery.txt", sep="\t")\
+    survey_design_discovery = pd.read_csv(data_folder + "weights/weights_discovery.txt", sep="\t")\
                                 .rename(columns={'SEQN':'ID'})\
                                 .set_index("ID")\
                                 .drop(columns="SDDSRVYR")
@@ -315,7 +314,7 @@ were computed from the 2-year weights prior to loading them here.
       </thead>
       <tbody>
         <tr>
-          <td>1</td>
+          <th>1</th>
           <td>1</td>
           <td>5</td>
           <td>9727.078709</td>
@@ -325,7 +324,7 @@ were computed from the 2-year weights prior to loading them here.
           <td>NaN</td>
         </tr>
         <tr>
-          <td>2</td>
+          <th>2</th>
           <td>3</td>
           <td>1</td>
           <td>26678.636376</td>
@@ -335,7 +334,7 @@ were computed from the 2-year weights prior to loading them here.
           <td>NaN</td>
         </tr>
         <tr>
-          <td>3</td>
+          <th>3</th>
           <td>2</td>
           <td>7</td>
           <td>43621.680548</td>
@@ -345,7 +344,7 @@ were computed from the 2-year weights prior to loading them here.
           <td>NaN</td>
         </tr>
         <tr>
-          <td>4</td>
+          <th>4</th>
           <td>1</td>
           <td>2</td>
           <td>10346.119327</td>
@@ -355,7 +354,7 @@ were computed from the 2-year weights prior to loading them here.
           <td>NaN</td>
         </tr>
         <tr>
-          <td>5</td>
+          <th>5</th>
           <td>2</td>
           <td>8</td>
           <td>91050.846620</td>
@@ -373,7 +372,7 @@ were computed from the 2-year weights prior to loading them here.
 
 .. code:: ipython3
 
-    survey_design_replication = pd.read_csv("weights/weights_replication_4yr.txt", sep="\t")\
+    survey_design_replication = pd.read_csv(data_folder + "weights/weights_replication_4yr.txt", sep="\t")\
                                 .rename(columns={'SEQN':'ID'})\
                                 .set_index("ID")\
                                 .drop(columns="SDDSRVYR")
@@ -423,7 +422,7 @@ were computed from the 2-year weights prior to loading them here.
       </thead>
       <tbody>
         <tr>
-          <td>21005</td>
+          <th>21005</th>
           <td>2</td>
           <td>39</td>
           <td>2756.160474</td>
@@ -433,7 +432,7 @@ were computed from the 2-year weights prior to loading them here.
           <td>NaN</td>
         </tr>
         <tr>
-          <td>21006</td>
+          <th>21006</th>
           <td>1</td>
           <td>41</td>
           <td>2711.070226</td>
@@ -443,7 +442,7 @@ were computed from the 2-year weights prior to loading them here.
           <td>NaN</td>
         </tr>
         <tr>
-          <td>21007</td>
+          <th>21007</th>
           <td>2</td>
           <td>35</td>
           <td>19882.088706</td>
@@ -453,7 +452,7 @@ were computed from the 2-year weights prior to loading them here.
           <td>NaN</td>
         </tr>
         <tr>
-          <td>21008</td>
+          <th>21008</th>
           <td>1</td>
           <td>32</td>
           <td>2799.749676</td>
@@ -463,7 +462,7 @@ were computed from the 2-year weights prior to loading them here.
           <td>NaN</td>
         </tr>
         <tr>
-          <td>21009</td>
+          <th>21009</th>
           <td>2</td>
           <td>31</td>
           <td>48796.839489</td>
@@ -482,7 +481,7 @@ were computed from the 2-year weights prior to loading them here.
 .. code:: ipython3
 
     # These files map variables to their correct weights, and were compiled by reading throught the NHANES codebook
-    var_weights = pd.read_csv("weights/VarWeights.csv")
+    var_weights = pd.read_csv(data_folder + "weights/VarWeights.csv")
     var_weights.head()
 
 
@@ -515,31 +514,31 @@ were computed from the 2-year weights prior to loading them here.
       </thead>
       <tbody>
         <tr>
-          <td>0</td>
+          <th>0</th>
           <td>99999</td>
           <td>WTMEC4YR</td>
           <td>WTMEC2YR</td>
         </tr>
         <tr>
-          <td>1</td>
+          <th>1</th>
           <td>ACETAMINOPHEN__CODEINE</td>
           <td>WTMEC4YR</td>
           <td>WTMEC2YR</td>
         </tr>
         <tr>
-          <td>2</td>
+          <th>2</th>
           <td>ACETAMINOPHEN__CODEINE_PHOSPHATE</td>
           <td>WTMEC4YR</td>
           <td>WTMEC2YR</td>
         </tr>
         <tr>
-          <td>3</td>
+          <th>3</th>
           <td>ACETAMINOPHEN__HYDROCODONE</td>
           <td>WTMEC4YR</td>
           <td>WTMEC2YR</td>
         </tr>
         <tr>
-          <td>4</td>
+          <th>4</th>
           <td>ACETAMINOPHEN__HYDROCODONE_BITARTRATE</td>
           <td>WTMEC4YR</td>
           <td>WTMEC2YR</td>
@@ -553,11 +552,8 @@ were computed from the 2-year weights prior to loading them here.
 .. code:: ipython3
 
     # Convert the data to two dictionaries for convenience
-    weights_discovery = dict()
-    weights_replication = dict()
-    for idx, row in var_weights.iterrows():
-        weights_discovery[row['variable_name']] = row['discovery']
-        weights_replication[row['variable_name']] = row['replication']
+    weights_discovery = var_weights.set_index('variable_name')['discovery'].to_dict()
+    weights_replication = var_weights.set_index('variable_name')['replication'].to_dict()
 
 Survey Year data
 ~~~~~~~~~~~~~~~~
@@ -779,7 +775,7 @@ Split the data into *discovery* and *replication*
       </thead>
       <tbody>
         <tr>
-          <td>2</td>
+          <th>2</th>
           <td>77</td>
           <td>0</td>
           <td>0</td>
@@ -789,7 +785,7 @@ Split the data into *discovery* and *replication*
           <td>1</td>
         </tr>
         <tr>
-          <td>5</td>
+          <th>5</th>
           <td>49</td>
           <td>0</td>
           <td>0</td>
@@ -799,7 +795,7 @@ Split the data into *discovery* and *replication*
           <td>1</td>
         </tr>
         <tr>
-          <td>6</td>
+          <th>6</th>
           <td>19</td>
           <td>1</td>
           <td>0</td>
@@ -809,7 +805,7 @@ Split the data into *discovery* and *replication*
           <td>1</td>
         </tr>
         <tr>
-          <td>12</td>
+          <th>12</th>
           <td>37</td>
           <td>0</td>
           <td>0</td>
@@ -819,7 +815,7 @@ Split the data into *discovery* and *replication*
           <td>1</td>
         </tr>
         <tr>
-          <td>13</td>
+          <th>13</th>
           <td>70</td>
           <td>0</td>
           <td>0</td>
@@ -883,7 +879,7 @@ Split the data into *discovery* and *replication*
       </thead>
       <tbody>
         <tr>
-          <td>21005</td>
+          <th>21005</th>
           <td>19</td>
           <td>0</td>
           <td>1</td>
@@ -893,7 +889,7 @@ Split the data into *discovery* and *replication*
           <td>3</td>
         </tr>
         <tr>
-          <td>21009</td>
+          <th>21009</th>
           <td>55</td>
           <td>0</td>
           <td>0</td>
@@ -903,7 +899,7 @@ Split the data into *discovery* and *replication*
           <td>3</td>
         </tr>
         <tr>
-          <td>21010</td>
+          <th>21010</th>
           <td>52</td>
           <td>1</td>
           <td>0</td>
@@ -913,7 +909,7 @@ Split the data into *discovery* and *replication*
           <td>3</td>
         </tr>
         <tr>
-          <td>21012</td>
+          <th>21012</th>
           <td>63</td>
           <td>0</td>
           <td>1</td>
@@ -923,7 +919,7 @@ Split the data into *discovery* and *replication*
           <td>3</td>
         </tr>
         <tr>
-          <td>21015</td>
+          <th>21015</th>
           <td>83</td>
           <td>0</td>
           <td>0</td>
@@ -1498,157 +1494,157 @@ This can then be passed into the EWAS function
     
     ####### Regressing 280 Continuous Variables #######
     
-    WARNING: DR1TFF has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TCOPP - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TS180 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TALCO - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TM201 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXALD has non-varying covariates(s): SDDSRVYR
-    WARNING: DRD370TQ - 1 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TP183 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TMAGN - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TSUGR has non-varying covariates(s): SDDSRVYR
-    WARNING: URXUHG has non-varying covariates(s): female
-    WARNING: URXMOH has non-varying covariates(s): SDDSRVYR
-    WARNING: age_stopped_birth_control has non-varying covariates(s): female
-    WARNING: DR1TVARA has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TCAFF - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TM161 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TZINC - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXP20 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX149 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX110 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TVB1 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TSELE - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TTFAT - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD350BQ - 2 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXP21 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TCALC - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBX028 has non-varying covariates(s): SDDSRVYR
-    WARNING: DRD350DQ - 1 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TM221 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TVK has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TBCAR has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TVB6 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370AQ - 2 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TRET has non-varying covariates(s): SDDSRVYR
-    WARNING: URXMHH has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TP205 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TCHOL - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXP01 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TVB2 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBX196 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TS060 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TCARB - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXOP4 - 403 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXOP2 - 404 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBX189 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TS080 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TFIBE - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370FQ - 1 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXDIE has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TP225 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXOP5 - 403 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXMNM has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TATOC has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX194 has non-varying covariates(s): SDDSRVYR
-    WARNING: URXOP3 - 404 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXVID has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TFA has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TP226 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TM181 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370DQ - 1 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBX087 has non-varying covariates(s): SDDSRVYR
-    WARNING: URXMC1 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TPROT - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXP02 has non-varying covariates(s): SDDSRVYR
-    WARNING: how_long_estrogen has non-varying covariates(s): female
-    WARNING: URXUUR has non-varying covariates(s): SDDSRVYR
-    WARNING: URXP24 has non-varying covariates(s): SDDSRVYR
-    WARNING: DRD350HQ - 6 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TVB12 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXLUZ has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX206 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TSFAT - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: URXOP1 - 404 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXCBC has non-varying covariates(s): SDDSRVYR
-    WARNING: age_started_birth_control has non-varying covariates(s): female
-    WARNING: LBXCRY has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TMFAT - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370EQ - 1 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TPFAT - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD350FQ - 1 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TS140 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXALC has non-varying covariates(s): SDDSRVYR
-    WARNING: LBD199 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TTHEO - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TS040 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TP184 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXLYC has non-varying covariates(s): SDDSRVYR
-    WARNING: RHQ556 has non-varying covariates(s): female
-    WARNING: URXOP6 - 403 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TS120 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXV3A has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TFDFE has non-varying covariates(s): SDDSRVYR
-    WARNING: LBXTHG has non-varying covariates(s): female
-    WARNING: URXMIB has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TS160 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TVC - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TP182 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXBEC has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TCRYP has non-varying covariates(s): SDDSRVYR
-    WARNING: URXP22 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TKCAL - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBX151 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TIRON - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TLZ has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TNIAC - 14 observation(s) with missing, negative, or zero weights were removed
     WARNING: DRD370UQ - 3 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXVID has non-varying covariates(s): SDDSRVYR
+    WARNING: URXP24 has non-varying covariates(s): SDDSRVYR
+    WARNING: age_stopped_birth_control has non-varying covariates(s): female
+    WARNING: DR1TCHOL - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBX206 has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TVB1 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXDIE has non-varying covariates(s): SDDSRVYR
+    WARNING: DRD350BQ - 2 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXLYC has non-varying covariates(s): SDDSRVYR
     WARNING: LBXF09 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBXD02 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TACAR has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TS160 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TVK has non-varying covariates(s): SDDSRVYR
+    WARNING: DRD350FQ - 1 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370TQ - 1 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370EQ - 1 observation(s) with missing, negative, or zero weights were removed
     WARNING: DR1TS100 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370MQ - 1 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD350AQ - 1 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TPOTA - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370BQ - 5 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DR1TP204 - 14 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBX195 has non-varying covariates(s): SDDSRVYR
-    WARNING: DR1TLYCO has non-varying covariates(s): SDDSRVYR
-    WARNING: LBXEND has non-varying covariates(s): SDDSRVYR
-    WARNING: LBXIHG has non-varying covariates(s): female
+    WARNING: LBXALD has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TCOPP - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXP20 has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TSELE - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBX151 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBXLUZ has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TLZ has non-varying covariates(s): SDDSRVYR
     WARNING: DR1TPHOS - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TP204 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXCBC has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TPOTA - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TVB6 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TVB12 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TP184 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TP182 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TMFAT - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: RHQ556 has non-varying covariates(s): female
+    WARNING: LBXBEC has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TSUGR has non-varying covariates(s): SDDSRVYR
+    WARNING: URXP02 has non-varying covariates(s): SDDSRVYR
+    WARNING: DRD370AQ - 2 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXEND has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TCRYP has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TKCAL - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TFIBE - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TTFAT - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TZINC - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBX110 has non-varying covariates(s): SDDSRVYR
+    WARNING: how_long_estrogen has non-varying covariates(s): female
+    WARNING: LBD199 has non-varying covariates(s): SDDSRVYR
+    WARNING: URXMHH has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TTHEO - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TFDFE has non-varying covariates(s): SDDSRVYR
+    WARNING: URXOP4 - 403 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD350DQ - 1 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TALCO - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXUHG has non-varying covariates(s): female
+    WARNING: URXP22 has non-varying covariates(s): SDDSRVYR
+    WARNING: URXP21 has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TSFAT - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD350HQ - 6 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXOP1 - 404 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370BQ - 5 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXOP2 - 404 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TM201 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TFF has non-varying covariates(s): SDDSRVYR
+    WARNING: URXMOH has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TFA has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TS120 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXMNM has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX195 has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TACAR has non-varying covariates(s): SDDSRVYR
+    WARNING: DRD370FQ - 1 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TATOC has non-varying covariates(s): SDDSRVYR
+    WARNING: URXOP3 - 404 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBX189 has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TP225 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TP226 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TP183 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXTHG has non-varying covariates(s): female
+    WARNING: DR1TBCAR has non-varying covariates(s): SDDSRVYR
+    WARNING: DRD370MQ - 1 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TPFAT - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TS060 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TM161 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXCRY has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TCALC - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXIHG has non-varying covariates(s): female
+    WARNING: DR1TM221 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TIRON - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370DQ - 1 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXOP5 - 403 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TPROT - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TVARA has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TCARB - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TMAGN - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TM181 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TS140 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TVC - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBX196 has non-varying covariates(s): SDDSRVYR
+    WARNING: age_started_birth_control has non-varying covariates(s): female
+    WARNING: URXP01 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBXD02 has non-varying covariates(s): SDDSRVYR
+    WARNING: URXMIB has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX149 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBXALC has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TS180 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TVB2 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TCAFF - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TLYCO has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX087 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBXV3A has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TP205 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBX194 has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TNIAC - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXUUR has non-varying covariates(s): SDDSRVYR
+    WARNING: DRD350AQ - 1 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXMC1 has non-varying covariates(s): SDDSRVYR
+    WARNING: DR1TS040 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: URXOP6 - 403 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TS080 - 14 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DR1TRET has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX028 has non-varying covariates(s): SDDSRVYR
     
     ####### Regressing 48 Binary Variables #######
     
-    WARNING: taking_birth_control has non-varying covariates(s): female
-    WARNING: RHQ510 has non-varying covariates(s): female
-    WARNING: DRD350H - 6 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD350B - 6 observation(s) with missing, negative, or zero weights were removed
     WARNING: DRD350A - 6 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370B - 10 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370E - 10 observation(s) with missing, negative, or zero weights were removed
-    WARNING: LBXMS1 has non-varying covariates(s): SDDSRVYR
-    WARNING: DRD370U - 10 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370D - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD350B - 6 observation(s) with missing, negative, or zero weights were removed
     WARNING: current_loud_noise - 925 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD340 - 22 observation(s) with missing, negative, or zero weights were removed
     WARNING: LBXBV has non-varying covariates(s): female, SDDSRVYR
-    WARNING: DRD350F - 6 observation(s) with missing, negative, or zero weights were removed
-    WARNING: SXQ280 has non-varying covariates(s): female
-    WARNING: LBXHBC - 5808 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD350D - 6 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370T - 10 observation(s) with missing, negative, or zero weights were removed
-    WARNING: RHQ540 has non-varying covariates(s): female
     WARNING: ordinary_salt - 19 observation(s) with missing, negative, or zero weights were removed
     WARNING: ordinary_salt has non-varying covariates(s): SDDSRVYR
+    WARNING: taking_birth_control has non-varying covariates(s): female
+    WARNING: LBXMS1 has non-varying covariates(s): SDDSRVYR
     WARNING: DRD370A - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370F - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: SXQ280 has non-varying covariates(s): female
+    WARNING: DRD350F - 6 observation(s) with missing, negative, or zero weights were removed
     WARNING: DRD350G - 6 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370B - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370U - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370D - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: LBXHBC - 5808 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370T - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD340 - 22 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD350H - 6 observation(s) with missing, negative, or zero weights were removed
+    WARNING: RHQ540 has non-varying covariates(s): female
+    WARNING: DRD350D - 6 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370M - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD360 - 21 observation(s) with missing, negative, or zero weights were removed
     WARNING: no_salt - 19 observation(s) with missing, negative, or zero weights were removed
     WARNING: no_salt has non-varying covariates(s): SDDSRVYR
-    WARNING: DRD370F - 10 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD360 - 21 observation(s) with missing, negative, or zero weights were removed
-    WARNING: DRD370M - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370E - 10 observation(s) with missing, negative, or zero weights were removed
+    WARNING: RHQ510 has non-varying covariates(s): female
     
     ####### Regressing 4 Categorical Variables #######
     
@@ -1680,7 +1676,7 @@ a Pandas DataFrame).
 
 .. code:: ipython3
 
-    significant_discovery_variables = ewas_discovery[ewas_discovery['pvalue_fdr']<0.1].index.get_level_values('variable')
+    significant_discovery_variables = ewas_discovery[ewas_discovery['pvalue_fdr']<0.1].index.get_level_values('Variable')
     print(f"Using {len(significant_discovery_variables)} variables based on FDR-corrected pvalues from the discovery dataset")
 
 
@@ -1729,6 +1725,170 @@ Run Replication EWAS
 
 .. code:: ipython3
 
+    survey_design_replication
+
+
+
+
+.. raw:: html
+
+    <div>
+    <style scoped>
+        .dataframe tbody tr th:only-of-type {
+            vertical-align: middle;
+        }
+    
+        .dataframe tbody tr th {
+            vertical-align: top;
+        }
+    
+        .dataframe thead th {
+            text-align: right;
+        }
+    </style>
+    <table border="1" class="dataframe">
+      <thead>
+        <tr style="text-align: right;">
+          <th></th>
+          <th>SDMVPSU</th>
+          <th>SDMVSTRA</th>
+          <th>WTINT2YR</th>
+          <th>...</th>
+          <th>WTSOG2YR</th>
+          <th>WTSC2YRA</th>
+          <th>WTSPC2YR</th>
+        </tr>
+        <tr>
+          <th>ID</th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>21005</th>
+          <td>2</td>
+          <td>39</td>
+          <td>2756.160474</td>
+          <td>...</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
+        </tr>
+        <tr>
+          <th>21006</th>
+          <td>1</td>
+          <td>41</td>
+          <td>2711.070226</td>
+          <td>...</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
+        </tr>
+        <tr>
+          <th>21007</th>
+          <td>2</td>
+          <td>35</td>
+          <td>19882.088706</td>
+          <td>...</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
+        </tr>
+        <tr>
+          <th>21008</th>
+          <td>1</td>
+          <td>32</td>
+          <td>2799.749676</td>
+          <td>...</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
+        </tr>
+        <tr>
+          <th>21009</th>
+          <td>2</td>
+          <td>31</td>
+          <td>48796.839489</td>
+          <td>...</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
+        </tr>
+        <tr>
+          <th>...</th>
+          <td>...</td>
+          <td>...</td>
+          <td>...</td>
+          <td>...</td>
+          <td>...</td>
+          <td>...</td>
+          <td>...</td>
+        </tr>
+        <tr>
+          <th>41470</th>
+          <td>2</td>
+          <td>46</td>
+          <td>8473.426110</td>
+          <td>...</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>NaN</td>
+        </tr>
+        <tr>
+          <th>41471</th>
+          <td>1</td>
+          <td>52</td>
+          <td>3141.652775</td>
+          <td>...</td>
+          <td>9148.1015</td>
+          <td>NaN</td>
+          <td>NaN</td>
+        </tr>
+        <tr>
+          <th>41472</th>
+          <td>1</td>
+          <td>48</td>
+          <td>33673.789576</td>
+          <td>...</td>
+          <td>99690.8420</td>
+          <td>NaN</td>
+          <td>71892.249044</td>
+        </tr>
+        <tr>
+          <th>41473</th>
+          <td>1</td>
+          <td>55</td>
+          <td>9956.504488</td>
+          <td>...</td>
+          <td>NaN</td>
+          <td>NaN</td>
+          <td>26257.847868</td>
+        </tr>
+        <tr>
+          <th>41474</th>
+          <td>1</td>
+          <td>47</td>
+          <td>3087.275833</td>
+          <td>...</td>
+          <td>9417.3990</td>
+          <td>NaN</td>
+          <td>NaN</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>20470 rows × 23 columns</p>
+    </div>
+
+
+
+.. code:: ipython3
+
     sd_replication = clarite.survey.SurveyDesignSpec(survey_df=survey_design_replication,
                                               strata="SDMVSTRA",
                                               cluster="SDMVPSU",
@@ -1747,44 +1907,44 @@ Run Replication EWAS
     
     ####### Regressing 85 Continuous Variables #######
     
-    WARNING: age_stopped_birth_control has non-varying covariates(s): female
-    WARNING: URXP03 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBXD05 has non-varying covariates(s): SDDSRVYR
-    WARNING: URXP15 has non-varying covariates(s): SDDSRVYR
-    WARNING: URXP20 has non-varying covariates(s): SDDSRVYR
-    WARNING: DUQ110 has non-varying covariates(s): SDDSRVYR
-    WARNING: URXP11 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX180 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX196 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX170 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX156 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX099 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBXIRN has non-varying covariates(s): female
-    WARNING: LBXHXC has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX194 has non-varying covariates(s): SDDSRVYR
-    WARNING: URXOP3 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBXF04 has non-varying covariates(s): SDDSRVYR
     WARNING: URXP24 has non-varying covariates(s): SDDSRVYR
+    WARNING: age_stopped_birth_control has non-varying covariates(s): female
+    WARNING: LBXODT has non-varying covariates(s): SDDSRVYR
     WARNING: LBX206 has non-varying covariates(s): SDDSRVYR
-    WARNING: URXOP1 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX170 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX099 has non-varying covariates(s): SDDSRVYR
+    WARNING: URXP20 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX156 has non-varying covariates(s): SDDSRVYR
+    WARNING: URXP11 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX118 has non-varying covariates(s): SDDSRVYR
     WARNING: LBX153 has non-varying covariates(s): SDDSRVYR
-    WARNING: age_started_birth_control has non-varying covariates(s): female
+    WARNING: LBXD05 has non-varying covariates(s): SDDSRVYR
     WARNING: LBD199 has non-varying covariates(s): SDDSRVYR
     WARNING: LBXHPE has non-varying covariates(s): SDDSRVYR
+    WARNING: URXOP1 has non-varying covariates(s): SDDSRVYR
+    WARNING: URXP15 has non-varying covariates(s): SDDSRVYR
     WARNING: LBXMIR has non-varying covariates(s): SDDSRVYR
+    WARNING: URXOP3 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBXHXC has non-varying covariates(s): SDDSRVYR
     WARNING: LBXME has non-varying covariates(s): SDDSRVYR
-    WARNING: LBX118 has non-varying covariates(s): SDDSRVYR
-    WARNING: LBXODT has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX180 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBX196 has non-varying covariates(s): SDDSRVYR
+    WARNING: age_started_birth_control has non-varying covariates(s): female
+    WARNING: LBXF04 has non-varying covariates(s): SDDSRVYR
+    WARNING: URXP03 has non-varying covariates(s): SDDSRVYR
+    WARNING: LBXIRN has non-varying covariates(s): female
+    WARNING: LBX194 has non-varying covariates(s): SDDSRVYR
+    WARNING: DUQ110 has non-varying covariates(s): SDDSRVYR
     
     ####### Regressing 13 Binary Variables #######
     
     WARNING: DUQ100 has non-varying covariates(s): SDDSRVYR
-    WARNING: ever_loud_noise_gt3_2 has non-varying covariates(s): SDDSRVYR
-    WARNING: SMQ210 has non-varying covariates(s): SDDSRVYR
-    WARNING: DRD370E - 19 observation(s) with missing, negative, or zero weights were removed
     WARNING: LBXHBC - 6318 observation(s) with missing, negative, or zero weights were removed
+    WARNING: SMQ210 has non-varying covariates(s): SDDSRVYR
     WARNING: ever_loud_noise_gt3 has non-varying covariates(s): SDDSRVYR
+    WARNING: ever_loud_noise_gt3_2 has non-varying covariates(s): SDDSRVYR
     WARNING: DRD370M - 19 observation(s) with missing, negative, or zero weights were removed
+    WARNING: DRD370E - 19 observation(s) with missing, negative, or zero weights were removed
     
     ####### Regressing 2 Categorical Variables #######
     
@@ -1800,7 +1960,7 @@ Run Replication EWAS
 
     # Combine results
     ewas_keep_cols = ['pvalue', 'pvalue_bonferroni', 'pvalue_fdr']
-    combined = pd.merge(ewas_discovery[['variable_type'] + ewas_keep_cols],
+    combined = pd.merge(ewas_discovery[['Variable_type'] + ewas_keep_cols],
                         ewas_replication[ewas_keep_cols],
                         left_index=True, right_index=True, suffixes=("_disc", "_repl"))
     
@@ -1858,7 +2018,7 @@ Run Replication EWAS
         <tr style="text-align: right;">
           <th></th>
           <th></th>
-          <th>variable_type</th>
+          <th>Variable_type</th>
           <th>pvalue_disc</th>
           <th>pvalue_bonferroni_disc</th>
           <th>...</th>
@@ -1867,8 +2027,8 @@ Run Replication EWAS
           <th>pvalue_fdr_repl</th>
         </tr>
         <tr>
-          <th>variable</th>
-          <th>phenotype</th>
+          <th>Variable</th>
+          <th>Phenotype</th>
           <th></th>
           <th></th>
           <th></th>
@@ -1880,8 +2040,8 @@ Run Replication EWAS
       </thead>
       <tbody>
         <tr>
-          <td>LBXGTC</td>
-          <td>BMXBMI</td>
+          <th>LBXGTC</th>
+          <th>BMXBMI</th>
           <td>continuous</td>
           <td>2.611467e-14</td>
           <td>8.670071e-12</td>
@@ -1891,8 +2051,8 @@ Run Replication EWAS
           <td>4.548631e-10</td>
         </tr>
         <tr>
-          <td>LBXIRN</td>
-          <td>BMXBMI</td>
+          <th>LBXIRN</th>
+          <th>BMXBMI</th>
           <td>continuous</td>
           <td>3.283440e-11</td>
           <td>1.090102e-08</td>
@@ -1902,8 +2062,8 @@ Run Replication EWAS
           <td>5.828079e-11</td>
         </tr>
         <tr>
-          <td>total_days_drink_year</td>
-          <td>BMXBMI</td>
+          <th>total_days_drink_year</th>
+          <th>BMXBMI</th>
           <td>continuous</td>
           <td>4.562887e-07</td>
           <td>1.514879e-04</td>
@@ -1913,8 +2073,8 @@ Run Replication EWAS
           <td>2.442402e-09</td>
         </tr>
         <tr>
-          <td>LBXBEC</td>
-          <td>BMXBMI</td>
+          <th>LBXBEC</th>
+          <th>BMXBMI</th>
           <td>continuous</td>
           <td>8.394013e-07</td>
           <td>2.786812e-04</td>
@@ -1924,8 +2084,8 @@ Run Replication EWAS
           <td>1.299795e-07</td>
         </tr>
         <tr>
-          <td>LBXCBC</td>
-          <td>BMXBMI</td>
+          <th>LBXCBC</th>
+          <th>BMXBMI</th>
           <td>continuous</td>
           <td>9.142106e-07</td>
           <td>3.035179e-04</td>
@@ -1959,5 +2119,6 @@ Manhattan plots from EWAS results
 
 
 
-.. image:: _static/example/output_81_0.png
+.. image:: _static/example/output_82_0.png
+
 

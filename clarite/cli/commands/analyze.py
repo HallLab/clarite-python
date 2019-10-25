@@ -25,7 +25,7 @@ def analyze_cli():
 @click.option('--cluster', type=click.STRING, default=None, help="Name of the cluster column in the survey data")
 @click.option('--nested/--not-nested', help="Whether survey data is nested or not")
 @click.option('--weights-file', type=INPUT_FILE, default=None,
-              help="Tab-delimited data file with 'Variable' and 'weight' columns to match weights from the survey data to specific variables")
+              help="Tab-delimited data file with 'Variable' and 'Weight' columns to match weights from the survey data to specific variables")
 @click.option('--weight', '-w', type=click.STRING, default=None,
               help="Name of a survey weight column found in the survey data.  This option can't be used with --weights-file")
 @click.option('--single-cluster', type=click.Choice(['error', 'scaled', 'centered', 'certainty']), default='error', help="How to handle singular clusters")
@@ -42,10 +42,10 @@ def ewas(phenotype, data, output, covariate, covariance_calc, min_n,
             raise ValueError("Either 'weights-file' or 'weight' should be specified, not both.")
         elif weights_file is not None:
             weights = pd.read_csv(weights_file, sep="\t")
-            if list(weights) != ['variable', 'weight']:
-                raise ValueError(f"The weights-file must be a tab-separated file with two columns: 'variable' and 'weight'. "
+            if list(weights) != ['Variable', 'Weight']:
+                raise ValueError(f"The weights-file must be a tab-separated file with two columns: 'Variable' and 'Weight'. "
                                  f"Columns were: {', '.join(list(weights))}")
-            weights = weights.set_index('variable')['weight'].to_dict()
+            weights = weights.set_index('Variable')['Weight'].to_dict()
         elif weight is not None:
             weights = weight
         elif weights_file is None and weight is None:

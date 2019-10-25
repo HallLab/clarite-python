@@ -25,7 +25,8 @@ from ..internal.regression import Regression
 from ..internal.utilities import _get_dtypes
 
 
-result_columns = ['variable_type', 'converged', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+result_columns = ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
+                  'LRT_pvalue', 'Diff_AIC', 'pvalue']
 corrected_pvalue_columns = ['pvalue_bonferroni', 'pvalue_fdr']
 
 
@@ -222,4 +223,4 @@ def add_corrected_pvalues(ewas_result):
                                                                                             method="bonferroni")[1]
         ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue_fdr'] = multipletests(ewas_result.loc[~ewas_result['pvalue'].isna(), 'pvalue'],
                                                                                      method="fdr_bh")[1]
-        ewas_result.sort_values(by=['pvalue_fdr', 'pvalue', 'converged'], inplace=True)
+        ewas_result.sort_values(by=['pvalue_fdr', 'pvalue', 'Converged'], inplace=True)

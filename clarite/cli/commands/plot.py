@@ -14,7 +14,7 @@ def plot_cli():
 @plot_cli.command(help="Create a histogram plot of a variable")
 @arg_data
 @arg_output
-@click.argument('variable', type=click.STRING)
+@click.argument('Variable', type=click.STRING)
 def histogram(data, output, variable):
     # Plot
     plot.histogram(data=data.df, column=variable)

@@ -168,7 +168,7 @@ class ClariteEwasResultParamType(click.ParamType):
             return None
         try:
             # Load data
-            data = pd.read_csv(value+".txt", sep="\t", index_col=['variable', 'phenotype'])
+            data = pd.read_csv(value+".txt", sep="\t", index_col=['Variable', 'Phenotype'])
             # Check columns
             cols_original = analyze.result_columns
             cols_with_corrected_pvals = analyze.result_columns + analyze.corrected_pvalue_columns

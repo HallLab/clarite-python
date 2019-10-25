@@ -185,7 +185,7 @@ def percent_na(data: pd.DataFrame):
     """
     result = 100 * (1 - (data.count() / data.apply(len)))
     result = result.reset_index()
-    result.columns = ['variable', 'percent_na']
+    result.columns = ['Variable', 'percent_na']
     return result
 
 

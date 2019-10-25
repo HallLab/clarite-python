@@ -301,8 +301,8 @@ def manhattan(
                 f"This plot may only be created for EWAS results with corrected p-values added. "
                 f"DataFrame {df_idx + 1} of {len(dfs)} was missing columns: {', '.join(missing_cols)}"
             )
-        if df.index.names != ['variable', 'phenotype']:
-            raise ValueError(f"The ewas result dataframes should have an index of ('variable', 'phenotype')."
+        if df.index.names != ['Variable', 'Phenotype']:
+            raise ValueError(f"The ewas result dataframes should have an index of ('Variable', 'Phenotype')."
                              f"DataFrame {df_idx + 1} of {len(dfs)} had '{list(df.index.names)}'")
 
     # Create a dataframe of pvalues indexed by variable name
