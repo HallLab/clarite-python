@@ -15,7 +15,6 @@ clarite.survey.SurveyDesignSpec
    
       ~SurveyDesignSpec.__init__
       ~SurveyDesignSpec.get_survey_design
-      ~SurveyDesignSpec.validate_params
    
    
 
