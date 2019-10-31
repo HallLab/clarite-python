@@ -2,6 +2,29 @@
 Release History
 ===============
 
+v0.9.0 (2019-10-31)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Add a *figure* parameter to histogram and manhattan plots in order to plot to an existing figure
+* *SurveyDesignSpec* can now utilize more parameters, such as *fpc*
+* The larger (numeric or alphabetic) binary variable is always treated as the success case for binary phenotypes
+* Improved logging during EWAS, including printing the survey design information
+* Extensively updated documentation
+* CLARITE now has a logo!
+
+Fixes
+^^^^^
+* Corrected an indexing error that sometimes occurred when removing rows with missing weights
+* Improve precision in EWAS results for weighted analyses by using sf instead of 1-cdf
+* Change some column names in the EWAS output to be more clear
+
+Tests
+^^^^^
+An R script and the output of that script is now included.  The R output is compared to the python output in the
+test suite in order to ensure analysis result concordance between R and Python for several analysis scenarios.
+
 v0.8.0 (2019-09-03)
 -------------------
 
