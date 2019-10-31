@@ -15,7 +15,7 @@ def load_r_results(filename):
     return r_result
 
 
-def compare_result(r_result, python_result, bin_vars=None):
+def compare_result(r_result, python_result):
     """Binary variables must be specified, since there are expected differences"""
     merged = pd.merge(left=r_result, right=python_result,
                       left_index=True, right_index=True,
@@ -26,49 +26,10 @@ def compare_result(r_result, python_result, bin_vars=None):
         raise ValueError(f"R Results have {len(r_result):,} rows,"
                          f" Python results have {len(python_result):,} rows,"
                          f" merged data has {len(merged):,} rows")
-    # Binary Variables
-    if bin_vars is not None:
-        # Separate bin variables from others
-        notbin_vars = list(set(merged.index.get_level_values('Variable')) - set(bin_vars))
-        merged_bin = merged.loc[bin_vars]
-        merged = merged.loc[notbin_vars]
-        for var in ["N", "pvalue"]:
-            # Same in both
-            try:
-                # Very generous tolerance requirement because R uses a LRT and python doesn't
-                assert np.allclose(merged_bin[f"{var}_r"], merged_bin[f"{var}_python"],
-                                   atol=1e-01, equal_nan=True)
-            except AssertionError:
-                raise ValueError(f"{var}: R ({merged_bin[f'{var}_r']}) != Python ({merged_bin[f'{var}_python']})")
-        for var in ["Beta", "SE", "Variable_pvalue"]:
-            # Value in python, Nan in R
-            try:
-                assert (merged_bin[f'{var}_r'].isna()).all()
-                assert not (merged_bin[f'{var}_python'].isna()).any()
-            except AssertionError:
-                raise ValueError(f"Binary Variable Test for {var}: "
-                                 f"R ({merged_bin[f'{var}_r']}) is not None or "
-                                 f"Python ({merged_bin[f'{var}_python']}) is None")
-        for var in ["LRT_pvalue"]:
-            # Value in R, Nan in Python
-            try:
-                assert not (merged_bin[f'{var}_r'].isna()).any()
-                assert (merged_bin[f'{var}_python'].isna()).all()
-            except AssertionError:
-                raise ValueError(f"Binary Variable Test for {var}: "
-                                 f"R ({merged_bin[f'{var}_r']}) is None or "
-                                 f"Python ({merged_bin[f'{var}_python']}) is not None")
-        for var in ["Diff_AIC"]:
-            # Value is possible in R, must be Nan in Python
-            try:
-                assert (merged_bin[f'{var}_python'].isna()).all()
-            except AssertionError:
-                raise ValueError(f"Binary Variable Test for {var}: "
-                                 f"Python ({merged_bin[f'{var}_python']}) is not None")
-    # Close-enough equality of numeric values for continuous and categorical variables
+    # Close-enough equality of numeric values
     for var in ["N", "Beta", "SE", "Variable_pvalue", "LRT_pvalue", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True, atol=1e-03)
+            assert np.allclose(merged[f"{var}_r"], merged[f"{var}_python"], equal_nan=True, atol=0, rtol=1e-03)
         except AssertionError:
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_r']}\n"
@@ -261,7 +222,7 @@ def test_nhanes_noweights():
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df),
         ], axis=0)
     # Compare
-    compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
+    compare_result(r_result, python_result)
 
 
 def test_nhanes_fulldesign():
@@ -286,7 +247,7 @@ def test_nhanes_fulldesign():
                              survey_design_spec=design),
         ], axis=0)
     # Compare
-    compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
+    compare_result(r_result, python_result)
 
 
 def test_nhanes_weightsonly():
@@ -310,7 +271,7 @@ def test_nhanes_weightsonly():
                              survey_design_spec=design),
         ], axis=0)
     # Compare
-    compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
+    compare_result(r_result, python_result)
 
 
 def test_nhanes_lonely_certain():
@@ -335,7 +296,7 @@ def test_nhanes_lonely_certain():
                              survey_design_spec=design),
         ], axis=0)
     # Compare
-    compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
+    compare_result(r_result, python_result)
 
 
 def test_nhanes_lonely_adjust():
@@ -360,4 +321,4 @@ def test_nhanes_lonely_adjust():
                              survey_design_spec=design),
         ], axis=0)
     # Compare
-    compare_result(r_result, python_result, bin_vars=['RIAGENDR'])
+    compare_result(r_result, python_result)
