@@ -245,11 +245,9 @@ class SurveyDesign(object):
     Parameters
     -------
     strata : array-like or None
-        Strata for each observation. If none, an array
-        of ones is constructed
+        Strata for each observation. If none, an array of ones is constructed
     cluster : array-like or None
-        Cluster for each observation. If none, an array
-        of ones is constructed
+        Cluster for each observation. If none, an incrementing array is constructed
     weights : array-like or None
         The weight for each observation. If none, an array
         of ones is constructed
@@ -301,13 +299,6 @@ class SurveyDesign(object):
                  single_cluster: str = 'error'):
 
         # Record inputs
-        # Note: Currently allowed combinations of parameters:
-        #        * Strata, Clusters (weights assumed to be 1)
-        #        * Strata, Clusters, Weight
-        # Note: Not Currently allowed combinations of parameters:
-        #        * FPC (not allowed to be provided- further testing and documentation needed)
-        #        * Weight only (further testing needed to confirm correctness)
-        #        * Strata or Clusters (not both) - requires further testing
         self.has_strata = False
         self.has_clusters = False
         self.has_weight = False
