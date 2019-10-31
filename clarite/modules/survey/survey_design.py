@@ -139,7 +139,7 @@ class SurveyDesignSpec:
 
     def __str__(self):
         """String version of the survey design specification, used in logging"""
-        result = f"Survey Design\n\t{len(self.survey_df):,} rows in the survey design data\n" \
+        result = f"Survey Design\n\t{len(self.survey_df):,} rows in the survey design data\n"
         # Strata
         if self.has_strata:
             result += f"\tStrata: {len(self.strata.unique())} unique values of {self.strata_name}\n"
