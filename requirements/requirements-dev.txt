@@ -4,10 +4,3 @@ codecov
 coverage
 flake8
 pytest>=4.6
-sphinx
-# These are dependencies of various sphinx extensions for documentation.
-ipython
-numpydoc
-sphinx-copybutton
-sphinx_rtd_theme
-sphinx-click
