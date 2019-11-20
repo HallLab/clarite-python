@@ -1,5 +1,6 @@
-CLARITE Documentation (:Version: |version|)
-===========================================
+CLARITE Documentation
+=====================
+:Version: |version|
 
 CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
 
