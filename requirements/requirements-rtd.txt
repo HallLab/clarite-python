@@ -7,4 +7,4 @@ sphinx_rtd_theme
 sphinx-click
 
 # Current version of clarite
-..
+.
