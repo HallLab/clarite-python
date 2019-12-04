@@ -28,9 +28,10 @@ def analyze_cli():
               help="Tab-delimited data file with 'Variable' and 'Weight' columns to match weights from the survey data to specific variables")
 @click.option('--weight', '-w', type=click.STRING, default=None,
               help="Name of a survey weight column found in the survey data.  This option can't be used with --weights-file")
+@click.option('--fpc', type=click.STRING, default=None, help="Name of the finite population correction column in the survey data")
 @click.option('--single-cluster', type=click.Choice(['error', 'scaled', 'centered', 'certainty']), default='error', help="How to handle singular clusters")
 def ewas(phenotype, data, output, covariate, covariance_calc, min_n,
-         survey_data, strata, cluster, nested, weights_file, weight, single_cluster):
+         survey_data, strata, cluster, nested, weights_file, weight, fpc, single_cluster):
     """Run EWAS and add corrected pvalues"""
     # Keep just the data from the loaded CLARITE_DATA arguments/options
     data = data.df
@@ -50,7 +51,8 @@ def ewas(phenotype, data, output, covariate, covariance_calc, min_n,
             weights = weight
         elif weights_file is None and weight is None:
             weights = None
-        sd = SurveyDesignSpec(survey_data.df, strata=strata, cluster=cluster, nest=nested, weights=weights, single_cluster=single_cluster)
+        sd = SurveyDesignSpec(survey_data.df, strata=strata, cluster=cluster, nest=nested,
+                              weights=weights, fpc=fpc, single_cluster=single_cluster)
     else:
         sd = None
         weights = None
