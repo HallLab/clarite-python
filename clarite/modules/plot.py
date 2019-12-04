@@ -242,6 +242,8 @@ def distributions(
 def manhattan(
     dfs: Dict[str, pd.DataFrame],
     categories: Dict[str, str] = dict(),
+    bonferroni: Optional[float] = 0.05,
+    fdr: Optional[float] = None,
     num_labeled: int = 3,
     label_vars: List[str] = list(),
     figsize: Tuple[int, int] = (12, 6),
@@ -261,6 +263,10 @@ def manhattan(
         Dictionary of dataset names to pandas dataframes of ewas results (requires certain columns)
     categories: dictionary (string: string)
         A dictionary mapping each variable name to a category name
+    bonferroni: float or None (default 0.05)
+        Show a cutoff line at the pvalue corresponding to a given bonferroni-corrected pvalue
+    fdr: float or None (default None)
+        Show a cutoff line at the pvalue corresponding to a given fdr
     num_labeled: int, default 3
         Label the top <num_labeled> results with the variable name
     label_vars: list of strings, default empty list
@@ -304,6 +310,14 @@ def manhattan(
         if df.index.names != ['Variable', 'Phenotype']:
             raise ValueError(f"The ewas result dataframes should have an index of ('Variable', 'Phenotype')."
                              f"DataFrame {df_idx + 1} of {len(dfs)} had '{list(df.index.names)}'")
+
+    # Parameter Validation- Bonferroni and FDR significance lines
+    if bonferroni is not None:
+        if bonferroni <= 0 or bonferroni >= 1:
+            raise ValueError(f"'bonferroni' was set to {bonferroni}.  It must be None or a float between 0 and 1")
+    if fdr is not None:
+        if fdr <= 0 or fdr >= 1:
+            raise ValueError(f"'fdr' was set to {fdr}.  It must be None or a float between 0 and 1")
 
     # Create a dataframe of pvalues indexed by variable name
     df = (
@@ -462,20 +476,42 @@ def manhattan(
     ax.set_ylim([-1, df["-log10(p value)"].max() + 10])
     ax.set_xlabel("")  # Hide x-axis label since it is obvious
 
-    # Significance line for each dataset
+    # Significance lines for each dataset
     for dataset_num, (dataset_name, dataset_data) in enumerate(df.groupby("dataset")):
         num_tests = dataset_data["pvalue"].count()
-        significance = -np.log10(0.05 / num_tests)
-        axes[dataset_num].axhline(
-            y=significance,
-            color="red",
-            linestyle="-",
-            zorder=3,
-            label=f"0.05 Bonferroni with {num_tests} tests",
-        )
-        axes[dataset_num].legend(
-            loc="upper right", bbox_to_anchor=(1, 1.1), fancybox=True, shadow=True
-        )
+        # Bonferroni Line
+        if bonferroni is not None:
+            bonf_significance = bonferroni / num_tests
+            axes[dataset_num].axhline(
+                y=-np.log10(bonf_significance),
+                color="red",
+                linestyle="dashed",
+                zorder=3,
+                label=f"{bonferroni} Bonferroni with {num_tests} tests",
+            )
+        # FDR Line
+        if fdr is not None:
+            cutoff = 0
+            for i, p in enumerate(dataset_data\
+                                          .loc[~dataset_data["pvalue"].isna(), "pvalue"]\
+                                          .sort_values(ascending=True)):
+                q = ((i + 1) / num_tests) * fdr
+                if p < q:
+                    cutoff = p
+                else:
+                    continue
+            axes[dataset_num].axhline(
+                y=-np.log10(cutoff),
+                color="red",
+                linestyle="dotted",
+                zorder=3,
+                label=f"{fdr} FDR with {num_tests} tests",
+            )
+        # Draw legend
+        if bonferroni is not None or fdr is not None:
+            axes[dataset_num].legend(
+                loc="upper right", bbox_to_anchor=(1, 1.1), fancybox=True, shadow=True
+            )
 
     # Title
     figure.suptitle(title, fontsize=20)
