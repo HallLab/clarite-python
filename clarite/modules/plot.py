@@ -321,8 +321,8 @@ def manhattan(
     # Create a dataframe of pvalues indexed by variable name
     df = (
         pd.DataFrame.from_dict({k: v["pvalue"] for k, v in dfs.items()})
-            .stack()
-            .reset_index()
+          .stack()
+          .reset_index()
     )
     df.columns = ("variable", "phenotype", "dataset", "pvalue")
     df[["variable", "phenotype", "dataset"]] = df[
