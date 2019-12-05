@@ -12,7 +12,6 @@ Functions that generate plots
      manhattan
 """
 
-
 from copy import copy
 import datetime
 from typing import Dict, List, Optional, Tuple
@@ -34,12 +33,12 @@ clarite_version = get_versions()
 
 
 def histogram(
-    data,
-    column: str,
-    figsize: Tuple[int, int] = (12, 5),
-    title: Optional[str] = None,
-    figure: Optional[plt.figure] = None,
-    **kwargs,
+        data,
+        column: str,
+        figsize: Tuple[int, int] = (12, 5),
+        title: Optional[str] = None,
+        figure: Optional[plt.figure] = None,
+        **kwargs,
 ):
     """
     Plot a histogram of the values in the given column.  Takes kwargs for seaborn's distplot.
@@ -85,14 +84,14 @@ def histogram(
 
 
 def distributions(
-    data,
-    filename: str,
-    continuous_kind: str = "count",
-    nrows: int = 4,
-    ncols: int = 3,
-    quality: str = "medium",
-    variables: Optional[List[str]] = None,
-    sort: bool = True,
+        data,
+        filename: str,
+        continuous_kind: str = "count",
+        nrows: int = 4,
+        ncols: int = 3,
+        quality: str = "medium",
+        variables: Optional[List[str]] = None,
+        sort: bool = True,
 ):
     """
     Create a pdf containing histograms for each binary or categorical variable, and one of several types of plots for each continuous variable.
@@ -211,7 +210,7 @@ def distributions(
             # Update xlabel with NA information
             na_count = data[variable].isna().sum()
             ax.set_xlabel(
-                f"{variable}\n{na_count:,} of {len(data[variable]):,} are NA ({na_count/len(data[variable]):.2%})"
+                f"{variable}\n{na_count:,} of {len(data[variable]):,} are NA ({na_count / len(data[variable]):.2%})"
             )
             # Move to next plot space
             col_idx += 1
@@ -240,19 +239,19 @@ def distributions(
 
 
 def manhattan(
-    dfs: Dict[str, pd.DataFrame],
-    categories: Dict[str, str] = dict(),
-    bonferroni: Optional[float] = 0.05,
-    fdr: Optional[float] = None,
-    num_labeled: int = 3,
-    label_vars: List[str] = list(),
-    figsize: Tuple[int, int] = (12, 6),
-    dpi: int = 300,
-    title: Optional[str] = None,
-    figure: Optional[plt.figure] = None,
-    colors: List[str] = ["#53868B", "#4D4D4D"],
-    background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
-    filename: Optional[str] = None,
+        dfs: Dict[str, pd.DataFrame],
+        categories: Dict[str, str] = dict(),
+        bonferroni: Optional[float] = 0.05,
+        fdr: Optional[float] = None,
+        num_labeled: int = 3,
+        label_vars: List[str] = list(),
+        figsize: Tuple[int, int] = (12, 6),
+        dpi: int = 300,
+        title: Optional[str] = None,
+        figure: Optional[plt.figure] = None,
+        colors: List[str] = ["#53868B", "#4D4D4D"],
+        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+        filename: Optional[str] = None,
 ):
     """
     Create a Manhattan-like plot for a list of EWAS Results
@@ -322,8 +321,8 @@ def manhattan(
     # Create a dataframe of pvalues indexed by variable name
     df = (
         pd.DataFrame.from_dict({k: v["pvalue"] for k, v in dfs.items()})
-        .stack()
-        .reset_index()
+            .stack()
+            .reset_index()
     )
     df.columns = ("variable", "phenotype", "dataset", "pvalue")
     df[["variable", "phenotype", "dataset"]] = df[
@@ -343,10 +342,10 @@ def manhattan(
 
     # Update index (actually x position) column by padding between each category
     df["category_x_offset"] = (
-        df.groupby("category").ngroup() * offset
+            df.groupby("category").ngroup() * offset
     )  # sorted category number, multiplied to pad between categories
     df["xpos"] = (
-        df.groupby(["category", "variable"]).ngroup() + df["category_x_offset"]
+            df.groupby(["category", "variable"]).ngroup() + df["category_x_offset"]
     )  # sorted category/variable number plus category offset
 
     # Create Plot and structures to hold category info
@@ -368,7 +367,7 @@ def manhattan(
     if len(categories) > 0:
         # Include category info
         for category_num, (category_name, category_data) in enumerate(
-            df.groupby("category")
+                df.groupby("category")
         ):
             # background bars
             left = category_data["xpos"].min() - (offset / 2) - 0.5
@@ -386,10 +385,10 @@ def manhattan(
             foreground_rectangles[category_num % len(colors)].append(rect)
             # plotted points
             for dataset_num, (dataset_name, dataset_data) in enumerate(
-                category_data.groupby("dataset")
+                    category_data.groupby("dataset")
             ):
                 if (
-                    len(dataset_data) > 0
+                        len(dataset_data) > 0
                 ):  # Sometimes a category has no variables in one dataset
                     dataset_data.plot(
                         kind="scatter",
@@ -421,7 +420,7 @@ def manhattan(
     else:
         # Just plot variables
         for dataset_num, (dataset_name, dataset_data) in enumerate(
-            df.groupby("dataset")
+                df.groupby("dataset")
         ):
             # Plot points
             dataset_data.plot(
@@ -492,9 +491,8 @@ def manhattan(
         # FDR Line
         if fdr is not None:
             cutoff = 0
-            for i, p in enumerate(dataset_data\
-                                          .loc[~dataset_data["pvalue"].isna(), "pvalue"]\
-                                          .sort_values(ascending=True)):
+            pvalues = dataset_data.loc[~dataset_data["pvalue"].isna(), "pvalue"].sort_values(ascending=True)
+            for i, p in enumerate(pvalues):
                 q = ((i + 1) / num_tests) * fdr
                 if p < q:
                     cutoff = p
