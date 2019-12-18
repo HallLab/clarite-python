@@ -11,6 +11,7 @@ CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
    CLARITE Github Repo <https://github.com/HallLab/clarite-python>
    motivation
    installation
+   citation
    usage
    example
    complex_surveys
