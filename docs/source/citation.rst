@@ -9,7 +9,7 @@ Lucas AM, et al (2019)
 `CLARITE facilitates the quality control and analysis process for EWAS of metabolic-related traits. <https://www.frontiersin.org/article/10.3389/fgene.2019.01240>`_
 *Frontiers in Genetics*: 10, 1240
 
-BibTeX entry:
+BibTeX entry::
 
     @article{lucas2019clarite,
       title={CLARITE facilitates the quality control and analysis process for EWAS of metabolic-related traits},
@@ -29,7 +29,7 @@ Passero K, et al (2020)
 *Pacific Symposium on Biocomputing*: 25, 659
 
 
-BibTeX entry:
+BibTeX entry::
 
     @inproceedings{passero2020phenome,
       title={Phenome-wide association studies on cardiovascular health and fatty acids considering phenotype quality control practices for epidemiological data.},
