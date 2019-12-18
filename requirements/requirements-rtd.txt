@@ -5,7 +5,6 @@ numpydoc
 sphinx-copybutton
 sphinx_rtd_theme
 sphinx-click
-sphinxcontrib-bibtext
 
 # Current version of clarite
 .
