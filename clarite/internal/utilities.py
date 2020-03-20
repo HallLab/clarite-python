@@ -103,3 +103,9 @@ def _process_colfilter(data: pd.DataFrame,
         kept = kept & ~removed_kind
 
     return kept
+
+def _remove_empty_categories(data, variables):
+    """
+    Remove catagories from categorical types if there are no occurences of that type
+    """
+

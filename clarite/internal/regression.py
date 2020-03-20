@@ -65,6 +65,33 @@ class Regression(object):
         self.LRT_pvalue = np.nan
         self.diff_AIC = np.nan
         self.pvalue = np.nan
+        self.varying_covariates = []
+
+    def check_categoricals(self, variables: List[str]):
+        """
+        Check to see if any of the variables are categoricals with an empty category.
+        Raise a warning if this is the case, and automatically handle it later.
+        """
+        zero_count_cat_vars = []
+        for var in variables:
+            if self.data[var].dtype.name == 'category':
+                counts = self.data[var].value_counts()
+                zero_counts = list(counts[counts == 0].index)   # Names of cats with 0 count
+                if len(zero_counts) > 0:
+                    zero_count_cat_vars.append(var)
+                    missing = [str(v) for v in zero_counts]  # Save strings for printing
+        if len(zero_count_cat_vars) == 1:
+            click.echo(
+                click.style(f"WARNING: {zero_count_cat_vars[0]} had categories with no occurrences: "
+                            f"{', '.join(missing)}",
+                            fg='yellow')
+            )
+        elif len(zero_count_cat_vars) > 1:
+            click.echo(
+                click.style(f"WARNING: Multiple categorical variables had categories with no occurrences: "
+                            f"{', '.join(zero_count_cat_vars)}",
+                            fg='yellow')
+            )
 
     def check_covars(self):
         # No varying covariates if there aren't any
@@ -78,13 +105,33 @@ class Regression(object):
             click.echo(click.style(f"WARNING: {self.variable} has non-varying covariates(s): {', '.join(non_varying_covars)}", fg='yellow'))
         return varying_covars
 
+    def remove_nonoccurring_cats(self):
+        """
+        Remove all categories that don't have any occurences
+        """
+        dtypes = self.data.dtypes
+        catvars = [v for v in dtypes[dtypes=='category'].index]
+        for var in catvars:
+            counts = self.data[var].value_counts()
+            keep_cats = list(counts[counts > 0].index)
+            if len(keep_cats) > 0:
+                self.data[var] = self.data[var].cat.set_categories(new_categories=keep_cats,
+                                                                   ordered=self.data[var].cat.ordered)
+
     def run(self, min_n):
         """Run the regression and update self with the results"""
         # Check for a minimum amount of data
         if len(self.data) < min_n:
             click.echo(f"{self.variable} = NULL due to: too few complete obervations ({len(self.data)} < {min_n})")
             return
+
+        # Check Covariates
         self.varying_covariates = self.check_covars()
+        self.check_categoricals(variables=self.covariates)
+
+        # Check variable for categories with no occurences, and remove all
+        self.check_categoricals(variables=[self.variable, ])
+        self.remove_nonoccurring_cats()
 
         # Make formulas
         self.formula_restricted = f"{self.phenotype} ~ "
