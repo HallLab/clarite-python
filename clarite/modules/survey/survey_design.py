@@ -56,7 +56,7 @@ class SurveyDesignSpec:
                  single_cluster: Optional[str] = 'error'):
 
         # Validate index
-        if isinstance(survey_df.index, pd.core.index.MultiIndex):
+        if isinstance(survey_df.index, pd.MultiIndex):
             raise ValueError("survey_df: DataFrame must not have a multiindex")
         survey_df.index.name = "ID"
 

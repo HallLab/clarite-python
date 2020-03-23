@@ -79,7 +79,7 @@ def ewas(
         raise ValueError("'covariates' must be specified as a list.  Use an empty list ([]) if there aren't any.")
 
     # Make sure the index of each dataset is not a multiindex and give it a consistent name
-    if isinstance(data.index, pd.core.index.MultiIndex):
+    if isinstance(data.index, pd.MultiIndex):
         raise ValueError(f"Data must not have a multiindex")
     data.index.name = "ID"
 
@@ -160,11 +160,12 @@ def run_regressions(phenotype: str,
                                 covariates=covariates,
                                 survey_design_spec=survey_design_spec,
                                 cov_method=cov_method)
+        regression.run(min_n=min_n)
         # Run the regression
-        try:
-            regression.run(min_n=min_n)
-        except Exception as e:
-            click.echo(f"{rv} = NULL due to: {e}")
+        #try:
+        #    regression.run(min_n=min_n)
+        #except Exception as e:
+        #    click.echo(f"{rv} = NULL due to: {e}")
         # Save results
         result.append(regression.get_results())
 

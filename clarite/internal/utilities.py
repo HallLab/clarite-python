@@ -17,7 +17,10 @@ def print_wrap(func):
     return wrapped
 
 
-def _validate_skip_only(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def _validate_skip_only(
+        data: pd.DataFrame,
+        skip: Optional[Union[str, List[str]]] = None,
+        only: Optional[Union[str, List[str]]] = None):
     """Validate use of the 'skip' and 'only' parameters, returning a boolean series for the columns where True = use the column"""
     # Convert string to a list
     if type(skip) == str:

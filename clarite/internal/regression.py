@@ -89,9 +89,6 @@ class Regression(object):
             click.echo(click.style(message, fg='yellow'))
 
     def check_covars(self):
-        # No varying covariates if there aren't any
-        if len(self.covariates) == 0:
-            return []
         unique_values = self.data[self.covariates].nunique()
         varying_covars = list(unique_values[unique_values > 1].index.values)
         non_varying_covars = list(unique_values[unique_values <= 1].index.values)
@@ -109,8 +106,9 @@ class Regression(object):
             return
 
         # Check Covariates
-        self.varying_covariates = self.check_covars()
-        self.check_categoricals(variables=self.covariates)
+        if len(self.covariates) > 0:
+            self.varying_covariates = self.check_covars()
+            self.check_categoricals(variables=self.covariates)
 
         # Check variable for categories with no occurences, and remove all
         self.check_categoricals(variables=[self.variable, ])
