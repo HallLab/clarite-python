@@ -32,7 +32,7 @@ import numpy as np
 import pandas as pd
 
 from ..internal.utilities import (
-    _validate_skip_only, _get_dtypes, _process_colfilter,\
+    _validate_skip_only, _get_dtypes, _process_colfilter,
     print_wrap, _remove_empty_categories)
 
 

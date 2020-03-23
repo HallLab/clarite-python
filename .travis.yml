@@ -16,7 +16,7 @@ script:
   - coverage run -m pytest  # Run the tests and check for test coverage.
   - coverage report -m --include=clarite/*,  # Generate test coverage report.
   - codecov  # Upload the report to codecov.
-  - flake8 --max-line-length=160  # Enforce code style (but relax line length limit a bit).
+  - flake8  # Enforce code style
 
 notifications:
 

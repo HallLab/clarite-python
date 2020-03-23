@@ -160,12 +160,11 @@ def run_regressions(phenotype: str,
                                 covariates=covariates,
                                 survey_design_spec=survey_design_spec,
                                 cov_method=cov_method)
-        regression.run(min_n=min_n)
         # Run the regression
-        #try:
-        #    regression.run(min_n=min_n)
-        #except Exception as e:
-        #    click.echo(f"{rv} = NULL due to: {e}")
+        try:
+            regression.run(min_n=min_n)
+        except Exception as e:
+            click.echo(f"{rv} = NULL due to: {e}")
         # Save results
         result.append(regression.get_results())
 

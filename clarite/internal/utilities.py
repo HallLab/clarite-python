@@ -58,7 +58,7 @@ def _get_dtypes(data: pd.DataFrame):
     data_catbin = data.loc[:, data.dtypes == 'category']
     if len(data_catbin.columns) > 0:
         # Constant
-        constant_cols  = data_catbin.apply(lambda col: len(col.cat.categories) == 1)
+        constant_cols = data_catbin.apply(lambda col: len(col.cat.categories) == 1)
         constant_cols = constant_cols[constant_cols].index
         dtypes.loc[constant_cols] = 'constant'
         # Binary
@@ -131,4 +131,3 @@ def _remove_empty_categories(data: pd.DataFrame,
             data[var] = data[var].cat.set_categories(new_categories=keep_cats,
                                                      ordered=data[var].cat.ordered)
     return data, removed_cats
-
