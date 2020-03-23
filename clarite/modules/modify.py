@@ -31,13 +31,15 @@ import click
 import numpy as np
 import pandas as pd
 
-from ..internal.utilities import _validate_skip_only, _get_dtypes, _process_colfilter, print_wrap
+from ..internal.utilities import (
+    _validate_skip_only, _get_dtypes, _process_colfilter,
+    print_wrap, _remove_empty_categories)
 
 
 @print_wrap
 def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min: int = 15):
     """
-    Classify variables into binary, categorical, continuous, and 'unknown'.  Drop variables that only have NaN values.
+    Classify variables into constant, binary, categorical, continuous, and 'unknown'.  Drop variables that only have NaN values.
 
     Parameters
     ----------
@@ -85,11 +87,11 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
         columns = list(empty_vars[empty_vars].index)
         data = data.drop(columns=columns)
 
-    # One unique non-NA value - Drop these variables
-    constant_vars = (unique_count == 1)
-    if constant_vars.sum() > 0:
-        columns = list(constant_vars[constant_vars].index)
-        data = data.drop(columns=columns)
+    # One unique non-NA value - Convert non-NA values to category (for constant)
+    keep_constant = (unique_count == 1)
+    if keep_constant.sum() > 0:
+        columns = list(keep_constant[keep_constant].index)
+        data = data.astype({c: 'category' for c in columns})
 
     # Two unique non-NA values - Convert non-NA values to category (for binary)
     keep_bin = (unique_count == 2)
@@ -117,13 +119,15 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
                 data[col] = data.loc[~col.isna(), col].astype(str)
 
     # Other - Convert non-NA values to string type
-    check_other = ~empty_vars & ~constant_vars & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
+    check_other = ~empty_vars & ~keep_constant & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
     if check_other.sum() > 0:
         columns = list(check_other[check_other].index)
         for c in columns:
             data.loc[~data[c].isna(), c] = data.loc[~data[c].isna(), c].astype(str)
 
     # Log categorized results
+    click.echo(f"{keep_constant.sum():,} of {total_vars:,} variables ({keep_constant.sum() / total_vars:.2%}) "
+               f"are classified as constant (1 unique value).")
     click.echo(f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
                f"are classified as binary (2 unique values).")
     click.echo(f"{keep_cat.sum():,} of {total_vars:,} variables ({keep_cat.sum()/total_vars:.2%}) "
@@ -132,11 +136,10 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
                f"are classified as continuous (>= {cont_min} unique values).")
 
     # Log dropped variables
-    dropped = empty_vars.sum() + constant_vars.sum()
+    dropped = empty_vars.sum()
     click.echo(f"{dropped:,} of {total_vars:,} variables ({dropped/total_vars:.2%}) were dropped.")
     if dropped > 0:
         click.echo(f"\t{empty_vars.sum():,} variables had zero unique values (all NA).")
-        click.echo(f"\t{constant_vars.sum():,} variables had one unique value.")
 
     # Log non-categorized results
     num_not_categorized = check_other.sum() + check_cont.sum()
@@ -847,5 +850,56 @@ def transform(data: pd.DataFrame,
             raise ValueError(f"Couldn't apply a function named '{transform_method}' to '{variable}'.\n\t{e}")
 
         click.echo(f"Transformed '{variable}' using '{transform_method}'")
+
+    return data
+
+
+@print_wrap
+def drop_extra_categories(data: pd.DataFrame,
+                          skip: Optional[Union[str, List[str]]] = None,
+                          only: Optional[Union[str, List[str]]] = None):
+    """
+    Update variable types to remove categories that don't occur in the data
+
+    Parameters
+    ----------
+    data: pd.DataFrame or pd.Series
+        Data to be processed
+    skip: str, list or None (default is None)
+        List of variables that will *not* be checked
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be checked
+
+    Returns
+    -------
+    data: pd.DataFrame
+        DataFrame with categorical types updated as needed
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df = clarite.modify.drop_extra_categories(df, only=['SDDSRVYR'])
+    ================================================================================
+    Running drop_extra_categories
+    --------------------------------------------------------------------------------
+    SDDSRVYR had categories with no occurrences: 3, 4
+    """
+    # Copy to avoid replacing in-place
+    data = data.copy(deep=True)
+
+    # Drop categories
+    data, removed_cats = _remove_empty_categories(data, skip, only)
+
+    # Log results
+    if len(removed_cats) == 1:
+        var = list(removed_cats.keys())[0]
+        cats = removed_cats[var]
+        message = f"\t{str(var)} had categories with no occurrences: {', '.join([str(c) for c in cats])}"
+        click.echo(message)
+    elif len(removed_cats) > 1:
+        message = f"\tMultiple categorical variables had categories with no occurrences:"
+        for var, cats in removed_cats.items():
+            message += f"\n\t{str(var)}: {', '.join([str(c) for c in cats])}"
+        click.echo(message)
 
     return data

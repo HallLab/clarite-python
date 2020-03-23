@@ -79,7 +79,7 @@ def ewas(
         raise ValueError("'covariates' must be specified as a list.  Use an empty list ([]) if there aren't any.")
 
     # Make sure the index of each dataset is not a multiindex and give it a consistent name
-    if isinstance(data.index, pd.core.index.MultiIndex):
+    if isinstance(data.index, pd.MultiIndex):
         raise ValueError(f"Data must not have a multiindex")
     data.index.name = "ID"
 
@@ -111,6 +111,8 @@ def ewas(
         raise ValueError(f"The phenotype ('{phenotype}') was not found in the data.")
     elif pheno_kind == 'unknown':
         raise ValueError(f"The phenotype ('{phenotype}') has an unknown type.")
+    elif pheno_kind == 'constant':
+        raise ValueError(f"The phenotype ('{phenotype}') is a constant value.")
     elif pheno_kind == 'categorical':
         raise NotImplementedError("Categorical Phenotypes are not yet supported.")
     elif pheno_kind == 'continuous':
