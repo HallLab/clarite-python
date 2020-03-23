@@ -10,6 +10,7 @@ import statsmodels.formula.api as smf
 
 from ..modules.survey import SurveyDesignSpec, SurveyModel
 from .calculations import regTermTest
+from .utilities import _remove_empty_categories
 
 
 class Regression(object):
@@ -65,17 +66,36 @@ class Regression(object):
         self.LRT_pvalue = np.nan
         self.diff_AIC = np.nan
         self.pvalue = np.nan
+        self.varying_covariates = []
+
+    def check_categoricals(self, variables: List[str]):
+        """
+        Check to see if any of the variables are categoricals with an empty category.
+        Raise a warning if this is the case, and remove them.
+        """
+        self.data, removed_cats = _remove_empty_categories(self.data, only=variables)
+        # Log
+        if len(removed_cats) == 1:
+            var = list(removed_cats.keys())[0]
+            cats = removed_cats[var]
+            message = f"WARNING for '{self.variable}': '{str(var)}' had categories with no occurrences: " \
+                      f"{', '.join([str(c) for c in cats])}"
+            click.echo(click.style(message, fg='yellow'))
+        elif len(removed_cats) > 1:
+            message = f"WARNING for '{self.variable}': " \
+                      f"Multiple categorical variables had categories with no occurrences:"
+            for var, cats in removed_cats.items():
+                message += f"\n\t{str(var)}: {', '.join([str(c) for c in cats])}"
+            click.echo(click.style(message, fg='yellow'))
 
     def check_covars(self):
-        # No varying covariates if there aren't any
-        if len(self.covariates) == 0:
-            return []
         unique_values = self.data[self.covariates].nunique()
         varying_covars = list(unique_values[unique_values > 1].index.values)
         non_varying_covars = list(unique_values[unique_values <= 1].index.values)
 
         if len(non_varying_covars) > 0:
-            click.echo(click.style(f"WARNING: {self.variable} has non-varying covariates(s): {', '.join(non_varying_covars)}", fg='yellow'))
+            click.echo(click.style(f"WARNING for '{self.variable}': non-varying covariates(s): "
+                                   f"{', '.join(non_varying_covars)}", fg='yellow'))
         return varying_covars
 
     def run(self, min_n):
@@ -84,7 +104,14 @@ class Regression(object):
         if len(self.data) < min_n:
             click.echo(f"{self.variable} = NULL due to: too few complete obervations ({len(self.data)} < {min_n})")
             return
-        self.varying_covariates = self.check_covars()
+
+        # Check Covariates
+        if len(self.covariates) > 0:
+            self.varying_covariates = self.check_covars()
+            self.check_categoricals(variables=self.covariates)
+
+        # Check variable for categories with no occurences, and remove all
+        self.check_categoricals(variables=[self.variable, ])
 
         # Make formulas
         self.formula_restricted = f"{self.phenotype} ~ "

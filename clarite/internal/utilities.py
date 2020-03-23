@@ -17,7 +17,10 @@ def print_wrap(func):
     return wrapped
 
 
-def _validate_skip_only(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def _validate_skip_only(
+        data: pd.DataFrame,
+        skip: Optional[Union[str, List[str]]] = None,
+        only: Optional[Union[str, List[str]]] = None):
     """Validate use of the 'skip' and 'only' parameters, returning a boolean series for the columns where True = use the column"""
     # Convert string to a list
     if type(skip) == str:
@@ -54,6 +57,10 @@ def _get_dtypes(data: pd.DataFrame):
     # Set binary and categorical
     data_catbin = data.loc[:, data.dtypes == 'category']
     if len(data_catbin.columns) > 0:
+        # Constant
+        constant_cols = data_catbin.apply(lambda col: len(col.cat.categories) == 1)
+        constant_cols = constant_cols[constant_cols].index
+        dtypes.loc[constant_cols] = 'constant'
         # Binary
         bin_cols = data_catbin.apply(lambda col: len(col.cat.categories) == 2)
         bin_cols = bin_cols[bin_cols].index
@@ -103,3 +110,24 @@ def _process_colfilter(data: pd.DataFrame,
         kept = kept & ~removed_kind
 
     return kept
+
+
+def _remove_empty_categories(data: pd.DataFrame,
+                             skip: Optional[Union[str, List[str]]] = None,
+                             only: Optional[Union[str, List[str]]] = None):
+    """
+    Remove categories from categorical types if there are no occurrences of that type.
+    Returns a corrected copy of the data and a dict of variables:removed catagories
+    """
+    columns = _validate_skip_only(data, skip, only)
+    dtypes = data.loc[:, columns].dtypes
+    catvars = [v for v in dtypes[dtypes == 'category'].index]
+    removed_cats = dict()
+    for var in catvars:
+        counts = data[var].value_counts()
+        keep_cats = list(counts[counts > 0].index)
+        if len(keep_cats) < len(counts):
+            removed_cats[var] = set(counts.index) - set(keep_cats)
+            data[var] = data[var].cat.set_categories(new_categories=keep_cats,
+                                                     ordered=data[var].cat.ordered)
+    return data, removed_cats
