@@ -212,7 +212,7 @@ class SurveyDesignSpec:
             weights = weights[~weights.isna() & (weights > 0)]
             n_removed = len(index) - len(weights)
             if n_removed > 0:
-                click.echo(click.style(f"WARNING: {regression_variable} - {n_removed} observation(s) "
+                click.echo(click.style(f"WARNING for '{regression_variable}': {n_removed} observation(s) "
                                        f"with missing, negative, or zero weights were removed", fg='yellow'))
                 index = weights.index
 

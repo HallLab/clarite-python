@@ -104,8 +104,24 @@ def _process_colfilter(data: pd.DataFrame,
 
     return kept
 
-def _remove_empty_categories(data, variables):
+
+def _remove_empty_categories(data: pd.DataFrame,
+                             skip: Optional[Union[str, List[str]]] = None,
+                             only: Optional[Union[str, List[str]]] = None):
     """
-    Remove catagories from categorical types if there are no occurences of that type
+    Remove categories from categorical types if there are no occurrences of that type.
+    Returns a corrected copy of the data and a dict of variables:removed catagories
     """
+    columns = _validate_skip_only(data, skip, only)
+    dtypes = data.loc[:, columns].dtypes
+    catvars = [v for v in dtypes[dtypes == 'category'].index]
+    removed_cats = dict()
+    for var in catvars:
+        counts = data[var].value_counts()
+        keep_cats = list(counts[counts > 0].index)
+        if len(keep_cats) < len(counts):
+            removed_cats[var] = set(counts.index) - set(keep_cats)
+            data[var] = data[var].cat.set_categories(new_categories=keep_cats,
+                                                     ordered=data[var].cat.ordered)
+    return data, removed_cats
 

@@ -31,7 +31,9 @@ import click
 import numpy as np
 import pandas as pd
 
-from ..internal.utilities import _validate_skip_only, _get_dtypes, _process_colfilter, print_wrap
+from ..internal.utilities import (
+    _validate_skip_only, _get_dtypes, _process_colfilter,\
+    print_wrap, _remove_empty_categories)
 
 
 @print_wrap
@@ -847,5 +849,56 @@ def transform(data: pd.DataFrame,
             raise ValueError(f"Couldn't apply a function named '{transform_method}' to '{variable}'.\n\t{e}")
 
         click.echo(f"Transformed '{variable}' using '{transform_method}'")
+
+    return data
+
+
+@print_wrap
+def drop_extra_categories(data: pd.DataFrame,
+                          skip: Optional[Union[str, List[str]]] = None,
+                          only: Optional[Union[str, List[str]]] = None):
+    """
+    Update variable types to remove categories that don't occur in the data
+
+    Parameters
+    ----------
+    data: pd.DataFrame or pd.Series
+        Data to be processed
+    skip: str, list or None (default is None)
+        List of variables that will *not* be checked
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be checked
+
+    Returns
+    -------
+    data: pd.DataFrame
+        DataFrame with categorical types updated as needed
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df = clarite.modify.drop_extra_categories(df, only=['SDDSRVYR'])
+    ================================================================================
+    Running drop_extra_categories
+    --------------------------------------------------------------------------------
+    SDDSRVYR had categories with no occurrences: 3, 4
+    """
+    # Copy to avoid replacing in-place
+    data = data.copy(deep=True)
+
+    # Drop categories
+    data, removed_cats = _remove_empty_categories(data, skip, only)
+
+    # Log results
+    if len(removed_cats) == 1:
+        var = list(removed_cats.keys())[0]
+        cats = removed_cats[var]
+        message = f"\t{str(var)} had categories with no occurrences: {', '.join([str(c) for c in cats])}"
+        click.echo(message)
+    elif len(removed_cats) > 1:
+        message = f"\tMultiple categorical variables had categories with no occurrences:"
+        for var, cats in removed_cats.items():
+            message += f"\n\t{str(var)}: {', '.join([str(c) for c in cats])}"
+        click.echo(message)
 
     return data
