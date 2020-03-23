@@ -111,6 +111,8 @@ def ewas(
         raise ValueError(f"The phenotype ('{phenotype}') was not found in the data.")
     elif pheno_kind == 'unknown':
         raise ValueError(f"The phenotype ('{phenotype}') has an unknown type.")
+    elif pheno_kind == 'constant':
+        raise ValueError(f"The phenotype ('{phenotype}') is a constant value.")
     elif pheno_kind == 'categorical':
         raise NotImplementedError("Categorical Phenotypes are not yet supported.")
     elif pheno_kind == 'continuous':

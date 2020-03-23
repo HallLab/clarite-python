@@ -39,7 +39,7 @@ from ..internal.utilities import (
 @print_wrap
 def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min: int = 15):
     """
-    Classify variables into binary, categorical, continuous, and 'unknown'.  Drop variables that only have NaN values.
+    Classify variables into constant, binary, categorical, continuous, and 'unknown'.  Drop variables that only have NaN values.
 
     Parameters
     ----------
@@ -87,11 +87,11 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
         columns = list(empty_vars[empty_vars].index)
         data = data.drop(columns=columns)
 
-    # One unique non-NA value - Drop these variables
-    constant_vars = (unique_count == 1)
-    if constant_vars.sum() > 0:
-        columns = list(constant_vars[constant_vars].index)
-        data = data.drop(columns=columns)
+    # One unique non-NA value - Convert non-NA values to category (for constant)
+    keep_constant = (unique_count == 1)
+    if keep_constant.sum() > 0:
+        columns = list(keep_constant[keep_constant].index)
+        data = data.astype({c: 'category' for c in columns})
 
     # Two unique non-NA values - Convert non-NA values to category (for binary)
     keep_bin = (unique_count == 2)
@@ -119,13 +119,15 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
                 data[col] = data.loc[~col.isna(), col].astype(str)
 
     # Other - Convert non-NA values to string type
-    check_other = ~empty_vars & ~constant_vars & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
+    check_other = ~empty_vars & ~keep_constant & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
     if check_other.sum() > 0:
         columns = list(check_other[check_other].index)
         for c in columns:
             data.loc[~data[c].isna(), c] = data.loc[~data[c].isna(), c].astype(str)
 
     # Log categorized results
+    click.echo(f"{keep_constant.sum():,} of {total_vars:,} variables ({keep_constant.sum() / total_vars:.2%}) "
+               f"are classified as constant (1 unique value).")
     click.echo(f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
                f"are classified as binary (2 unique values).")
     click.echo(f"{keep_cat.sum():,} of {total_vars:,} variables ({keep_cat.sum()/total_vars:.2%}) "
@@ -134,11 +136,10 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
                f"are classified as continuous (>= {cont_min} unique values).")
 
     # Log dropped variables
-    dropped = empty_vars.sum() + constant_vars.sum()
+    dropped = empty_vars.sum()
     click.echo(f"{dropped:,} of {total_vars:,} variables ({dropped/total_vars:.2%}) were dropped.")
     if dropped > 0:
         click.echo(f"\t{empty_vars.sum():,} variables had zero unique values (all NA).")
-        click.echo(f"\t{constant_vars.sum():,} variables had one unique value.")
 
     # Log non-categorized results
     num_not_categorized = check_other.sum() + check_cont.sum()

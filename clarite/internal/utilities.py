@@ -54,6 +54,10 @@ def _get_dtypes(data: pd.DataFrame):
     # Set binary and categorical
     data_catbin = data.loc[:, data.dtypes == 'category']
     if len(data_catbin.columns) > 0:
+        # Constant
+        constant_cols  = data_catbin.apply(lambda col: len(col.cat.categories) == 1)
+        constant_cols = constant_cols[constant_cols].index
+        dtypes.loc[constant_cols] = 'constant'
         # Binary
         bin_cols = data_catbin.apply(lambda col: len(col.cat.categories) == 2)
         bin_cols = bin_cols[bin_cols].index
