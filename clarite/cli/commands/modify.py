@@ -212,6 +212,19 @@ def transform_variable(data, output, transform_method, skip, only):
     save_clarite_data(data, output)
 
 
+@modify_cli.command(help="Remove extra categories from categorical datatypes")
+@arg_data
+@arg_output
+@option_skip
+@option_only
+def drop_extra_categories(data, output, skip, only):
+    # Create new variable
+    data.df = modify.drop_extra_categories(
+        data=data.df, skip=skip, only=only)
+    # Save
+    save_clarite_data(data, output)
+
+
 @modify_cli.command(help="Categorize data based on the number of unique values")
 @arg_data
 @arg_output
