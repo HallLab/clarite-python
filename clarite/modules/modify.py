@@ -116,7 +116,7 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
                 # Couldn't convert to a number- possibly a categorical variable with string names?
                 keep_cont[col] = False
                 check_cont[col] = True
-                data[col] = data.loc[~col.isna(), col].astype(str)
+                data[col] = data.loc[:, col].astype(str)
 
     # Other - Convert non-NA values to string type
     check_other = ~empty_vars & ~keep_constant & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont

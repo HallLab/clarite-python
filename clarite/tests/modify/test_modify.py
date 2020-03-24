@@ -171,3 +171,18 @@ def test_transform(plantTraits, capfd):
     assert all(result['b'] == [2, 3, 4])
     assert all(result['c'] == [True, False, True])
     return
+
+
+def test_categorize_many_string():
+    """
+    Ensure an error isn't thrown when attempting to make a string column continuous
+    """
+    df = pd.DataFrame({
+        'a': range(100),
+        'b': range(100),
+        'c': [str(n)+"ABC" for n in range(100)]})
+    categorized = modify.categorize(df)
+    # Dtypes and data shouldn't have actually changed.  'c' will remain an 'unknown' type.
+    assert (categorized.dtypes == df.dtypes).all()
+    assert (categorized == df).all().all()
+    return
