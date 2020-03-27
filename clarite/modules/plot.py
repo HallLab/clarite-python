@@ -348,7 +348,7 @@ def _plot_manhattan(
                     dataset_data.plot(
                         kind="scatter",
                         x="xpos",
-                        y="-log10(p value)",
+                        y=log_pval_column,
                         label=None,
                         color=colors[category_num % len(colors)],
                         zorder=2,
@@ -405,7 +405,7 @@ def _plot_manhattan(
         # Update y-axis
         plt.yticks(fontsize=8)
         # Label points
-        top_n = dataset_data.sort_values("-log10(p value)", ascending=False).head(
+        top_n = dataset_data.sort_values(log_pval_column, ascending=False).head(
             n=num_labeled
         )["variable"]
         labeled = set(label_vars) | set(top_n)
@@ -547,7 +547,7 @@ def manhattan(
 
     _plot_manhattan(
         dfs=dfs,
-        pval_column="pvalues",
+        pval_column="pvalue",
         categories=categories,
         cutoffs=cutoffs,
         num_labeled=num_labeled,
@@ -612,7 +612,8 @@ def manhattan_bonferroni(
 
     Examples
     --------
-    >>> clarite.plot_manhattan({'discovery':disc_df, 'replication':repl_df}, categories=data_categories, title="EWAS Results")
+    >>> clarite.plot_manhattan_bonferroni({'discovery':disc_df, 'replication':repl_df},
+     categories=data_categories, title="EWAS Results")
 
     .. image:: ../../_static/plot/manhattan.png
     """
@@ -622,7 +623,83 @@ def manhattan_bonferroni(
         cutoffs = None
     _plot_manhattan(
         dfs=dfs,
-        pval_column="pval_bonferroni",
+        pval_column="pvalue_bonferroni",
+        categories=categories,
+        cutoffs=cutoffs,
+        num_labeled=num_labeled,
+        label_vars=label_vars,
+        figsize=figsize,
+        dpi=dpi,
+        title=title,
+        figure=figure,
+        colors=colors,
+        background_colors=background_colors,
+        filename=filename
+    )
+
+
+def manhattan_fdr(
+        dfs: Dict[str, pd.DataFrame],
+        categories: Dict[str, str] = dict(),
+        cutoff: Optional[float] = 0.05,
+        num_labeled: int = 3,
+        label_vars: List[str] = list(),
+        figsize: Tuple[int, int] = (12, 6),
+        dpi: int = 300,
+        title: Optional[str] = None,
+        figure: Optional[plt.figure] = None,
+        colors: List[str] = ["#53868B", "#4D4D4D"],
+        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+        filename: Optional[str] = None
+):
+    """
+    Create a Manhattan-like plot for a list of EWAS Results using FDR significance
+
+    Parameters
+    ----------
+    dfs: DataFrame
+        Dictionary of dataset names to pandas dataframes of ewas results (requires certain columns)
+    categories: dictionary (string: string)
+        A dictionary mapping each variable name to a category name
+    cutoff: float or None (default 0.05)
+        The pvalue to draw the Bonferroni significance line at (None for no line)
+    num_labeled: int, default 3
+        Label the top <num_labeled> results with the variable name
+    label_vars: list of strings, default empty list
+        Label the named variables
+    figsize: tuple(int, int), default (12, 6)
+        The figure size of the resulting plot in inches
+    dpi: int, default 300
+        The figure dots-per-inch
+    title: string or None, default None
+        The title used for the plot
+    figure: matplotlib Figure or None, default None
+        Pass in an existing figure to plot to that instead of creating a new one (ignoring figsize and dpi)
+    colors: List(string, string), default ["#53868B", "#4D4D4D"]
+        A list of colors to use for alternating categories (must be same length as 'background_colors')
+    background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
+        A list of background colors to use for alternating categories (must be same length as 'colors')
+    filename: Optional str
+        If provided, a copy of the plot will be saved to the specified file
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> clarite.plot_manhattan_fdr({'discovery':disc_df, 'replication':repl_df},
+     categories=data_categories, title="EWAS Results")
+
+    .. image:: ../../_static/plot/manhattan.png
+    """
+    if cutoff is not None:
+        cutoffs = [[(f"{cutoff} FDR", cutoff, "red", "dashed")] for _ in dfs]
+    else:
+        cutoffs = None
+    _plot_manhattan(
+        dfs=dfs,
+        pval_column="pvalue_fdr",
         categories=categories,
         cutoffs=cutoffs,
         num_labeled=num_labeled,
