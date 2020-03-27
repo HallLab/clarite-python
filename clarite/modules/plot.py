@@ -238,7 +238,7 @@ def distributions(
         d["ModDate"] = datetime.datetime.today()
 
 
-def manhattan(
+def _plot_manhattan(
         dfs: Dict[str, pd.DataFrame],
         categories: Dict[str, str] = dict(),
         bonferroni: Optional[float] = 0.05,
@@ -254,46 +254,8 @@ def manhattan(
         filename: Optional[str] = None,
 ):
     """
-    Create a Manhattan-like plot for a list of EWAS Results
-
-    Parameters
-    ----------
-    dfs: DataFrame
-        Dictionary of dataset names to pandas dataframes of ewas results (requires certain columns)
-    categories: dictionary (string: string)
-        A dictionary mapping each variable name to a category name
-    bonferroni: float or None (default 0.05)
-        Show a cutoff line at the pvalue corresponding to a given bonferroni-corrected pvalue
-    fdr: float or None (default None)
-        Show a cutoff line at the pvalue corresponding to a given fdr
-    num_labeled: int, default 3
-        Label the top <num_labeled> results with the variable name
-    label_vars: list of strings, default empty list
-        Label the named variables
-    figsize: tuple(int, int), default (12, 6)
-        The figure size of the resulting plot in inches
-    dpi: int, default 300
-        The figure dots-per-inch
-    title: string or None, default None
-        The title used for the plot
-    figure: matplotlib Figure or None, default None
-        Pass in an existing figure to plot to that instead of creating a new one (ignoring figsize and dpi)
-    colors: List(string, string), default ["#53868B", "#4D4D4D"]
-        A list of colors to use for alternating categories (must be same length as 'background_colors')
-    background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
-        A list of background colors to use for alternating categories (must be same length as 'colors')
-    filename: Optional str
-        If provided, a copy of the plot will be saved to the specified file
-
-    Returns
-    -------
-    None
-
-    Examples
-    --------
-    >>> clarite.plot_manhattan({'discovery':disc_df, 'replication':repl_df}, categories=data_categories, title="EWAS Results")
-
-    .. image:: ../../_static/plot/manhattan.png
+    Create a manhattan plot.  Easier for the user to expose multiple functions with different specific parameters
+    than to use this one big function with all of the parameters.
     """
     # Hardcoded options
     offset = 5  # Spacing between categories
@@ -518,3 +480,77 @@ def manhattan(
     if filename is not None:
         plt.savefig(filename, bbox_inches="tight")
     plt.show()
+
+
+def manhattan(
+        dfs: Dict[str, pd.DataFrame],
+        categories: Dict[str, str] = dict(),
+        bonferroni: Optional[float] = 0.05,
+        fdr: Optional[float] = None,
+        num_labeled: int = 3,
+        label_vars: List[str] = list(),
+        figsize: Tuple[int, int] = (12, 6),
+        dpi: int = 300,
+        title: Optional[str] = None,
+        figure: Optional[plt.figure] = None,
+        colors: List[str] = ["#53868B", "#4D4D4D"],
+        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+        filename: Optional[str] = None
+):
+    """
+    Create a Manhattan-like plot for a list of EWAS Results
+
+    Parameters
+    ----------
+    dfs: DataFrame
+        Dictionary of dataset names to pandas dataframes of ewas results (requires certain columns)
+    categories: dictionary (string: string)
+        A dictionary mapping each variable name to a category name
+    bonferroni: float or None (default 0.05)
+        Show a cutoff line at the pvalue corresponding to a given bonferroni-corrected pvalue
+    fdr: float or None (default None)
+        Show a cutoff line at the pvalue corresponding to a given fdr
+    num_labeled: int, default 3
+        Label the top <num_labeled> results with the variable name
+    label_vars: list of strings, default empty list
+        Label the named variables
+    figsize: tuple(int, int), default (12, 6)
+        The figure size of the resulting plot in inches
+    dpi: int, default 300
+        The figure dots-per-inch
+    title: string or None, default None
+        The title used for the plot
+    figure: matplotlib Figure or None, default None
+        Pass in an existing figure to plot to that instead of creating a new one (ignoring figsize and dpi)
+    colors: List(string, string), default ["#53868B", "#4D4D4D"]
+        A list of colors to use for alternating categories (must be same length as 'background_colors')
+    background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
+        A list of background colors to use for alternating categories (must be same length as 'colors')
+    filename: Optional str
+        If provided, a copy of the plot will be saved to the specified file
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> clarite.plot_manhattan({'discovery':disc_df, 'replication':repl_df}, categories=data_categories, title="EWAS Results")
+
+    .. image:: ../../_static/plot/manhattan.png
+    """
+    _plot_manhattan(
+        dfs = dfs,
+        categories=categories,
+        bonferroni=bonferroni,
+        fdr=fdr,
+        num_labeled=num_labeled,
+        label_vars=label_vars,
+        figsize=figsize,
+        dpi=dpi,
+        title=title,
+        figure=figure,
+        colors=colors,
+        background_colors=background_colors,
+        filename=filename
+    )
