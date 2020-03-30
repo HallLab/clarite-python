@@ -430,7 +430,6 @@ def _plot_manhattan(
     ax.set_ylim([-1, df[log_pval_column].max() + 10])
     ax.set_xlabel("")  # Hide x-axis label since it is obvious
 
-
     # Draw cutoffs
     # NOTE: cutoffs values should be in raw pvalue
     if cutoffs is not None:
@@ -614,9 +613,12 @@ def manhattan_bonferroni(
     --------
     >>> clarite.plot_manhattan_bonferroni({'discovery':disc_df, 'replication':repl_df},
      categories=data_categories, title="EWAS Results")
-
-    .. image:: ../../_static/plot/manhattan.png
     """
+    # Ensure corrected values are present
+    for name, df in dfs.items():
+        if 'pvalue_bonferroni' not in list(df):
+            raise ValueError(f"Missing Bonferroni-corrected Pvalues in {name}.  Run clarite.analyze.add_corrected_pvalues")
+    # Create cutoff
     if cutoff is not None:
         cutoffs = [[(f"{cutoff} Bonferroni", cutoff, "red", "dashed")] for _ in dfs]
     else:
@@ -662,7 +664,7 @@ def manhattan_fdr(
     categories: dictionary (string: string)
         A dictionary mapping each variable name to a category name
     cutoff: float or None (default 0.05)
-        The pvalue to draw the Bonferroni significance line at (None for no line)
+        The pvalue to draw the FDR significance line at (None for no line)
     num_labeled: int, default 3
         Label the top <num_labeled> results with the variable name
     label_vars: list of strings, default empty list
@@ -690,9 +692,12 @@ def manhattan_fdr(
     --------
     >>> clarite.plot_manhattan_fdr({'discovery':disc_df, 'replication':repl_df},
      categories=data_categories, title="EWAS Results")
-
-    .. image:: ../../_static/plot/manhattan.png
     """
+    # Ensure corrected values are present
+    for name, df in dfs.items():
+        if 'pvalue_fdr' not in list(df):
+            raise ValueError(f"Missing FDR-corrected Pvalues in {name}.  Run clarite.analyze.add_corrected_pvalues")
+    # Create cutoff
     if cutoff is not None:
         cutoffs = [[(f"{cutoff} FDR", cutoff, "red", "dashed")] for _ in dfs]
     else:

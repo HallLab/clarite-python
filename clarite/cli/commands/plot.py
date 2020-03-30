@@ -67,3 +67,57 @@ def manhattan(ewas_result, output, categories, bonferroni, fdr, other, nlabeled,
                    num_labeled=nlabeled, label_vars=label, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
+
+
+@plot_cli.command(help="Generate a manhattan plot of EWAS results showing Bonferroni-corrected pvalues")
+@click.argument('ewas_result', type=EWAS_RESULT)
+@arg_output
+@click.option('--categories', '-c', type=INPUT_FILE, default=None, help="tab-separate file with two columns: 'Variable' and 'category'")
+@click.option('--cutoff', type=click.FLOAT, default=0.05, help="cutoff value for plotting the significance line")
+@click.option('--fdr', type=click.FLOAT, default=None, help="cutoff value to plot Bonferroni-adjusted pvalue line")
+@click.option('--other', '-o', multiple=True, type=EWAS_RESULT, help="other datasets to include in the plot")
+@click.option('--nlabeled', default=3, type=click.IntRange(min=0, max=50), help="label top n points")
+@click.option('--label', default=None, multiple=True, type=click.STRING, help="label points by name")
+def manhattan_bonferroni(ewas_result, output, categories, cutoff, other, nlabeled, label):
+    # Load data
+    name, data = ewas_result
+    data_dict = {name: data}
+    for (name, data) in other:
+        data_dict[name] = data
+    # Load categories, if any
+    if categories is not None:
+        categories = pd.read_csv(categories, sep="\t")
+        categories.columns = ['Variable', 'category']
+        categories = categories.set_index('Variable')['category'].to_dict()
+    # Plot and save
+    plot.manhattan_bonferroni(data_dict, categories=categories, cutoff=cutoff,
+                              num_labeled=nlabeled, label_vars=label, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
+
+
+@plot_cli.command(help="Generate a manhattan plot of EWAS results showing FDR-corrected pvalues")
+@click.argument('ewas_result', type=EWAS_RESULT)
+@arg_output
+@click.option('--categories', '-c', type=INPUT_FILE, default=None, help="tab-separate file with two columns: 'Variable' and 'category'")
+@click.option('--cutoff', type=click.FLOAT, default=0.05, help="cutoff value for plotting the significance line")
+@click.option('--fdr', type=click.FLOAT, default=None, help="cutoff value to plot fdr-adjusted pvalue line")
+@click.option('--other', '-o', multiple=True, type=EWAS_RESULT, help="other datasets to include in the plot")
+@click.option('--nlabeled', default=3, type=click.IntRange(min=0, max=50), help="label top n points")
+@click.option('--label', default=None, multiple=True, type=click.STRING, help="label points by name")
+def manhattan_fdr(ewas_result, output, categories, cutoff, other, nlabeled, label):
+    # Load data
+    name, data = ewas_result
+    data_dict = {name: data}
+    for (name, data) in other:
+        data_dict[name] = data
+    # Load categories, if any
+    if categories is not None:
+        categories = pd.read_csv(categories, sep="\t")
+        categories.columns = ['Variable', 'category']
+        categories = categories.set_index('Variable')['category'].to_dict()
+    # Plot and save
+    plot.manhattan_fdr(data_dict, categories=categories, cutoff=cutoff,
+                       num_labeled=nlabeled, label_vars=label, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
