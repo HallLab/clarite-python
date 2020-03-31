@@ -117,7 +117,7 @@ def _remove_empty_categories(data: pd.DataFrame,
                              only: Optional[Union[str, List[str]]] = None):
     """
     Remove categories from categorical types if there are no occurrences of that type.
-    Returns a corrected copy of the data and a dict of variables:removed catagories
+    Updates the data in-place and returns a dict of variables:removed categories
     """
     columns = _validate_skip_only(data, skip, only)
     dtypes = data.loc[:, columns].dtypes
@@ -128,6 +128,7 @@ def _remove_empty_categories(data: pd.DataFrame,
         keep_cats = list(counts[counts > 0].index)
         if len(keep_cats) < len(counts):
             removed_cats[var] = set(counts.index) - set(keep_cats)
-            data[var] = data[var].cat.set_categories(new_categories=keep_cats,
-                                                     ordered=data[var].cat.ordered)
-    return data, removed_cats
+            data[var].cat.set_categories(new_categories=keep_cats,
+                                         ordered=data[var].cat.ordered,
+                                         inplace=True)
+    return removed_cats
