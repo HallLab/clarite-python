@@ -888,7 +888,7 @@ def drop_extra_categories(data: pd.DataFrame,
     data = data.copy(deep=True)
 
     # Drop categories
-    data, removed_cats = _remove_empty_categories(data, skip, only)
+    removed_cats = _remove_empty_categories(data, skip, only)
 
     # Log results
     if len(removed_cats) == 1:

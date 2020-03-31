@@ -73,7 +73,7 @@ class Regression(object):
         Check to see if any of the variables are categoricals with an empty category.
         Raise a warning if this is the case, and remove them.
         """
-        self.data, removed_cats = _remove_empty_categories(self.data, only=variables)
+        removed_cats = _remove_empty_categories(self.data, only=variables)
         # Log
         if len(removed_cats) == 1:
             var = list(removed_cats.keys())[0]
