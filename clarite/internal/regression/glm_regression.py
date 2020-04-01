@@ -7,8 +7,10 @@ import statsmodels.formula.api as smf
 
 from clarite.internal.utilities import _remove_empty_categories, _get_dtype
 
+from .base import Regression
 
-class GLMRegression(object):
+
+class GLMRegression(Regression):
     """
     Statsmodels GLM Regression.
     """
@@ -22,6 +24,9 @@ class GLMRegression(object):
         covariates - other variables to include in the regression formula
         min_n - minimum number of observations (after discarding any with NA)
         """
+        # base class init (sets pvalue, test_dtype, error, and warnings
+        super().__init__()
+
         # Store passed parameters
         self.data = data
         self.outcome_variable = outcome_variable
@@ -30,10 +35,6 @@ class GLMRegression(object):
         self.test_dtype = _get_dtype(data[test_variable])
         self.covariates = covariates
         self.min_n = min_n
-
-        # Error/warning tracking
-        self.error = None
-        self.warnings = []
 
         # Placeholders
         self.varying_covars = []
@@ -50,7 +51,6 @@ class GLMRegression(object):
         self.var_pvalue = np.nan
         self.LRT_pvalue = np.nan
         self.diff_AIC = np.nan
-        self.pvalue = np.nan
 
     def subset_data(self):
         """Remove observations with missing data and run the min_n filter"""
@@ -129,23 +129,6 @@ class GLMRegression(object):
             'pvalue': self.pvalue
         }
         return result, self.warnings, self.error
-
-    def run(self):
-        self.pre_run_setup()
-
-        # Return early if an error has occurred
-        if self.error is not None:
-            return self.get_result()
-
-        # Run Regression
-        if self.test_dtype == 'continuous':
-            self.run_continuous()
-        elif self.test_dtype == 'binary':
-            self.run_binary()  # Essentially same as continuous, except for the string used to key the results
-        elif self.test_dtype == "categorical":
-            self.run_categorical()
-        else:
-            self.error = f"Unknown regression variable type '{self.test_dtype}'"
 
     def run_continuous(self):
         # Regress

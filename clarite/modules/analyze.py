@@ -159,16 +159,7 @@ def ewas(
             )
 
         # Run
-        try:
-            regression.run()
-        except Exception as e:
-            click.echo(click.style(f"{rv} = NULL due to: {e}", fg='red'))
-            result, warnings, error = regression.get_result()
-            ewas_results.append(result)
-            continue
-
-        # Gather Results
-        result, warnings, error = regression.get_result()
+        result, warnings, error = regression.run()
 
         # Log errors and warnings
         if error is not None:
