@@ -21,7 +21,7 @@ from numpy import nan
 from statsmodels.stats.multitest import multipletests
 from .survey import SurveyDesignSpec
 
-from ..internal.regression import Regression
+from clarite.internal.regression import GLMRegression, WeightedGLMRegression
 from ..internal.utilities import _get_dtypes
 
 
@@ -93,6 +93,8 @@ def ewas(
     # Ensure there are variables which can be regressed
     if len(rv_bin + rv_cat + rv_cont) == 0:
         raise ValueError(f"No variables are available to run regression on")
+    else:
+        click.echo(f"Running {len(rv_bin):,} binary, {len(rv_cat):,} categorical, and {len(rv_cont):,} continuous variables")
 
     # Ensure covariates are all present and not unknown type
     covariate_types = [types.get(c, None) for c in covariates]
@@ -127,93 +129,66 @@ def ewas(
     else:
         raise ValueError(f"The phenotype's type could not be determined.  Please report this error.")
 
-    # Print the survey design
+    # Log Survey Design if it is being used
     if survey_design_spec is not None:
         click.echo(click.style(f"Using a Survey Design:\n{survey_design_spec}", fg='green'))
 
     # Run Regressions
-    return run_regressions(phenotype, covariates, data, rv_bin, rv_cat, rv_cont, pheno_kind, min_n, survey_design_spec, cov_method)
+    ewas_results = []
+    rvs = rv_bin + rv_cat + rv_cont
 
+    for rv in rvs:
+        # Set up regression object
+        if survey_design_spec is not None:
+            regression = WeightedGLMRegression(
+                data=data,
+                outcome_variable=phenotype,
+                test_variable=rv,
+                covariates=covariates,
+                min_n=min_n,
+                survey_design_spec=survey_design_spec,
+                cov_method=cov_method
+            )
+        else:
+            regression = GLMRegression(
+                data=data,
+                outcome_variable=phenotype,
+                test_variable=rv,
+                covariates=covariates,
+                min_n=min_n
+            )
 
-def run_regressions(phenotype: str,
-                    covariates: List[str],
-                    data: pd.DataFrame,
-                    rv_bin: List[str],
-                    rv_cat: List[str],
-                    rv_cont: List[str],
-                    pheno_kind: str,
-                    min_n: int,
-                    survey_design_spec: Optional[SurveyDesignSpec],
-                    cov_method: Optional[str]):
-    """Run a regressions on variables"""
-    result = []
-
-    # Continuous Variables
-    click.echo(f"\n####### Regressing {len(rv_cont)} Continuous Variables #######\n")
-    for rv in rv_cont:
-        # Set up the regression
-        regression = Regression(variable=rv,
-                                variable_kind='continuous',
-                                phenotype=phenotype,
-                                phenotype_kind=pheno_kind,
-                                data=data,
-                                covariates=covariates,
-                                survey_design_spec=survey_design_spec,
-                                cov_method=cov_method)
-        # Run the regression
+        # Run
         try:
-            regression.run(min_n=min_n)
+            regression.run()
         except Exception as e:
-            click.echo(f"{rv} = NULL due to: {e}")
-        # Save results
-        result.append(regression.get_results())
+            click.echo(click.style(f"{rv} = NULL due to: {e}", fg='red'))
+            result, warnings, error = regression.get_result()
+            ewas_results.append(result)
+            continue
 
-    click.echo(f"\n####### Regressing {len(rv_bin)} Binary Variables #######\n")
-    for rv in rv_bin:
-        # Set up the regression
-        regression = Regression(variable=rv,
-                                variable_kind='binary',
-                                phenotype=phenotype,
-                                phenotype_kind=pheno_kind,
-                                data=data,
-                                covariates=covariates,
-                                survey_design_spec=survey_design_spec,
-                                cov_method=cov_method)
-        # Run the regression
-        try:
-            regression.run(min_n=min_n)
-        except Exception as e:
-            click.echo(f"{rv} = NULL due to: {e}")
-        # Save results
-        result.append(regression.get_results())
+        # Gather Results
+        result, warnings, error = regression.get_result()
 
-    click.echo(f"\n####### Regressing {len(rv_cat)} Categorical Variables #######\n")
-    for rv in rv_cat:
-        # Set up the regression
-        regression = Regression(variable=rv,
-                                variable_kind='categorical',
-                                phenotype=phenotype,
-                                phenotype_kind=pheno_kind,
-                                data=data,
-                                covariates=covariates,
-                                survey_design_spec=survey_design_spec,
-                                cov_method=cov_method)
-        # Run the regression
-        try:
-            regression.run(min_n=min_n)
-        except Exception as e:
-            click.echo(f"{rv} = NULL due to: {e}")
-        # Save results
-        result.append(regression.get_results())
+        # Log errors and warnings
+        if error is not None:
+            click.echo(click.style(f"{rv} = NULL due to: {error}", fg='red'))
+        if len(warnings) > 0:
+            warning_message = f"{rv} had warnings:"
+            for warning in warnings:
+                warning_message += f"\n\t{warning}"
 
-    # Gather All Results
-    result = pd.DataFrame(result)
-    result['Phenotype'] = phenotype  # Add phenotype
-    result = result.sort_values('pvalue').set_index(['Variable', 'Phenotype'])  # Sort and set index
-    result = result[['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
-                     'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
+        # Collect result
+        ewas_results.append(result)
+
+    # Process Results
+    ewas_result = pd.DataFrame(ewas_results)
+    ewas_result['Phenotype'] = phenotype  # Add phenotype
+    ewas_result = ewas_result.sort_values('pvalue').set_index(['Variable', 'Phenotype'])  # Sort and set index
+    ewas_result = ewas_result[['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
+                               'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
     click.echo("Completed EWAS\n")
-    return result
+    return ewas_result
 
 
 def add_corrected_pvalues(ewas_result):

@@ -50,7 +50,7 @@ def _validate_skip_only(
 
 
 def _get_dtypes(data: pd.DataFrame):
-    """Return a Series of dtypes indexed by variable name"""
+    """Return a Series of CLARITE dtypes indexed by variable name"""
     # Start with all as unknown
     dtypes = pd.Series('unknown', index=data.columns)
 
@@ -82,6 +82,23 @@ def _get_dtypes(data: pd.DataFrame):
         click.echo(click.style(f"WARNING: {unknown_num:,} variables need to be categorized into a type manually", fg='yellow'))
 
     return dtypes
+
+
+def _get_dtype(data: pd.Series):
+    """Return the CLARITE dtype of a pandas series"""
+    # Set binary and categorical
+    if data.dtype.name == 'category':
+        num_categories = len(data.cat.categories)
+        if num_categories == 1:
+            return 'constant'
+        elif num_categories == 2:
+            return 'binary'
+        elif num_categories > 2:
+            return 'categorical'
+    elif pd.api.types.is_numeric_dtype(data.dtype):
+        return 'continuous'
+    else:
+        return 'unknown'
 
 
 def _process_colfilter(data: pd.DataFrame,
