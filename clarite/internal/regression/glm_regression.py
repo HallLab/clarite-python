@@ -95,8 +95,8 @@ class GLMRegression(Regression):
 
         # Minimum complete cases filter
         if len(self.data) < self.min_n:
-            raise ValueError(f"too few complete observations (min_n filter)"
-                             f" ({len(self.data)} < {self.min_n})")
+            raise ValueError(f"too few complete observations (min_n filter: "
+                             f"{len(self.data)} < {self.min_n})")
 
         # Check variable values, creating warnings if needed
         self.check_covariate_values()
