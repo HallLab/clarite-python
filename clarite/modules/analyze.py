@@ -183,11 +183,18 @@ def ewas(
 
 @requires('rpy2')
 def ewas_r(phenotype: str,
-        covariates: List[str],
-        data: pd.DataFrame,
-        survey_design_spec: Optional[SurveyDesignSpec] = None,
-        cov_method: Optional[str] = 'stata',
-        min_n: Optional[int] = 200):
+           covariates: List[str],
+           data: pd.DataFrame,
+           survey_design_spec: Optional[SurveyDesignSpec] = None,
+           cov_method: Optional[str] = 'stata',
+           min_n: Optional[int] = 200):
+    import rpy2.robjects as ro
+    from rpy2.robjects.packages import importr
+    print(ro.r)
+    utils = importr('utils')
+    utils.install_packages('survey')
+    survey = importr('survey')
+    print(survey)
     return
 
 
