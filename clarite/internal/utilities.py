@@ -1,5 +1,7 @@
 from functools import wraps
+from importlib import import_module
 from typing import Optional, List, Union
+import sys
 
 import click
 import pandas as pd
@@ -15,6 +17,34 @@ def print_wrap(func):
         click.echo("=" * 80)
         return result
     return wrapped
+
+
+def requires(package_name):
+    """Decorator factory to ensure optional packages are imported before running"""
+
+    # Define and return an appropriate decorator
+    def decorator(func):
+
+        # Check if package is imported
+        if package_name not in sys.modules:
+            # Try to import
+            try:
+                import_module(package_name)
+            except ImportError as e:
+                missing_module = True
+                error_msg = str(e)
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            if missing_module:
+                raise ImportError(f"Can't run '{func.__name__}' since '{package_name}' could not be imported: {error_msg}")
+            else:
+                result = func(*args, **kwargs)
+            return result
+
+        return wrapped
+
+    return decorator
 
 
 def _validate_skip_only(

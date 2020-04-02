@@ -22,8 +22,7 @@ from statsmodels.stats.multitest import multipletests
 from .survey import SurveyDesignSpec
 
 from clarite.internal.regression import GLMRegression, WeightedGLMRegression
-from ..internal.utilities import _get_dtypes
-
+from ..internal.utilities import _get_dtypes, requires
 
 result_columns = ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
                   'LRT_pvalue', 'Diff_AIC', 'pvalue']
@@ -180,6 +179,16 @@ def ewas(
                                'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
     click.echo("Completed EWAS\n")
     return ewas_result
+
+
+@requires('rpy2')
+def ewas_r(phenotype: str,
+        covariates: List[str],
+        data: pd.DataFrame,
+        survey_design_spec: Optional[SurveyDesignSpec] = None,
+        cov_method: Optional[str] = 'stata',
+        min_n: Optional[int] = 200):
+    return
 
 
 def add_corrected_pvalues(ewas_result):
