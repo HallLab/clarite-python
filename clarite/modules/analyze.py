@@ -165,9 +165,9 @@ def ewas(
         if error is not None:
             click.echo(click.style(f"{rv} = NULL due to: {error}", fg='red'))
         if len(warnings) > 0:
-            warning_message = f"{rv} had warnings:"
+            click.echo(click.style(f"{rv} had warnings:", fg='yellow'))
             for warning in warnings:
-                warning_message += f"\n\t{warning}"
+                click.echo(click.style(f"\t{warning}", fg='yellow'))
 
         # Collect result
         ewas_results.append(result)
