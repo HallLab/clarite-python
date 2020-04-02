@@ -38,7 +38,10 @@ class Regression(metaclass=ABCMeta):
 
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
-        self.pre_run_setup()
+        try:
+            self.pre_run_setup()
+        except Exception as e:
+            self.error = str(e)
 
         # Return early if an error has occurred
         if self.error is not None:

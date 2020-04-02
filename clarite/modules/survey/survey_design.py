@@ -187,7 +187,10 @@ class SurveyDesignSpec:
             SurveyDesign object used for further analysis
         index: pd.Index
             Index corresponding to all data in the design- limited by the input index or weights that are na or zero
+        warnings: List[str]
+            List of any warnings that occurred
         """
+        warnings = []
         # Return all observations if a subset index is not specified
         if index is None:
             index = self.survey_df.index
@@ -212,8 +215,7 @@ class SurveyDesignSpec:
             weights = weights[~weights.isna() & (weights > 0)]
             n_removed = len(index) - len(weights)
             if n_removed > 0:
-                click.echo(click.style(f"WARNING for '{regression_variable}': {n_removed} observation(s) "
-                                       f"with missing, negative, or zero weights were removed", fg='yellow'))
+                warnings.append(f"{n_removed:,} observation(s) with missing, negative, or zero weights were removed")
                 index = weights.index
 
         # Get strata array
@@ -234,8 +236,9 @@ class SurveyDesignSpec:
         else:
             fpc = None
 
-        return SurveyDesign(strata=strata, cluster=cluster, weights=weights, fpc=fpc,
-                            nest=self.nest, single_cluster=self.single_cluster), index
+        sd = SurveyDesign(strata=strata, cluster=cluster, weights=weights, fpc=fpc,
+                          nest=self.nest, single_cluster=self.single_cluster)
+        return sd, index, warnings
 
 
 class SurveyDesign(object):

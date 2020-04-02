@@ -53,9 +53,10 @@ class GLMRegression(Regression):
         self.diff_AIC = np.nan
 
     def subset_data(self):
-        """Remove observations with missing data and run the min_n filter"""
+        """Remove observations with missing data"""
         self.data = self.data.dropna(axis='index', how='any',
                                      subset=[self.test_variable, self.outcome_variable] + self.covariates)
+        self.N = len(self.data)
 
     def check_covariate_values(self):
         """Remove covariates that do not vary"""
@@ -94,8 +95,8 @@ class GLMRegression(Regression):
 
         # Minimum complete cases filter
         if len(self.data) < self.min_n:
-            self.error = f"{self.test_variable} = NULL due to: too few complete observations ({len(self.data)} < {self.min_n})"
-            return
+            raise ValueError(f"too few complete observations (min_n filter)"
+                             f" ({len(self.data)} < {self.min_n})")
 
         # Check variable values, creating warnings if needed
         self.check_covariate_values()
@@ -160,8 +161,7 @@ class GLMRegression(Regression):
             assert len(rv_keys) == 1
             rv_key = rv_keys[0]
         except AssertionError:
-            self.error = f"Error extracting results for '{self.test_variable}', try renaming the variable"
-            return
+            raise ValueError(f"Error extracting results for '{self.test_variable}', try renaming the variable")
         self.beta = est.params[rv_key]
         self.SE = est.bse[rv_key]
         self.var_pvalue = est.pvalues[rv_key]
