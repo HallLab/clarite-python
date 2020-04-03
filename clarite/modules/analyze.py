@@ -23,6 +23,7 @@ from .survey import SurveyDesignSpec
 
 from clarite.internal.regression import GLMRegression, WeightedGLMRegression
 from ..internal.utilities import _get_dtypes, requires, validate_ewas_params
+from ..r_code.r_utilities import ewasresult2py
 
 result_columns = ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
                   'LRT_pvalue', 'Diff_AIC', 'pvalue']
@@ -156,8 +157,8 @@ def ewas_r(phenotype: str,
     # These lists must be passed as NULL if they are empty
     if len(cat_vars) == 0:
         cat_vars = ro.NULL
-    if len(rv_cont) == 0:
-        rv_cont = ro.NULL
+    if len(cont_vars) == 0:
+        cont_vars = ro.NULL
     if len(cat_covars) == 0:
         cat_covars = ro.NULL
     if len(cont_covars) == 0:
@@ -173,15 +174,11 @@ def ewas_r(phenotype: str,
 
     # TODO: Allow nonvarying by default
     # TODO: Survey Parameters
-    # Run data to R format
     with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
         result = ro.r.ewas(d=data, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
                            cat_covars=cat_covars, cont_covars=cont_covars,
                            regression_family=regression_family)
-        print(result.r_repr())
-        result = pd.DataFrame.from_dict({k: ro.conversion.ri2py(v) for k, v in result.items()})
-        result = result.rename(columns={'pval': 'pvalue', 'phenotype': 'Phenotype'})
-        result = result.set_index(['Variable', 'Phenotype'])
+        result = ewasresult2py(result)
     return result
 
 
