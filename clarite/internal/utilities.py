@@ -169,3 +169,59 @@ def _remove_empty_categories(data: pd.DataFrame,
                                          ordered=data[var].cat.ordered,
                                          inplace=True)
     return removed_cats
+
+
+def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
+    # Covariates must be a list
+    if type(covariates) != list:
+        raise ValueError("'covariates' must be specified as a list.  Use an empty list ([]) if there aren't any.")
+    # Make sure the index of each dataset is not a multiindex and give it a consistent name
+    if isinstance(data.index, pd.MultiIndex):
+        raise ValueError(f"Data must not have a multiindex")
+    data.index.name = "ID"
+    # Collects lists of regression variables
+    types = _get_dtypes(data)
+    rv_bin = [v for v, t in types.iteritems() if t == 'binary' and v not in covariates and v != phenotype]
+    rv_cat = [v for v, t in types.iteritems() if t == 'categorical' and v not in covariates and v != phenotype]
+    rv_cont = [v for v, t in types.iteritems() if t == 'continuous' and v not in covariates and v != phenotype]
+    # Ensure there are variables which can be regressed
+    if len(rv_bin + rv_cat + rv_cont) == 0:
+        raise ValueError(f"No variables are available to run regression on")
+    else:
+        click.echo(
+            f"Running {len(rv_bin):,} binary, {len(rv_cat):,} categorical, and {len(rv_cont):,} continuous variables")
+    # Ensure covariates are all present and not unknown type
+    covariate_types = [types.get(c, None) for c in covariates]
+    missing_covariates = [c for c, dt in zip(covariates, covariate_types) if dt is None]
+    unknown_covariates = [c for c, dt in zip(covariates, covariate_types) if dt == 'unknown']
+    if len(missing_covariates) > 0:
+        raise ValueError(f"One or more covariates were not found in the data: {', '.join(missing_covariates)}")
+    if len(unknown_covariates) > 0:
+        raise ValueError(f"One or more covariates have an unknown datatype: {', '.join(unknown_covariates)}")
+    # Validate the type of the phenotype variable
+    pheno_kind = types.get(phenotype, None)
+    if phenotype in covariates:
+        raise ValueError(f"The phenotype ('{phenotype}') cannot also be a covariate.")
+    elif pheno_kind is None:
+        raise ValueError(f"The phenotype ('{phenotype}') was not found in the data.")
+    elif pheno_kind == 'unknown':
+        raise ValueError(f"The phenotype ('{phenotype}') has an unknown type.")
+    elif pheno_kind == 'constant':
+        raise ValueError(f"The phenotype ('{phenotype}') is a constant value.")
+    elif pheno_kind == 'categorical':
+        raise NotImplementedError("Categorical Phenotypes are not yet supported.")
+    elif pheno_kind == 'continuous':
+        click.echo(f"Running EWAS on a Continuous Outcome (family = Gaussian)")
+    elif pheno_kind == 'binary':
+        # Set phenotype categories so that the higher number is a success
+        categories = sorted(data[phenotype].unique(), reverse=True)
+        cat_type = pd.api.types.CategoricalDtype(categories=categories, ordered=True)
+        data[phenotype] = data[phenotype].astype(cat_type)
+        click.echo(click.style(f"Running EWAS on a Binary Outcome (family = Binomial)\n"
+                               f"\t(Success = '{categories[0]}', Failure = '{categories[1]}')", fg='green'))
+    else:
+        raise ValueError(f"The phenotype's type could not be determined.  Please report this error.")
+    # Log Survey Design if it is being used
+    if survey_design_spec is not None:
+        click.echo(click.style(f"Using a Survey Design:\n{survey_design_spec}", fg='green'))
+    return rv_bin, rv_cat, rv_cont

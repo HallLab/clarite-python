@@ -59,39 +59,6 @@ def compare_result(r_result, python_result):
 # nest = True
 
 
-def test_analyze_r():
-    # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col='ID')
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "fpc_noweights_result.csv")
-    # Process data
-    df = clarite.modify.make_continuous(df, only=["x", "y"])
-    df = clarite.modify.colfilter(df, only=["x", "y"])
-    try:
-        python_result = clarite.analyze.ewas_r(phenotype="y", covariates=[], data=df, min_n=1)
-    except ImportError as e:
-        print("Correctly raise import error:", e)
-        return
-    # Compare
-    # compare_result(r_result, python_result)
-    print(python_result)
-    print(r_result)
-
-
-def test_fpc_noweights():
-    """Test the fpc dataset with no survey info"""
-    # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col='ID')
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "fpc_noweights_result.csv")
-    # Process data
-    df = clarite.modify.make_continuous(df, only=["x", "y"])
-    df = clarite.modify.colfilter(df, only=["x", "y"])
-    python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, min_n=1)
-    # Compare
-    compare_result(r_result, python_result)
-
-
 def test_fpc_withoutfpc():
     """Use a survey design specifying weights, cluster, strata"""
     # Load the data
