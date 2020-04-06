@@ -29,7 +29,7 @@ def compare_result(loaded_result, calculated_result):
     # Close-enough equality of numeric values
     for var in ["N", "Beta", "SE", "Variable_pvalue", "LRT_pvalue", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0)
+            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=1e-03)
         except AssertionError:
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_loaded']}\n"

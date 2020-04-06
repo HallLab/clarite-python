@@ -59,7 +59,6 @@ regress_cont <- function(d, covariates, phenotype, var_name, regression_family, 
 
   # Run GLM
   if(use_survey){
-    require(survey)
     # Update scope of the regression_family and subset_data variables (surveyglm doesn't handle this well)
     regression_family <<- regression_family
     subset_data <<- subset_data

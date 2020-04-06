@@ -130,11 +130,11 @@ def ewas_r(phenotype: str,
            covariates: List[str],
            data: pd.DataFrame,
            survey_design_spec: Optional[SurveyDesignSpec] = None,
-           cov_method: Optional[str] = 'stata',
            min_n: Optional[int] = 200):
     """
     Run EWAS using R
     """
+
     # Validate parameters
     rv_bin, rv_cat, rv_cont = validate_ewas_params(covariates, data, phenotype, survey_design_spec)
 
@@ -142,7 +142,7 @@ def ewas_r(phenotype: str,
     data = data.reset_index(drop=False)
     data.columns = ["ID", ] + [c for c in data.columns if c != "ID"]
 
-    # Run R script to define the function
+    # Source R script to define the function
     import rpy2.robjects as ro
     from rpy2.robjects import pandas2ri
     ro.r.source("../../r_code/ewas_r.R")
@@ -172,13 +172,40 @@ def ewas_r(phenotype: str,
     else:
         raise ValueError("Phenotype must be 'binary' or 'continuous'")
 
-    # TODO: Allow nonvarying by default
-    # TODO: Survey Parameters
-    with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
-        result = ro.r.ewas(d=data, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
-                           cat_covars=cat_covars, cont_covars=cont_covars,
-                           regression_family=regression_family)
-        result = ewasresult2py(result)
+    # Run with or without survey design info
+    if survey_design_spec is None:
+        with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
+            result = ro.r.ewas(d=data, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
+                               cat_covars=cat_covars, cont_covars=cont_covars,
+                               regression_family=regression_family)
+    else:
+        # Merge weights into data
+        data = pd.merge(data, survey_design_spec.weights, left_index=True, right_index=True, how='left')
+        if survey_design_spec.single_weight:
+            weights = survey_design_spec.weight_name
+        elif survey_design_spec.multi_weight:
+            weights = survey_design_spec.weight_names
+        else:
+            raise ValueError("Weights must be provided")
+        ids = f"~{survey_design_spec.cluster_name}"
+        strats = f"~{survey_design_spec.strata_name}"
+        if survey_design_spec.nest:
+            nest = ro.rinterface.TRUE
+        else:
+            nest = ro.rinterface.FALSE
+        fpc = f"~{survey_design_spec.fpc_name}"
+        with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
+            result = ro.r.ewas(d=data, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
+                               cat_covars=cat_covars, cont_covars=cont_covars,
+                               regression_family=regression_family,
+                               weights=weights,
+                               id=ids,
+                               strat=strats,
+                               nest=nest,
+                               fpc=fpc)
+
+
+    result = ewasresult2py(result)
     return result
 
 
