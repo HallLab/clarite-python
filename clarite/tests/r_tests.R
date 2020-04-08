@@ -1,56 +1,13 @@
-# This script loads several datasets from the survey library, tests the R version of CLARITE, and saves results to use in pytest
-# Note that most examples run a single glm and compare it to the concatenated results of several EWAS runs (one per variable)
-# in order to test all variables run at the same time (covariate values are ignored by clarite).
+# This script loads several datasets from the survey library abnd runs GLMs to compare results in CLARITE
 
 library(devtools)
-install.packages('survey', repos = "http://cran.us.r-project.org")
-install_github('HallLab/clarite')
-library('survey')
-library('clarite')
+if (!require('survey')) install.packages('survey', repos = "http://cran.us.r-project.org"); library('survey')
+#install_github('HallLab/clarite')
+#library('clarite')
 
 ####################
 # Useful Functions #
 ####################
-
-add_id_col <- function(df){
-  df$ID <- 1:nrow(df)
-  df <- df[,c("ID",setdiff(names(df),"ID"))]
-  df
-}
-
-compare_ewas <- function(header, glm_result, ewas_result){
-  # For each variable in the glm_result data.frame, Compare results to the ewas_result data.frame
-  print(header)
-  print("-----------------")
-  variable_list <- glm_result$Variable
-  for (variable in variable_list){
-    print(paste("  ", variable, sep=""))
-    # Compare Beta
-    glm_beta <- glm_result[glm_result$Variable==variable, 'Beta']
-    ewas_beta <- ewas_result[ewas_result$Variable==variable, 'Beta']
-    match_beta <- isTRUE(all.equal(glm_beta, ewas_beta))
-    print(paste("    ", " Beta: survey (", glm_beta, ") == clarite (", ewas_beta, ")?  ", match_beta, sep=""))
-    # Compare Std Error
-    glm_se <- glm_result[glm_result$Variable==variable, 'SE']
-    ewas_se <- ewas_result[ewas_result$Variable==variable, 'SE']
-    match_se <- isTRUE(all.equal(glm_se, ewas_se))
-    print(paste("    ", " SE: survey (", glm_se, ") == clarite (", ewas_se, ")?  ", match_se, sep=""))
-    # Compare Diff_AIC
-    glm_aic <- glm_result[glm_result$Variable==variable, 'Diff_AIC']
-    ewas_aic <- ewas_result[ewas_result$Variable==variable, 'Diff_AIC']
-    match_aic <- isTRUE(all.equal(glm_aic, ewas_aic))
-    print(paste("    ", " Diff_AIC: survey (", glm_aic, ") == clarite (", ewas_aic, ")?  ", match_aic, sep=""))
-    # Compare Pval
-    glm_pval <- glm_result[glm_result$Variable==variable, 'pval']
-    ewas_pval <- ewas_result[ewas_result$Variable==variable, 'pval']
-    match_pval <- isTRUE(all.equal(glm_pval, ewas_pval, tolerance = 1e-4))
-    print(paste("    ", " pval: survey (", glm_pval, ") == clarite (", ewas_pval, ")?  ", match_pval, sep=""))
-    
-    if (!match_beta || !match_se || !match_pval){
-      stop(paste("Discrepancy for ", variable, sep=""))
-    }
-  }
-}
 
 get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=TRUE, alt_name=NULL) {
   # Gathers results from the glm for continuous variables
@@ -76,7 +33,7 @@ get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=
                       "Beta"=beta,
                       "SE"=se,
                       "Diff_AIC"=NA,
-                      "pval"=pval))
+                      "pvalue"=pval))
   } else {
     # Restricted model exists = categorical variable (differences between stats::anova and survey::anova)
     if(use_weights){
@@ -91,7 +48,7 @@ get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=
                       "Beta"=NA,
                       "SE"=NA,
                       "Diff_AIC"=diff_aic,
-                      "pval"=pval))
+                      "pvalue"=pval))
   }
 }
 
@@ -100,9 +57,7 @@ update_binary_result <- function(ewas_result, new_bin_result){
   ewas_result$Beta[match(new_bin_result$Variable, ewas_result$Variable)] <- new_bin_result$Beta
   ewas_result$SE[match(new_bin_result$Variable, ewas_result$Variable)] <- new_bin_result$SE
   ewas_result$Diff_AIC[match(new_bin_result$Variable, ewas_result$Variable)] <- new_bin_result$Diff_AIC
-  ewas_result$pval[match(new_bin_result$Variable, ewas_result$Variable)] <- new_bin_result$pval
-  ewas_result$Variable_pvalue[match(new_bin_result$Variable, ewas_result$Variable)] <- new_bin_result$pval
-  ewas_result$LRT_pvalue[match(new_bin_result$Variable, ewas_result$Variable)] <- NA
+  ewas_result$pvalue[match(new_bin_result$Variable, ewas_result$Variable)] <- new_bin_result$pvalue
   return(ewas_result)
 }
 
@@ -117,7 +72,6 @@ setwd(output_dir)
 #################
 # One outcome (y) and one variable (x)
 data(fpc)
-fpc <- add_id_col(fpc)
 # Add an outcome variable
 fpc$y <- fpc$x + (fpc$stratid * 2) + (fpc$psuid * 0.5) 
 write.csv(fpc, 'fpc_data.csv', row.names=FALSE)
@@ -126,31 +80,20 @@ fpc <- read.csv(file = 'fpc_data.csv')
 
 # No weights
 glm_result_fpcnoweights <- rbind(get_glm_result("x", glm(y~x, data=fpc), use_weights=FALSE))
-ewas_result_fpcnoweights <- ewas(d=fpc, cont_vars="x", cat_vars=NULL, y="y", regression_family="gaussian", min_n=1)
-compare_ewas("fpc: No Weights", glm_result_fpcnoweights, ewas_result_fpcnoweights)
 # No binary variables- python should match
-write.csv(ewas_result_fpcnoweights, 'fpc_noweights_result.csv', row.names=FALSE)
+write.csv(glm_result_fpcnoweights, 'fpc_noweights_result.csv', row.names=FALSE)
 
 # Test without specifying fpc
 withoutfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, data=fpc, nest=TRUE)
 glm_result_withoutfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withoutfpc)))
-ewas_result_withoutfpc <- ewas(d=fpc, cont_vars = "x", cat_vars = NULL,
-                               y="y", regression_family="gaussian",
-                               weights="weight", ids="psuid", strata="stratid", nest=TRUE, min_n = 1)
-compare_ewas("fpc: Without FPC", glm_result_withoutfpc, ewas_result_withoutfpc)
 # No binary variables- python should match
-write.csv(ewas_result_withoutfpc, 'fpc_withoutfpc_result.csv', row.names=FALSE)
-
+write.csv(glm_result_withoutfpc, 'fpc_withoutfpc_result.csv', row.names=FALSE)
 
 # Test with specifying fpc
 withfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, fpc=~Nh, data=fpc, nest=TRUE)
 glm_result_withfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc)))
-ewas_result_withfpc <- ewas(d=fpc, cont_vars = "x", cat_vars = NULL,
-                            y="y", regression_family="gaussian",
-                            weights="weight", ids="psuid", strata="stratid", fpc="Nh", nest=TRUE, min_n = 1)
-compare_ewas("fpc: With FPC", glm_result_withfpc, ewas_result_withfpc)
 # No binary variables- python should match
-write.csv(ewas_result_withfpc, 'fpc_withfpc_result.csv', row.names=FALSE)
+write.csv(glm_result_withfpc, 'fpc_withfpc_result.csv', row.names=FALSE)
 
 # Test with specifying fpc and no strata
 # Have to make fpc identical now that it is one strata
@@ -159,27 +102,20 @@ fpc_nostrat$Nh <- 30
 write.csv(fpc_nostrat, 'fpc_nostrat_data.csv', row.names=FALSE)
 withfpc_nostrata <- svydesign(weights=~weight, ids=~psuid, strata=NULL, fpc=~Nh, data=fpc_nostrat)
 glm_result_withfpc_nostrata <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc_nostrata)))
-ewas_result_withfpc_nostrata <- ewas(d=fpc_nostrat, cont_vars = "x", cat_vars = NULL,
-                                     y="y", regression_family="gaussian",
-                                     weights="weight", ids="psuid", strata=NULL, fpc="Nh", min_n = 1)
-compare_ewas("fpc: With FPC, No Strata", glm_result_withfpc_nostrata, ewas_result_withfpc_nostrata)
 # No binary variables- python should match
-write.csv(ewas_result_withfpc_nostrata, 'fpc_withfpc_nostrat_result.csv', row.names=FALSE)
+write.csv(glm_result_withfpc_nostrata, 'fpc_withfpc_nostrat_result.csv', row.names=FALSE)
 
 #################
 # api Test data #
 #################
 # one outcome (api00) and 3 continuous variables (ell, meals, mobility)
 data(api)
-apipop <- add_id_col(apipop)
 write.csv(apipop, 'apipop_data.csv', row.names=FALSE)
 apipop <- read.csv(file = 'apipop_data.csv')
 
-apistrat <- add_id_col(apistrat)
 write.csv(apistrat, 'apistrat_data.csv', row.names=FALSE)
 apistrat <- read.csv(file = 'apistrat_data.csv')
 
-apiclus1 <- add_id_col(apiclus1)
 write.csv(apiclus1, 'apiclus1_data.csv', row.names=FALSE)
 apiclus1 <- read.csv(file = 'apiclus1_data.csv')
 
@@ -190,20 +126,8 @@ glm_result_apipop <- rbind(
   get_glm_result("meals", glm_apipop, use_weights = FALSE),
   get_glm_result("mobility", glm_apipop, use_weights = FALSE)
 )
-ewas_result_apipop <- rbind(
-  ewas(d=apipop, cont_vars="ell", cat_vars=NULL,
-       cont_covars = c("meals", "mobility"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1),
-  ewas(d=apipop, cont_vars="meals", cat_vars=NULL,
-       cont_covars = c("ell", "mobility"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1),
-  ewas(d=apipop, cont_vars="mobility", cat_vars=NULL,
-       cont_covars = c("ell", "meals"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1)
-)
-compare_ewas("api: apipop", glm_result_apipop, ewas_result_apipop)
 # No binary variables- python should match
-write.csv(ewas_result_apipop, 'api_apipop_result.csv', row.names=FALSE)
+write.csv(glm_result_apipop, 'api_apipop_result.csv', row.names=FALSE)
 
 # stratified sample (no clusters) with fpc
 dstrat <- svydesign(id=~1, strata=~stype, weights=~pw, data=apistrat, fpc=~fpc)
@@ -213,23 +137,8 @@ glm_result_apistrat <- rbind(
   get_glm_result("meals", glm_apistrat),
   get_glm_result("mobility", glm_apistrat)
 )
-ewas_result_apistrat <- rbind(
-  ewas(d=apistrat, cont_vars="ell", cat_vars=NULL,
-       cont_covars = c("meals", "mobility"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1,
-       weights="pw", ids=NULL, strata="stype", fpc="fpc"),
-  ewas(d=apistrat, cont_vars="meals", cat_vars=NULL,
-       cont_covars = c("ell", "mobility"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1,
-       weights="pw", ids=NULL, strata="stype", fpc="fpc"),
-  ewas(d=apistrat, cont_vars="mobility", cat_vars=NULL,
-       cont_covars = c("ell", "meals"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1,
-       weights="pw", ids=NULL, strata="stype", fpc="fpc")
-)
-compare_ewas("api: apistrat", glm_result_apistrat, ewas_result_apistrat)
 # No binary variables- python should match
-write.csv(ewas_result_apistrat, 'api_apistrat_result.csv', row.names=FALSE)
+write.csv(glm_result_apistrat, 'api_apistrat_result.csv', row.names=FALSE)
 
 # one-stage cluster sample (no strata) with fpc
 dclus1 <- svydesign(id=~dnum, weights=~pw, data=apiclus1, fpc=~fpc)
@@ -239,23 +148,8 @@ glm_result_apiclus1 <- rbind(
   get_glm_result("meals", glm_apiclus1),
   get_glm_result("mobility", glm_apiclus1)
 )
-ewas_result_apiclus1 <- rbind(
-  ewas(d=apiclus1, cont_vars="ell", cat_vars=NULL,
-       cont_covars = c("meals", "mobility"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1,
-       weights="pw", ids="dnum", strata=NULL, fpc="fpc"),
-  ewas(d=apiclus1, cont_vars="meals", cat_vars=NULL,
-       cont_covars = c("ell", "mobility"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1,
-       weights="pw", ids="dnum", strata=NULL, fpc="fpc"),
-  ewas(d=apiclus1, cont_vars="mobility", cat_vars=NULL,
-       cont_covars = c("ell", "meals"), cat_covars = NULL,
-       y="api00", regression_family="gaussian", min_n=1,
-       weights="pw", ids="dnum", strata=NULL, fpc="fpc")
-)
-compare_ewas("api: apiclus1", glm_result_apiclus1, ewas_result_apiclus1)
 # No binary variables- python should match
-write.csv(ewas_result_apiclus1, 'api_apiclus1_result.csv', row.names=FALSE)
+write.csv(glm_result_apiclus1, 'api_apiclus1_result.csv', row.names=FALSE)
 
 ####################
 # NHANES Test data #
@@ -270,7 +164,6 @@ write.csv(ewas_result_apiclus1, 'api_apiclus1_result.csv', row.names=FALSE)
 # RIAGENDR - Binary: Gender: 1=male, 2=female
 
 data(nhanes)
-nhanes <- add_id_col(nhanes)
 # Update types (all previous tests were using continuous)
 # Don't update binary outcome (HI_CHOL) since outcome must be continuous
 nhanes$HI_CHOL <- as.factor(nhanes$HI_CHOL)
@@ -291,24 +184,13 @@ glm_result_nhanes_noweights <- rbind(
   get_glm_result("agecat", glm_nhanes_noweights, glm(HI_CHOL~race+RIAGENDR, family=binomial(link="logit"), data=nhanes), use_weights=FALSE),
   get_glm_result("RIAGENDR", glm_nhanes_noweights, glm(HI_CHOL~race+agecat, family=binomial(link="logit"), data=nhanes), use_weights=FALSE)
 )
-ewas_result_nhanes_noweights <- rbind(
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="race",
-       cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
-       y="HI_CHOL", regression_family="binomial", min_n=1),
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="agecat",
-       cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
-       y="HI_CHOL", regression_family="binomial", min_n=1),
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="RIAGENDR",
-       cont_covars = NULL, cat_covars = c("race", "agecat"),
-       y="HI_CHOL", regression_family="binomial", min_n=1)
-)
-compare_ewas("nhanes: noweights", glm_result_nhanes_noweights, ewas_result_nhanes_noweights)
+write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result_r.csv', row.names=FALSE)
 # RIAGENDR is binary, need to change calculation to match python
-ewas_result_nhanes_noweights <- update_binary_result(
-  ewas_result = ewas_result_nhanes_noweights,
+glm_result_nhanes_noweights <- update_binary_result(
+  ewas_result = glm_result_nhanes_noweights,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_noweights, glm_restricted=NULL, use_weights=FALSE, alt_name="RIAGENDR2")
   )
-write.csv(ewas_result_nhanes_noweights, 'nhanes_noweights_result.csv', row.names=FALSE)
+write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result.csv', row.names=FALSE)
 
 
 # Full design: cluster, strata, weights
@@ -319,27 +201,13 @@ glm_result_nhanes_complete <- rbind(
   get_glm_result("agecat", glm_nhanes_complete, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))),
   get_glm_result("RIAGENDR", glm_nhanes_complete, svyglm(HI_CHOL~race+agecat, design=dnhanes_complete, family=binomial(link="logit")))
 )
-ewas_result_nhanes_complete <- rbind(
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="race",
-       cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
-       y="HI_CHOL", regression_family="binomial", min_n=1,
-       weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="agecat",
-       cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
-       y="HI_CHOL", regression_family="binomial", min_n=1,
-       weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="RIAGENDR",
-       cont_covars = NULL, cat_covars = c("race", "agecat"),
-       y="HI_CHOL", regression_family="binomial", min_n=1,
-       weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE)
-)
-compare_ewas("nhanes: complete", glm_result_nhanes_complete, ewas_result_nhanes_complete)
+write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_r.csv', row.names=FALSE)
 # RIAGENDR is binary, need to change calculation to match python
-ewas_result_nhanes_complete <- update_binary_result(
-  ewas_result = ewas_result_nhanes_complete,
+glm_result_nhanes_complete <- update_binary_result(
+  ewas_result = glm_result_nhanes_complete,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
   )
-write.csv(ewas_result_nhanes_complete, 'nhanes_complete_result.csv', row.names=FALSE)
+write.csv(glm_result_nhanes_complete, 'nhanes_complete_result.csv', row.names=FALSE)
 
 # Weights Only
 dnhanes_weightsonly <- svydesign(id=~1, weights=~WTMEC2YR, data=nhanes)
@@ -349,27 +217,13 @@ glm_result_nhanes_weightsonly <- rbind(
   get_glm_result("agecat", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"))),
   get_glm_result("RIAGENDR", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+agecat, design=dnhanes_weightsonly, family=binomial(link="logit")))
 )
-ewas_result_nhanes_weightsonly <- rbind(
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="race",
-       cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
-       y="HI_CHOL", regression_family="binomial", min_n=1,
-       weights="WTMEC2YR"),
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="agecat",
-       cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
-       y="HI_CHOL", regression_family="binomial", min_n=1,
-       weights="WTMEC2YR"),
-  ewas(d=nhanes, cont_vars=NULL, cat_vars="RIAGENDR",
-       cont_covars = NULL, cat_covars = c("race", "agecat"),
-       y="HI_CHOL", regression_family="binomial", min_n=1,
-       weights="WTMEC2YR")
-)
-compare_ewas("nhanes: weights only", glm_result_nhanes_weightsonly, ewas_result_nhanes_weightsonly)
+write.csv(glm_result_nhanes_weightsonly, 'nhanes_weightsonly_result_r.csv', row.names=FALSE)
 # RIAGENDR is binary, need to change calculation to match python
-ewas_result_nhanes_weightsonly <- update_binary_result(
-  ewas_result = ewas_result_nhanes_weightsonly,
+glm_result_nhanes_weightsonly <- update_binary_result(
+  ewas_result = glm_result_nhanes_weightsonly,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_weightsonly, alt_name="RIAGENDR2")
   )
-write.csv(ewas_result_nhanes_weightsonly, 'nhanes_weightsonly_result.csv', row.names=FALSE)
+write.csv(glm_result_nhanes_weightsonly, 'nhanes_weightsonly_result.csv', row.names=FALSE)
 
 #################
 # NHANES Lonely #
@@ -389,10 +243,10 @@ print(paste("Removed", nrow(nhanes) - nrow(nhanes_lonely), "rows to make lonely 
 write.csv(nhanes_lonely, 'nhanes_lonely_data.csv', row.names=FALSE)
 # Don't need to reload nhanes_lonely since it is subset from a reload
 
-get_lonely_glm_results <- function(setting, python=FALSE){
+get_lonely_glm_results <- function(setting, binary_as_continuous=FALSE){
   options(survey.lonely.psu=setting)
   glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))
-  if(python){
+  if(binary_as_continuous){
     glm_result_nhanes_lonely <- rbind(
       get_glm_result("race", glm_nhanes_lonely, svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))),
       get_glm_result("agecat", glm_nhanes_lonely, svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))),
@@ -407,45 +261,15 @@ get_lonely_glm_results <- function(setting, python=FALSE){
   }
   return(glm_result_nhanes_lonely)
 }
-get_lonely_ewas_results <- function(setting, python=FALSE){
-  options(survey.lonely.psu=setting)
-  ewas_result_nhanes_lonely <- rbind(
-    ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="race",
-         cont_covars = NULL, cat_covars = c("agecat", "RIAGENDR"),
-         y="HI_CHOL", regression_family="binomial", min_n=1,
-         weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
-    ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="agecat",
-         cont_covars = NULL, cat_covars = c("race", "RIAGENDR"),
-         y="HI_CHOL", regression_family="binomial", min_n=1,
-         weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE),
-    ewas(d=nhanes_lonely, cont_vars=NULL, cat_vars="RIAGENDR",
-         cont_covars = NULL, cat_covars = c("race", "agecat"),
-         y="HI_CHOL", regression_family="binomial", min_n=1,
-         weights="WTMEC2YR", ids="SDMVPSU", strata="SDMVSTRA", fpc=NULL, nest=TRUE)
-  )
-  if(python){
-    # Update RIAGENDR to be binary processed as continuous
-    glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))
-    ewas_result_nhanes_lonely <- update_binary_result(
-        ewas_result = ewas_result_nhanes_lonely,
-        new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_lonely,
-                                        glm_restricted=NULL, use_weights=FALSE, alt_name="RIAGENDR2")
-  )
-  }
-  return(ewas_result_nhanes_lonely)
-}
+
 # Certainty
-glm_result_nhanes_certainty <- get_lonely_glm_results("remove")
-ewas_result_nhanes_certainty <- get_lonely_ewas_results("remove")
-compare_ewas("nhanes lonely: remove", glm_result_nhanes_certainty, ewas_result_nhanes_certainty)
-# RIAGENDR is binary, need to change calculation to match python
-ewas_result_nhanes_certainty <- get_lonely_ewas_results("remove", python=TRUE)
-write.csv(ewas_result_nhanes_certainty, 'nhanes_certainty_result.csv', row.names=FALSE)
+glm_result_nhanes_certainty <- get_lonely_glm_results("remove", binary_as_continuous=FALSE)
+write.csv(glm_result_nhanes_certainty, 'nhanes_certainty_result_r.csv', row.names=FALSE)
+glm_result_nhanes_certainty <- get_lonely_glm_results("remove", binary_as_continuous=TRUE)
+write.csv(glm_result_nhanes_certainty, 'nhanes_certainty_result.csv', row.names=FALSE)
 
 # Adjust
-glm_result_nhanes_adjust <- get_lonely_glm_results("adjust")
-ewas_result_nhanes_adjust <- get_lonely_ewas_results("adjust")
-compare_ewas("nhanes lonely: adjust", glm_result_nhanes_adjust, ewas_result_nhanes_adjust)
-# RIAGENDR is binary, need to change calculation to match python
-ewas_result_nhanes_adjust <- get_lonely_ewas_results("adjust", python=TRUE)
-write.csv(ewas_result_nhanes_adjust, 'nhanes_adjust_result.csv', row.names=FALSE)
+glm_result_nhanes_adjust <- get_lonely_glm_results("adjust", binary_as_continuous=FALSE)
+write.csv(glm_result_nhanes_adjust, 'nhanes_adjust_result_r.csv', row.names=FALSE)
+glm_result_nhanes_adjust <- get_lonely_glm_results("adjust", binary_as_continuous=TRUE)
+write.csv(glm_result_nhanes_adjust, 'nhanes_adjust_result.csv', row.names=FALSE)

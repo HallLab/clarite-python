@@ -10,27 +10,33 @@ DATA_PATH = Path(__file__).parent.parent / 'r_test_output'
 def load_r_results(filename):
     """Load R results and convert column names to match python results"""
     r_result = pd.read_csv(filename)
-    r_result = r_result.rename(columns={'pval': 'pvalue', 'phenotype': 'Phenotype'})
-    r_result = r_result.set_index(['Variable', 'Phenotype'])
+    r_result = r_result.set_index('Variable')
     return r_result
 
 
-def compare_result(loaded_result, calculated_result):
+def compare_result(loaded_r_result, calculated_result):
     """Binary variables must be specified, since there are expected differences"""
-    merged = pd.merge(left=loaded_result, right=calculated_result,
+    # Remove "Phenotype" from the index in calculated results
+    calculated_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
+    # Merge
+    merged = pd.merge(left=loaded_r_result, right=calculated_result,
                       left_index=True, right_index=True,
                       how="inner", suffixes=("_loaded", "_calculated"))
     try:
-        assert len(merged) == len(loaded_result) == len(calculated_result)
+        assert len(merged) == len(loaded_r_result) == len(calculated_result)
     except AssertionError:
-        raise ValueError(f" Loaded Results have {len(loaded_result):,} rows,"
+        raise ValueError(f" Loaded Results have {len(loaded_r_result):,} rows,"
                          f" Calculated results have {len(calculated_result):,} rows,"
                          f" merged data has {len(merged):,} rows")
     # Close-enough equality of numeric values
-    for var in ["N", "Beta", "SE", "Variable_pvalue", "LRT_pvalue", "pvalue"]:
+    for var in ["Beta", "SE", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=1e-03)
+            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=1e-02)
         except AssertionError:
+            for var in ["Beta", "SE", "pvalue"]:
+                print(f"{var}:\n"
+                             f"{merged[f'{var}_loaded']}\n"
+                             f"{merged[f'{var}_calculated']}")
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_loaded']}\n"
                              f"{merged[f'{var}_calculated']}")
@@ -43,9 +49,6 @@ def compare_result(loaded_result, calculated_result):
                                merged.loc[~either_nan, f"{var}_calculated"], equal_nan=True)
         except AssertionError:
             raise ValueError(f"{var}: Loaded ({merged[f'{var}_r']}) != Calculated ({merged[f'{var}_python']})")
-
-    # Both converged
-    assert all(merged["Converged_loaded"] == merged["Converged_calculated"])
 
 ###############
 # fpc Dataset #
@@ -62,7 +65,7 @@ def compare_result(loaded_result, calculated_result):
 def test_fpc_withoutfpc():
     """Use a survey design specifying weights, cluster, strata"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "fpc_withoutfpc_result.csv")
     # Process data
@@ -77,7 +80,7 @@ def test_fpc_withoutfpc():
 def test_fpc_withfpc():
     """Use a survey design specifying weights, cluster, strata, fpc"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "fpc_withfpc_result.csv")
     # Process data
@@ -93,7 +96,7 @@ def test_fpc_withfpc():
 def test_fpc_withfpc_nostrata():
     """Use a survey design specifying weights, cluster, strata, fpc"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "fpc_nostrat_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "fpc_nostrat_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "fpc_withfpc_nostrat_result.csv")
     # Process data
@@ -120,7 +123,7 @@ def test_fpc_withfpc_nostrata():
 def test_api_noweights():
     """Test the api dataset with no survey info"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "apipop_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "apipop_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "api_apipop_result.csv")
     # Process data
@@ -138,7 +141,7 @@ def test_api_noweights():
 def test_api_stratified():
     """Test the api dataset with weights, strata, and fpc"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "apistrat_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "apistrat_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "api_apistrat_result.csv")
     # Process data
@@ -160,7 +163,7 @@ def test_api_stratified():
 def test_api_cluster():
     """Test the api dataset with weights, clusters, and fpc"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "apiclus1_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "apiclus1_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "api_apiclus1_result.csv")
     # Process data
@@ -194,7 +197,7 @@ def test_api_cluster():
 def test_nhanes_noweights():
     """Test the nhanes dataset with no survey info"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "nhanes_noweights_result.csv")
     # Process data
@@ -214,7 +217,7 @@ def test_nhanes_noweights():
 def test_nhanes_fulldesign():
     """Test the nhanes dataset with the full survey design"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "nhanes_complete_result.csv")
     # Process data
@@ -239,7 +242,7 @@ def test_nhanes_fulldesign():
 def test_nhanes_weightsonly():
     """Test the nhanes dataset with only weights in the survey design"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "nhanes_weightsonly_result.csv")
     # Process data
@@ -263,7 +266,7 @@ def test_nhanes_weightsonly():
 def test_nhanes_lonely_certain():
     """Test the nhanes dataset with a lonely PSU and the value set to certain"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "nhanes_certainty_result.csv")
     # Process data
@@ -288,7 +291,7 @@ def test_nhanes_lonely_certain():
 def test_nhanes_lonely_adjust():
     """Test the nhanes dataset with a lonely PSU and the value set to certain"""
     # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col='ID')
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "nhanes_adjust_result.csv")
     # Process data
