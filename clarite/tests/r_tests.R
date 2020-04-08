@@ -196,6 +196,15 @@ write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result.csv', row.names=
 # Full design: cluster, strata, weights
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes)
 glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))
+print("**** Survey Design ****")
+print(summary(dnhanes_complete))
+print("***********************")
+#print("HI_CHOL~race+agecat+RIAGENDR")
+#print("HI_CHOL~agecat+RIAGENDR")
+#print(summary(svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))))
+#print("===================")
+#print(summary(svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))))
+
 glm_result_nhanes_complete <- rbind(
   get_glm_result("race", glm_nhanes_complete, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))),
   get_glm_result("agecat", glm_nhanes_complete, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))),
