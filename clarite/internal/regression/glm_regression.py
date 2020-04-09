@@ -54,9 +54,9 @@ class GLMRegression(Regression):
 
     def subset_data(self):
         """Remove observations with missing data"""
-        self.data = self.data.dropna(axis='index', how='any',
-                                     subset=[self.test_variable, self.outcome_variable] + self.covariates)
-        self.N = len(self.data)
+        subset_data = self.data.dropna(axis='index', how='any',
+                                       subset=[self.test_variable, self.outcome_variable] + self.covariates)
+        self.N = len(subset_data)
 
     def check_covariate_values(self):
         """Remove covariates that do not vary"""
@@ -133,7 +133,7 @@ class GLMRegression(Regression):
 
     def run_continuous(self):
         # Regress
-        est = smf.glm(self.formula, data=self.data, family=self.family).fit(use_t=True)
+        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=True)
         # Check convergence
         if not est.converged:
             return
@@ -147,7 +147,7 @@ class GLMRegression(Regression):
 
     def run_binary(self):
         # Regress
-        est = smf.glm(self.formula, data=self.data, family=self.family).fit(use_t=True)
+        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=True)
         # Check convergence
         if not est.converged:
             return
@@ -169,8 +169,8 @@ class GLMRegression(Regression):
 
     def run_categorical(self):
         # Regress both models
-        est_restricted = smf.glm(self.formula_restricted, data=self.data, family=self.family).fit(use_t=True)
-        est = smf.glm(self.formula, data=self.data, family=self.family).fit(use_t=True)
+        est_restricted = smf.glm(self.formula_restricted, data=self.data, family=self.family, missing="drop").fit(use_t=True)
+        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=True)
         # Check convergence
         if not est.converged & est_restricted.converged:
             return

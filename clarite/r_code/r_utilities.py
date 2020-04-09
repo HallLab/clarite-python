@@ -1,25 +1,27 @@
 import numpy as np
 import pandas as pd
-from rpy2.rinterface import NALogicalType
+from rpy2.rinterface_lib.na_values import NALogicalType
+from rpy2 import robjects as ro
+
+from clarite.internal.utilities import _get_dtypes
 
 
 def ewasresult2py(r_result):
     """
     Convert EWAS results from R into a pandas DataFrame.
-    This can likely be replaced with rpy2 functionality when it is fixed for pandas 1.0.
     """
-    result = pd.DataFrame.from_dict({
-        'Variable': np.asarray(r_result.rx2("Variable"), dtype="object"),
-        'Phenotype': np.asarray(r_result.rx2("phenotype"), dtype="object"),
-        'N': np.asarray(r_result.rx2("N")),
-        'Converged': np.asarray(r_result.rx2("Converged"), dtype=bool),
-        'Beta': np.asarray([np.NaN if type(v) == NALogicalType else v for v in r_result.rx2("Beta")], dtype=float),
-        'SE': np.asarray([np.NaN if type(v) == NALogicalType else v for v in r_result.rx2("SE")], dtype=float),
-        'Variable_pvalue': np.asarray([np.NaN if type(v) == NALogicalType else v for v in r_result.rx2("Variable_pvalue")], dtype=float),
-        'LRT_pvalue': np.asarray([np.NaN if type(v) == NALogicalType else v for v in r_result.rx2("LRT_pvalue")], dtype=float),
-        'Diff_AIC': np.asarray([np.NaN if type(v) == NALogicalType else v for v in r_result.rx2("Diff_AIC")], dtype=float),
-        'pvalue': np.asarray([np.NaN if type(v) == NALogicalType else v for v in r_result.rx2("pval")], dtype=float),
-        'weight': np.asarray([np.NaN if type(v) == NALogicalType else v for v in r_result.rx2("weight")], dtype=object),
-    })
-    result = result.set_index(['Variable', 'Phenotype'])
-    return result
+    df = ro.conversion.rpy2py(r_result)
+    df = df.rename(columns={'phenotype': 'Phenotype', 'pval': 'pvalue'})
+    df = df.replace("None", np.nan)  # The EWAS R function specifically returns 'None' instead of NA
+    df = df.set_index(['Variable', 'Phenotype'])
+    return df
+
+
+def df_pandas2r(data: pd.DataFrame) -> ro.vectors.DataFrame:
+    """Convert pandas dataframe to R DataFrame, making sure categoricals/factors are correctly preserved"""
+    # Make sure categories are strings
+    for col in data.columns:
+        if data[col].dtype.name == 'category':
+            data[col] = data[col].cat.rename_categories([str(c) for c in data[col].cat.categories])
+    data = ro.vectors.DataFrame(data)
+    return data

@@ -39,10 +39,10 @@ regress_cont <- function(d, covariates, phenotype, var_name, regression_family, 
   # Check Covariates and subset the data to use only observations where the variable is not NA
   if (use_survey){
     varying_covariates <- get_varying_covariates(d$variables, covariates, phenotype, var_name, allowed_nonvarying)
-    subset_data <- subset(d, !is.na(d$variables[var_name]))  # Use the survey subset function
+    #subset_data <- subset(d, !is.na(d$variables[var_name]))  # Use the survey subset function
   } else {
     varying_covariates <- get_varying_covariates(d, covariates, phenotype, var_name, allowed_nonvarying)
-    subset_data <- d[!is.na(d[var_name]),]  # use a subset of the data directly
+    #subset_data <- d[!is.na(d[var_name]),]  # use a subset of the data directly
   }
 
   # Return null if 'get_varying_covarites' returned NULL (b/c it found a nonvarying covariate the wasn't allowed)
@@ -61,12 +61,14 @@ regress_cont <- function(d, covariates, phenotype, var_name, regression_family, 
   if(use_survey){
     # Update scope of the regression_family and subset_data variables (surveyglm doesn't handle this well)
     regression_family <<- regression_family
-    subset_data <<- subset_data
+    d <<- d
     # Use survey::svyglm
-    var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=subset_data), error=function(e) warn_on_e(var_name, e))
+    var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=d, na.action=na.omit),
+                           error=function(e) warn_on_e(var_name, e))
   } else {
     # Use stats::glm
-    var_result <- tryCatch(glm(stats::as.formula(fmla), family=regression_family, data=subset_data), error=function(e) warn_on_e(var_name, e))
+    var_result <- tryCatch(glm(stats::as.formula(fmla), family=regression_family, data=d, na.action=na.omit),
+                           error=function(e) warn_on_e(var_name, e))
   }
   # Collect Results
   if (!is.null(var_result)){
@@ -106,11 +108,12 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
 
   # Check Covariates and subset the data to use only observations where the variable is not NA
   if (use_survey){
+    # The GLM function in R can handle this
     varying_covariates <- get_varying_covariates(d$variables, covariates, phenotype, var_name, allowed_nonvarying)
-    subset_data <- subset(d, !is.na(d$variables[var_name]))  # Use the survey subset function
+    #subset_data <- subset(d, !is.na(d$variables[var_name]))  # Use the survey subset function
   } else {
     varying_covariates <- get_varying_covariates(d, covariates, phenotype, var_name, allowed_nonvarying)
-    subset_data <- d[!is.na(d[var_name]),]  # use a subset of the data directly
+    #subset_data <- d[!is.na(d[var_name]),]  # use a subset of the data directly
   }
 
   # Return null if 'get_varying_covarites' returned NULL (b/c it found a nonvarying covariate the wasn't allowed)
@@ -130,10 +133,13 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
   if(use_survey){
     # Update scope of the family and subset_data variables (surveyglm doesn't handle this well)
     regression_family <<- regression_family
-    subset_data <<- subset_data
+    d <<- d
     # Results using surveyglm
-    var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=subset_data), error=function(e) warn_on_e(var_name, e))
-    restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), family=regression_family, design=subset_data), error=function(e) warn_on_e(var_name, e))
+    var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=d, na.action=na.omit),
+                           error=function(e) warn_on_e(var_name, e))
+    restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), family=regression_family, design=d, na.action=na.omit),
+                                  error=function(e) warn_on_e(var_name, e))
+    print(summary(var_result))
     if(!is.null(var_result) & !is.null(restricted_result)){
       # Get the LRT using anova
       lrt <- anova(var_result, restricted_result, method = "LRT")
@@ -147,8 +153,10 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
     }
   } else {
     # Results using data.frame with stats::anova
-    var_result <- tryCatch(glm(stats::as.formula(fmla), family=regression_family, data=subset_data), error=function(e) warn_on_e(var_name, e))
-    restricted_result <- tryCatch(glm(stats::as.formula(fmla_restricted), family=regression_family, data=subset_data), error=function(e) warn_on_e(var_name, e))
+    var_result <- tryCatch(glm(stats::as.formula(fmla), family=regression_family, data=d, na.action=na.omit),
+                           error=function(e) warn_on_e(var_name, e))
+    restricted_result <- tryCatch(glm(stats::as.formula(fmla_restricted), family=regression_family, data=d, na.action=na.omit),
+                                  error=function(e) warn_on_e(var_name, e))
     if(!is.null(var_result) & !is.null(restricted_result)){
       # Get the LRT using anova
       lrt <- anova(var_result, restricted_result, test = "LRT")
@@ -322,10 +330,9 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
         next
       }
       ewas_result_df$weight[i] <- weight
-      data = d[!is.na(d[weight]), ]
       # Create survey design object
-      sd <- survey::svydesign(weights = data[weight],
-                              data = data,
+      sd <- survey::svydesign(weights = d[weight],
+                              data = d,
                               ...)
       # Regress, updating the dataframe if results were returned
       result <- regress_cat(sd, covariates, phenotype=y, var_name, regression_family, allowed_nonvarying)
@@ -363,10 +370,9 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
         next
       }
       ewas_result_df$weight[i] <- weight
-      data = d[!is.na(d[weight]), ]
       # Create survey design object
-      sd <- survey::svydesign(weights = data[weight],
-                              data = data,
+      sd <- survey::svydesign(weights = d[weight],
+                              data = d,
                               ...)
       # Regress, updating the dataframe if results were returned
       result <- regress_cont(sd, covariates, phenotype=y, var_name, regression_family, allowed_nonvarying)
@@ -385,5 +391,9 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
 
   # Sort by pval
   ewas_result_df <- ewas_result_df[order(ewas_result_df$pval),]
+
+  # Replace NA with 'None' for correct conversion back to Pandas format
+  ewas_result_df[is.na(ewas_result_df)]='None'
+
   return(ewas_result_df)
 }

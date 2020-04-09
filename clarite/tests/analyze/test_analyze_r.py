@@ -37,7 +37,7 @@ def compare_result(loaded_r_result, calculated_result):
                              f"{merged[f'{var}_loaded']}\n"
                              f"{merged[f'{var}_calculated']}")
     for var in ["Diff_AIC"]:
-        # Pass if R result is NaN (quasibinomial) or Python result is NaN (survey data used)
+        # Pass if loaded result is NaN (quasibinomial) or calculated result is NaN (survey data used)
         either_nan = merged[[f'{var}_loaded', f'{var}_calculated']].isna().any(axis=1)
         try:
             # Value must be close when both exist or both are NaN

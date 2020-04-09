@@ -23,7 +23,7 @@ from .survey import SurveyDesignSpec
 
 from clarite.internal.regression import GLMRegression, WeightedGLMRegression
 from ..internal.utilities import _get_dtypes, requires, validate_ewas_params
-from ..r_code.r_utilities import ewasresult2py
+from ..r_code.r_utilities import ewasresult2py, df_pandas2r
 
 result_columns = ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
                   'LRT_pvalue', 'Diff_AIC', 'pvalue']
@@ -151,7 +151,7 @@ def ewas_r(phenotype: str,
     dtypes = _get_dtypes(data)
     cat_vars = ro.StrVector(rv_bin + rv_cat)
     cont_vars = ro.StrVector(rv_cont)
-    cat_covars = ro.StrVector([v for v in covariates if dtypes.loc[v] == 'categorical'])
+    cat_covars = ro.StrVector([v for v in covariates if (dtypes.loc[v] == 'categorical') or (dtypes.loc[v] == 'binary')])
     cont_covars = ro.StrVector([v for v in covariates if dtypes.loc[v] == 'continuous'])
 
     # These lists must be passed as NULL if they are empty
@@ -175,9 +175,10 @@ def ewas_r(phenotype: str,
     # Run with or without survey design info
     if survey_design_spec is None:
         with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
-            result = ro.r.ewas(d=data, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
+            data_r = df_pandas2r(data)
+            result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
                                cat_covars=cat_covars, cont_covars=cont_covars,
-                               regression_family=regression_family)
+                               regression_family=regression_family, min_n=min_n)
     else:
         # Merge weights into data
         data = pd.merge(data, survey_design_spec.weights, left_index=True, right_index=True, how='left')
@@ -187,23 +188,34 @@ def ewas_r(phenotype: str,
             weights = survey_design_spec.weight_names
         else:
             raise ValueError("Weights must be provided")
-        ids = f"~{survey_design_spec.cluster_name}"
-        strats = f"~{survey_design_spec.strata_name}"
-        if survey_design_spec.nest:
-            nest = ro.rinterface.TRUE
+        # Gather optional parts of survey parameters
+        kwargs = dict()
+        # Cluster IDs
+        if survey_design_spec.has_cluster:
+            kwargs['ids'] = ro.Formula(f"~{survey_design_spec.cluster_name}")
+            data[survey_design_spec.cluster_name] = survey_design_spec.cluster
         else:
-            nest = ro.rinterface.FALSE
-        fpc = f"~{survey_design_spec.fpc_name}"
+            kwargs['ids'] = ro.Formula("~1")
+        # Strata
+        if survey_design_spec.has_strata:
+            kwargs['strat'] = ro.Formula(f"~{survey_design_spec.strata_name}")
+            data[survey_design_spec.strata_name] = survey_design_spec.strata
+        # Nest
+        if survey_design_spec.nest:
+            kwargs['nest'] = True
+        else:
+            kwargs['nest'] = False
+        if survey_design_spec.has_fpc:
+            kwargs['fpc'] = ro.Formula(f"~{survey_design_spec.fpc_name}")
+            data[survey_design_spec.fpc_name] = survey_design_spec.fpc
         with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
-            result = ro.r.ewas(d=data, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
+            data_r = df_pandas2r(data)
+            result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
                                cat_covars=cat_covars, cont_covars=cont_covars,
                                regression_family=regression_family,
+                               min_n=min_n,
                                weights=weights,
-                               id=ids,
-                               strat=strats,
-                               nest=nest,
-                               fpc=fpc)
-
+                               **kwargs)
 
     result = ewasresult2py(result)
     return result

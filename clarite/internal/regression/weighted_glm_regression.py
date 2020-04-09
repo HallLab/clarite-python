@@ -21,14 +21,14 @@ class WeightedGLMRegression(GLMRegression):
 
     def subset_data(self):
         """Subset the data by dropping incomplete cases and also checking for missing weights"""
-        self.data = self.data.dropna(axis='index', how='any',
+        subset_data = self.data.dropna(axis='index', how='any',
                                      subset=[self.test_variable, self.outcome_variable] + self.covariates)
         # Get a survey design object based on the data and subset the data to match
         self.survey_design, survey_index, survey_warnings = \
-            self.survey_design_spec.get_survey_design(self.test_variable, self.data.index)
-        self.data = self.data.loc[survey_index]
+            self.survey_design_spec.get_survey_design(self.test_variable, subset_data.index)
+        subset_data = subset_data.loc[survey_index]
 
-        self.N = len(self.data)
+        self.N = len(subset_data)
 
         # Log any warnings
         if len(survey_warnings) > 0:
@@ -38,7 +38,7 @@ class WeightedGLMRegression(GLMRegression):
         y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe')
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                            init_args=dict(family=self.family),
+                            init_args=dict(family=self.family, missing="drop"),
                             fit_args=dict(use_t=True))
         model.fit(y=y, X=X)
         # Check convergence
@@ -64,7 +64,7 @@ class WeightedGLMRegression(GLMRegression):
         y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe')
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                            init_args=dict(family=self.family),
+                            init_args=dict(family=self.family, missing="drop"),
                             fit_args=dict(use_t=True))
         model.fit(y=y, X=X)
         # Check convergence
@@ -92,7 +92,7 @@ class WeightedGLMRegression(GLMRegression):
         # Regress restricted model
         y, X_restricted = patsy.dmatrices(self.formula_restricted, self.data, return_type='dataframe')
         model_restricted = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                                       init_args=dict(family=self.family),
+                                       init_args=dict(family=self.family, missing="drop"),
                                        fit_args=dict(use_t=True))
         model_restricted.fit(y=y, X=X_restricted)
         # Regress full model (Already have the survey_design and index objects)

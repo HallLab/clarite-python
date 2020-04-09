@@ -214,7 +214,7 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
         click.echo(f"Running EWAS on a Continuous Outcome (family = Gaussian)")
     elif pheno_kind == 'binary':
         # Set phenotype categories so that the higher number is a success
-        categories = sorted(data[phenotype].unique(), reverse=True)
+        categories = sorted([c for c in data[phenotype].unique() if not pd.isna(c)], reverse=True)
         cat_type = pd.api.types.CategoricalDtype(categories=categories, ordered=True)
         data[phenotype] = data[phenotype].astype(cat_type)
         click.echo(click.style(f"Running EWAS on a Binary Outcome (family = Binomial)\n"
