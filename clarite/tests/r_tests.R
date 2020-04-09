@@ -291,9 +291,9 @@ get_lonely_glm_results <- function(setting, binary_as_continuous=FALSE){
 }
 
 # Certainty
-glm_result_nhanes_certainty <- get_lonely_glm_results("remove", binary_as_continuous=FALSE)
+glm_result_nhanes_certainty <- get_lonely_glm_results("certainty", binary_as_continuous=FALSE)
 write.csv(glm_result_nhanes_certainty, 'nhanes_certainty_result_r.csv', row.names=FALSE)
-glm_result_nhanes_certainty <- get_lonely_glm_results("remove", binary_as_continuous=TRUE)
+glm_result_nhanes_certainty <- get_lonely_glm_results("certainty", binary_as_continuous=TRUE)
 write.csv(glm_result_nhanes_certainty, 'nhanes_certainty_result.csv', row.names=FALSE)
 
 # Adjust
@@ -301,3 +301,9 @@ glm_result_nhanes_adjust <- get_lonely_glm_results("adjust", binary_as_continuou
 write.csv(glm_result_nhanes_adjust, 'nhanes_adjust_result_r.csv', row.names=FALSE)
 glm_result_nhanes_adjust <- get_lonely_glm_results("adjust", binary_as_continuous=TRUE)
 write.csv(glm_result_nhanes_adjust, 'nhanes_adjust_result.csv', row.names=FALSE)
+
+# Average
+glm_result_nhanes_adjust <- get_lonely_glm_results("average", binary_as_continuous=FALSE)
+write.csv(glm_result_nhanes_adjust, 'nhanes_average_result_r.csv', row.names=FALSE)
+glm_result_nhanes_adjust <- get_lonely_glm_results("average", binary_as_continuous=TRUE)
+write.csv(glm_result_nhanes_adjust, 'nhanes_average_result.csv', row.names=FALSE)

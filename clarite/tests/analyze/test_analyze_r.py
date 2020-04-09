@@ -257,7 +257,7 @@ def test_nhanes_weightsonly():
     compare_result(r_result, calculated_result)
 
 
-def test_nhanes_lonely_certain():
+def test_nhanes_lonely_certainty():
     """Test the nhanes dataset with a lonely PSU and the value set to certainty"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
@@ -292,6 +292,29 @@ def test_nhanes_lonely_adjust():
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True, single_cluster='adjust')
+    df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    calculated_result = pd.concat([
+        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design),
+        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design),
+        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design),
+        ], axis=0)
+    # Compare
+    compare_result(r_result, calculated_result)
+
+def test_nhanes_lonely_average():
+    """Test the nhanes dataset with a lonely PSU and the value set to average"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_average_result_r.csv")
+    # Process data
+    df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
+    df = clarite.modify.make_categorical(df, only=["race", "agecat"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
+                                             fpc=None, nest=True, single_cluster='average')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     calculated_result = pd.concat([
         clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
