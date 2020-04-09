@@ -30,6 +30,7 @@ get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=
       pval <- glm_table[var_idx_name, 'Pr(>|z|)']
     }
     return(data.frame("Variable"=variable,
+                      "N"=nobs(glm_full),
                       "Beta"=beta,
                       "SE"=se,
                       "Diff_AIC"=NA,
@@ -45,6 +46,7 @@ get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=
     }
     diff_aic <- glm_full$aic - glm_restricted$aic
     return(data.frame("Variable"=variable,
+                      "N"=nobs(glm_full),
                       "Beta"=NA,
                       "SE"=NA,
                       "Diff_AIC"=diff_aic,

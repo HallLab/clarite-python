@@ -29,7 +29,7 @@ def compare_result(loaded_r_result, calculated_result):
                          f" Calculated results have {len(calculated_result):,} rows,"
                          f" merged data has {len(merged):,} rows")
     # Close-enough equality of numeric values
-    for var in ["Beta", "SE", "pvalue"]:
+    for var in ["N", "Beta", "SE", "pvalue"]:
         try:
             assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0)
         except AssertionError:
@@ -258,7 +258,7 @@ def test_nhanes_weightsonly():
 
 
 def test_nhanes_lonely_certain():
-    """Test the nhanes dataset with a lonely PSU and the value set to certain"""
+    """Test the nhanes dataset with a lonely PSU and the value set to certainty"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
     # Load the expected results
@@ -282,7 +282,7 @@ def test_nhanes_lonely_certain():
 
 
 def test_nhanes_lonely_adjust():
-    """Test the nhanes dataset with a lonely PSU and the value set to certain"""
+    """Test the nhanes dataset with a lonely PSU and the value set to adjust"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
     # Load the expected results
@@ -291,7 +291,7 @@ def test_nhanes_lonely_adjust():
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
-                                             fpc=None, nest=True, single_cluster='centered')
+                                             fpc=None, nest=True, single_cluster='adjust')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     calculated_result = pd.concat([
         clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,

@@ -14,7 +14,7 @@ def load_r_results(filename):
     return r_result
 
 
-def compare_result(loaded_r_result, calculated_result):
+def compare_result(loaded_r_result, calculated_result, rtol=1e-03):
     """Binary variables must be specified, since there are expected differences"""
     # Remove "Phenotype" from the index in calculated results
     calculated_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
@@ -29,15 +29,15 @@ def compare_result(loaded_r_result, calculated_result):
                          f" Calculated results have {len(calculated_result):,} rows,"
                          f" merged data has {len(merged):,} rows")
     # Close-enough equality of numeric values
-    for var in ["Beta", "SE", "pvalue"]:
+    for var in ["N", "Beta", "SE", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=1e-03)
+            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=rtol)
         except AssertionError:
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_loaded']}\n"
                              f"{merged[f'{var}_calculated']}")
     for var in ["Diff_AIC"]:
-        # Pass if R result is NaN (quasibinomial) or Python result is NaN (survey data used)
+        # Pass if loaded result is NaN (quasibinomial) or calculated result is NaN (survey data used)
         either_nan = merged[[f'{var}_loaded', f'{var}_calculated']].isna().any(axis=1)
         try:
             # Value must be close when both exist or both are NaN
@@ -200,7 +200,6 @@ def test_nhanes_noweights():
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df),
@@ -222,7 +221,6 @@ def test_nhanes_fulldesign():
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True)
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -246,7 +244,6 @@ def test_nhanes_weightsonly():
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR")
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -260,7 +257,7 @@ def test_nhanes_weightsonly():
 
 
 def test_nhanes_lonely_certain():
-    """Test the nhanes dataset with a lonely PSU and the value set to certain"""
+    """Test the nhanes dataset with a lonely PSU and the value set to certainty"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
     # Load the expected results
@@ -271,7 +268,6 @@ def test_nhanes_lonely_certain():
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True, single_cluster='certainty')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -285,7 +281,7 @@ def test_nhanes_lonely_certain():
 
 
 def test_nhanes_lonely_adjust():
-    """Test the nhanes dataset with a lonely PSU and the value set to certain"""
+    """Test the nhanes dataset with a lonely PSU and the value set to adjust"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
     # Load the expected results
@@ -294,9 +290,8 @@ def test_nhanes_lonely_adjust():
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
-                                             fpc=None, nest=True, single_cluster='centered')
+                                             fpc=None, nest=True, single_cluster='adjust')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
