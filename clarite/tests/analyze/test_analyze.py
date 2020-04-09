@@ -31,12 +31,8 @@ def compare_result(loaded_r_result, calculated_result):
     # Close-enough equality of numeric values
     for var in ["Beta", "SE", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=1e-02)
+            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=1e-03)
         except AssertionError:
-            for var in ["Beta", "SE", "pvalue"]:
-                print(f"{var}:\n"
-                             f"{merged[f'{var}_loaded']}\n"
-                             f"{merged[f'{var}_calculated']}")
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_loaded']}\n"
                              f"{merged[f'{var}_calculated']}")

@@ -79,19 +79,19 @@ write.csv(fpc, 'fpc_data.csv', row.names=FALSE)
 fpc <- read.csv(file = 'fpc_data.csv')
 
 # No weights
-glm_result_fpcnoweights <- rbind(get_glm_result("x", glm(y~x, data=fpc), use_weights=FALSE))
+glm_result_fpcnoweights <- rbind(get_glm_result("x", glm(y~x, data=fpc, na.action=na.omit), use_weights=FALSE))
 # No binary variables- python should match
 write.csv(glm_result_fpcnoweights, 'fpc_noweights_result.csv', row.names=FALSE)
 
 # Test without specifying fpc
 withoutfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, data=fpc, nest=TRUE)
-glm_result_withoutfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withoutfpc)))
+glm_result_withoutfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withoutfpc, na.action=na.omit)))
 # No binary variables- python should match
 write.csv(glm_result_withoutfpc, 'fpc_withoutfpc_result.csv', row.names=FALSE)
 
 # Test with specifying fpc
 withfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, fpc=~Nh, data=fpc, nest=TRUE)
-glm_result_withfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc)))
+glm_result_withfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc, na.action=na.omit)))
 # No binary variables- python should match
 write.csv(glm_result_withfpc, 'fpc_withfpc_result.csv', row.names=FALSE)
 
@@ -101,7 +101,7 @@ fpc_nostrat <- fpc
 fpc_nostrat$Nh <- 30
 write.csv(fpc_nostrat, 'fpc_nostrat_data.csv', row.names=FALSE)
 withfpc_nostrata <- svydesign(weights=~weight, ids=~psuid, strata=NULL, fpc=~Nh, data=fpc_nostrat)
-glm_result_withfpc_nostrata <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc_nostrata)))
+glm_result_withfpc_nostrata <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc_nostrata, na.action=na.omit)))
 # No binary variables- python should match
 write.csv(glm_result_withfpc_nostrata, 'fpc_withfpc_nostrat_result.csv', row.names=FALSE)
 
@@ -120,7 +120,7 @@ write.csv(apiclus1, 'apiclus1_data.csv', row.names=FALSE)
 apiclus1 <- read.csv(file = 'apiclus1_data.csv')
 
 # Full population no weights
-glm_apipop <- glm(api00~ell+meals+mobility, data=apipop)
+glm_apipop <- glm(api00~ell+meals+mobility, data=apipop, na.action=na.omit)
 glm_result_apipop <- rbind(
   get_glm_result("ell", glm_apipop, use_weights = FALSE),
   get_glm_result("meals", glm_apipop, use_weights = FALSE),
@@ -131,7 +131,7 @@ write.csv(glm_result_apipop, 'api_apipop_result.csv', row.names=FALSE)
 
 # stratified sample (no clusters) with fpc
 dstrat <- svydesign(id=~1, strata=~stype, weights=~pw, data=apistrat, fpc=~fpc)
-glm_apistrat <- svyglm(api00~ell+meals+mobility, design=dstrat)
+glm_apistrat <- svyglm(api00~ell+meals+mobility, design=dstrat, na.action=na.omit)
 glm_result_apistrat <- rbind(
   get_glm_result("ell", glm_apistrat),
   get_glm_result("meals", glm_apistrat),
@@ -142,7 +142,7 @@ write.csv(glm_result_apistrat, 'api_apistrat_result.csv', row.names=FALSE)
 
 # one-stage cluster sample (no strata) with fpc
 dclus1 <- svydesign(id=~dnum, weights=~pw, data=apiclus1, fpc=~fpc)
-glm_apiclus1 <- svyglm(api00~ell+meals+mobility, design=dclus1)
+glm_apiclus1 <- svyglm(api00~ell+meals+mobility, design=dclus1, na.action=na.omit)
 glm_result_apiclus1 <- rbind(
   get_glm_result("ell", glm_apiclus1),
   get_glm_result("meals", glm_apiclus1),
@@ -178,11 +178,17 @@ nhanes$agecat <- as.factor(nhanes$agecat)
 nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)
 
 # Full population no weights
-glm_nhanes_noweights <- glm(HI_CHOL~race+agecat+RIAGENDR, family=binomial(link="logit"), data=nhanes)
+glm_nhanes_noweights <- glm(HI_CHOL~race+agecat+RIAGENDR, family=binomial(link="logit"), data=nhanes, na.action=na.omit)
 glm_result_nhanes_noweights <- rbind(
-  get_glm_result("race", glm_nhanes_noweights, glm(HI_CHOL~agecat+RIAGENDR, family=binomial(link="logit"), data=nhanes), use_weights=FALSE),
-  get_glm_result("agecat", glm_nhanes_noweights, glm(HI_CHOL~race+RIAGENDR, family=binomial(link="logit"), data=nhanes), use_weights=FALSE),
-  get_glm_result("RIAGENDR", glm_nhanes_noweights, glm(HI_CHOL~race+agecat, family=binomial(link="logit"), data=nhanes), use_weights=FALSE)
+  get_glm_result("race", glm_nhanes_noweights,
+                 glm(HI_CHOL~agecat+RIAGENDR, family=binomial(link="logit"), data=nhanes, na.action=na.omit),
+                 use_weights=FALSE),
+  get_glm_result("agecat", glm_nhanes_noweights,
+                 glm(HI_CHOL~race+RIAGENDR, family=binomial(link="logit"), data=nhanes, na.action=na.omit),
+                 use_weights=FALSE),
+  get_glm_result("RIAGENDR", glm_nhanes_noweights,
+                 glm(HI_CHOL~race+agecat, family=binomial(link="logit"), data=nhanes, na.action=na.omit),
+                 use_weights=FALSE)
 )
 write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result_r.csv', row.names=FALSE)
 # RIAGENDR is binary, need to change calculation to match python
@@ -195,20 +201,15 @@ write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result.csv', row.names=
 
 # Full design: cluster, strata, weights
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes)
-glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))
-print("**** Survey Design ****")
-print(summary(dnhanes_complete))
-print("***********************")
-#print("HI_CHOL~race+agecat+RIAGENDR")
-#print("HI_CHOL~agecat+RIAGENDR")
-#print(summary(svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))))
-#print("===================")
-#print(summary(svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))))
+glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)
 
 glm_result_nhanes_complete <- rbind(
-  get_glm_result("race", glm_nhanes_complete, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))),
-  get_glm_result("agecat", glm_nhanes_complete, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"))),
-  get_glm_result("RIAGENDR", glm_nhanes_complete, svyglm(HI_CHOL~race+agecat, design=dnhanes_complete, family=binomial(link="logit")))
+  get_glm_result("race", glm_nhanes_complete,
+                 svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)),
+  get_glm_result("agecat", glm_nhanes_complete,
+                 svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)),
+  get_glm_result("RIAGENDR", glm_nhanes_complete,
+                 svyglm(HI_CHOL~race+agecat, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit))
 )
 write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_r.csv', row.names=FALSE)
 # RIAGENDR is binary, need to change calculation to match python
@@ -220,11 +221,14 @@ write.csv(glm_result_nhanes_complete, 'nhanes_complete_result.csv', row.names=FA
 
 # Weights Only
 dnhanes_weightsonly <- svydesign(id=~1, weights=~WTMEC2YR, data=nhanes)
-glm_nhanes_weightsonly <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"))
+glm_nhanes_weightsonly <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"), na.action=na.omit)
 glm_result_nhanes_weightsonly <- rbind(
-  get_glm_result("race", glm_nhanes_weightsonly, svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"))),
-  get_glm_result("agecat", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"))),
-  get_glm_result("RIAGENDR", glm_nhanes_weightsonly, svyglm(HI_CHOL~race+agecat, design=dnhanes_weightsonly, family=binomial(link="logit")))
+  get_glm_result("race", glm_nhanes_weightsonly,
+                 svyglm(HI_CHOL~agecat+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"), na.action=na.omit)),
+  get_glm_result("agecat", glm_nhanes_weightsonly,
+                 svyglm(HI_CHOL~race+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"), na.action=na.omit)),
+  get_glm_result("RIAGENDR", glm_nhanes_weightsonly,
+                 svyglm(HI_CHOL~race+agecat, design=dnhanes_weightsonly, family=binomial(link="logit"), na.action=na.omit))
 )
 write.csv(glm_result_nhanes_weightsonly, 'nhanes_weightsonly_result_r.csv', row.names=FALSE)
 # RIAGENDR is binary, need to change calculation to match python
@@ -254,18 +258,31 @@ write.csv(nhanes_lonely, 'nhanes_lonely_data.csv', row.names=FALSE)
 
 get_lonely_glm_results <- function(setting, binary_as_continuous=FALSE){
   options(survey.lonely.psu=setting)
-  glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))
+  glm_nhanes_lonely <- svyglm(HI_CHOL~race+agecat+RIAGENDR,
+                              design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely),
+                              family=binomial(link="logit"),
+                              na.action=na.omit)
   if(binary_as_continuous){
     glm_result_nhanes_lonely <- rbind(
-      get_glm_result("race", glm_nhanes_lonely, svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))),
-      get_glm_result("agecat", glm_nhanes_lonely, svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))),
+      get_glm_result("race", glm_nhanes_lonely,
+                     svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, na.action=na.omit),
+                            family=binomial(link="logit"))),
+      get_glm_result("agecat", glm_nhanes_lonely,
+                     svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, na.action=na.omit),
+                            family=binomial(link="logit"))),
       get_glm_result("RIAGENDR", glm_nhanes_lonely, alt_name="RIAGENDR2")
     )
   } else {
     glm_result_nhanes_lonely <- rbind(
-      get_glm_result("race", glm_nhanes_lonely, svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))),
-      get_glm_result("agecat", glm_nhanes_lonely, svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit"))),
-      get_glm_result("RIAGENDR", glm_nhanes_lonely, svyglm(HI_CHOL~race+agecat, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely), family=binomial(link="logit")))
+      get_glm_result("race", glm_nhanes_lonely,
+                     svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, na.action=na.omit),
+                            family=binomial(link="logit"))),
+      get_glm_result("agecat", glm_nhanes_lonely,
+                     svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, na.action=na.omit),
+                            family=binomial(link="logit"))),
+      get_glm_result("RIAGENDR", glm_nhanes_lonely,
+                     svyglm(HI_CHOL~race+agecat, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, na.action=na.omit),
+                            family=binomial(link="logit")))
     )
   }
   return(glm_result_nhanes_lonely)

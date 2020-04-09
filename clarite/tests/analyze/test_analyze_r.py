@@ -31,12 +31,8 @@ def compare_result(loaded_r_result, calculated_result):
     # Close-enough equality of numeric values
     for var in ["Beta", "SE", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=1e-02)
+            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0)
         except AssertionError:
-            for var in ["Beta", "SE", "pvalue"]:
-                print(f"{var}:\n"
-                             f"{merged[f'{var}_loaded']}\n"
-                             f"{merged[f'{var}_calculated']}")
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_loaded']}\n"
                              f"{merged[f'{var}_calculated']}")
@@ -226,7 +222,6 @@ def test_nhanes_fulldesign():
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True)
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     calculated_result = pd.concat([
         clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -250,7 +245,6 @@ def test_nhanes_weightsonly():
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR")
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     calculated_result = pd.concat([
         clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -275,7 +269,6 @@ def test_nhanes_lonely_certain():
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True, single_cluster='certainty')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     calculated_result = pd.concat([
         clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -300,7 +293,6 @@ def test_nhanes_lonely_adjust():
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True, single_cluster='centered')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    df = clarite.modify.rowfilter_incomplete_obs(df)
     calculated_result = pd.concat([
         clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
