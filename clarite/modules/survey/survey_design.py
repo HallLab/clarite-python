@@ -26,10 +26,10 @@ class SurveyDesignSpec:
         May be specified as the total population size, or the fraction of the population that was sampled.
     single_cluster: str
         Setting controlling variance calculation in single-cluster ('lonely psu') strata
-        'error': default, throw an error
-        'scaled': use the average value of other strata
-        'centered': use the average of all observations
-        'certainty': that strata doesn't contribute to the variance
+        'fail': default, throw an error
+        'adjust': use the average of all observations (more conservative)
+        'average': use the average value of other strata
+        'certainty': that strata doesn't contribute to the variance (0 variance)
 
     Attributes
     ----------
@@ -43,7 +43,7 @@ class SurveyDesignSpec:
                                          nest=True,
                                          weights=weights_replication,
                                          fpc=None,
-                                         single_cluster='scaled')
+                                         single_cluster='fail')
     """
     def __init__(self,
                  survey_df: pd.DataFrame,
@@ -52,7 +52,7 @@ class SurveyDesignSpec:
                  nest: bool = False,
                  weights: Union[str, Dict[str, str]] = None,
                  fpc: Optional[str] = None,
-                 single_cluster: Optional[str] = 'error'):
+                 single_cluster: Optional[str] = 'fail'):
 
         # Validate index
         if isinstance(survey_df.index, pd.MultiIndex):
@@ -130,9 +130,9 @@ class SurveyDesignSpec:
                     self.weights = self.survey_df[self.weight_name]
 
         # Load single_cluster
-        if single_cluster not in {'error', 'scaled', 'certainty', 'centered'}:
+        if single_cluster not in {'fail', 'adjust', 'average', 'certainty'}:
             raise ValueError(f"if provided, 'single_cluster' must be one of "
-                             f"'error', 'scaled', 'certainty', or 'centered'.")
+                             f"'fail', 'adjust', 'average', or 'certainty'.")
         else:
             self.single_cluster = single_cluster
 
@@ -178,18 +178,14 @@ class SurveyDesignSpec:
         regression_variable : str or None
             Name of the variable being regressed.  Required if weights are variable-specific.
         index : pd.Index or None
-            Data being used in the analysis whose index is a subset of the survey design indicies
+            Data being used in the analysis whose index is a subset of the survey design indicies.
+            If the variable or any covariates are missing, those observations should not be included in this index.
 
         Returns
         -------
         survey_design: SurveyDesign
             SurveyDesign object used for further analysis
-        index: pd.Index
-            Index corresponding to all data in the design- limited by the input index or weights that are na or zero
-        warnings: List[str]
-            List of any warnings that occurred
         """
-        warnings = []
         # Return all observations if a subset index is not specified
         if index is None:
             index = self.survey_df.index
@@ -208,14 +204,6 @@ class SurveyDesignSpec:
                 weights = self.weights[regression_variable].loc[index]
         else:
             weights = None
-
-        # Update index to remove missing, negative, or zero weights
-        if weights is not None:
-            weights = weights[~weights.isna() & (weights > 0)]
-            n_removed = len(index) - len(weights)
-            if n_removed > 0:
-                warnings.append(f"{n_removed:,} observation(s) with missing, negative, or zero weights were removed")
-                index = weights.index
 
         # Get strata array
         if self.has_strata:
@@ -237,7 +225,7 @@ class SurveyDesignSpec:
 
         sd = SurveyDesign(strata=strata, cluster=cluster, weights=weights, fpc=fpc,
                           nest=self.nest, single_cluster=self.single_cluster)
-        return sd, index, warnings
+        return sd
 
 
 class SurveyDesign(object):
@@ -261,12 +249,12 @@ class SurveyDesign(object):
     nest : boolean
         allows user to specify if PSU's with the same
         PSU number in different strata are treated as distinct PSUs.
-    single_cluster : str
-        Setting controlling variance calculation in single-cluster strata
-        'error': default, throw an error
-        'scaled': use the average value of other strata
-        'centered': use the average of all observations
-        'certainty': that strata doesn't contribute to the variance
+    single_cluster: str
+        Setting controlling variance calculation in single-cluster ('lonely psu') strata
+        'fail': default, throw an error
+        'adjust': use the average of all observations (more conservative)
+        'average': use the average value of other strata
+        'certainty': that strata doesn't contribute to the variance (0 variance)
 
     Attributes
     ----------
@@ -298,7 +286,7 @@ class SurveyDesign(object):
                  weights: Optional[pd.Series] = None,
                  fpc: Optional[pd.Series] = None,
                  nest: bool = True,
-                 single_cluster: str = 'error'):
+                 single_cluster: str = 'fail'):
 
         # Record inputs
         self.has_strata = False

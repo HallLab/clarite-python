@@ -135,6 +135,7 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
     regression_family <<- regression_family
     d <<- d
     # Results using surveyglm
+    print(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=d, na.action=na.omit))
     var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=d, na.action=na.omit),
                            error=function(e) warn_on_e(var_name, e))
     restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), family=regression_family, design=d, na.action=na.omit),

@@ -20,19 +20,12 @@ class WeightedGLMRegression(GLMRegression):
         self.cov_method = cov_method
 
     def subset_data(self):
-        """Subset the data by dropping incomplete cases and also checking for missing weights"""
+        """Count observations without missing data.  These will be dropped automatically in glm functions."""
         subset_data = self.data.dropna(axis='index', how='any',
-                                     subset=[self.test_variable, self.outcome_variable] + self.covariates)
+                                       subset=[self.test_variable, self.outcome_variable] + self.covariates)
         # Get a survey design object based on the data and subset the data to match
-        self.survey_design, survey_index, survey_warnings = \
-            self.survey_design_spec.get_survey_design(self.test_variable, subset_data.index)
-        subset_data = subset_data.loc[survey_index]
-
+        self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, subset_data.index)
         self.N = len(subset_data)
-
-        # Log any warnings
-        if len(survey_warnings) > 0:
-            self.warnings.extend(survey_warnings)
 
     def run_continuous(self):
         y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe')

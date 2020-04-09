@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
-from rpy2.rinterface_lib.na_values import NALogicalType
 from rpy2 import robjects as ro
-
-from clarite.internal.utilities import _get_dtypes
 
 
 def ewasresult2py(r_result):

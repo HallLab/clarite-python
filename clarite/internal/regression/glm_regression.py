@@ -53,7 +53,7 @@ class GLMRegression(Regression):
         self.diff_AIC = np.nan
 
     def subset_data(self):
-        """Remove observations with missing data"""
+        """Count observations without missing data.  These will be dropped automatically in glm functions."""
         subset_data = self.data.dropna(axis='index', how='any',
                                        subset=[self.test_variable, self.outcome_variable] + self.covariates)
         self.N = len(subset_data)
@@ -94,9 +94,9 @@ class GLMRegression(Regression):
         self.subset_data()
 
         # Minimum complete cases filter
-        if len(self.data) < self.min_n:
+        if self.N < self.min_n:
             raise ValueError(f"too few complete observations (min_n filter: "
-                             f"{len(self.data)} < {self.min_n})")
+                             f"{self.N} < {self.min_n})")
 
         # Check variable values, creating warnings if needed
         self.check_covariate_values()

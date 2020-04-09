@@ -205,9 +205,12 @@ def ewas_r(phenotype: str,
             kwargs['nest'] = True
         else:
             kwargs['nest'] = False
+        # fpc
         if survey_design_spec.has_fpc:
             kwargs['fpc'] = ro.Formula(f"~{survey_design_spec.fpc_name}")
             data[survey_design_spec.fpc_name] = survey_design_spec.fpc
+        # Single cluster setting
+        ro.r(f'options("survey.lonely.psu"="{survey_design_spec.single_cluster}")')
         with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
             data_r = df_pandas2r(data)
             result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
