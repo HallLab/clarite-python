@@ -1,2 +1,2 @@
-"Variable","N","Converged","Beta","SE","Variable_pvalue","LRT_pvalue","Diff_AIC","pval","phenotype","weight"
-"x",8,TRUE,1.12743994469334,0.127645096718047,0.00030902192977747,NA,NA,0.00030902192977747,"y","weight"
+"Variable","N","Beta","SE","Diff_AIC","pvalue"
+"x",8,1.12743994469334,0.127645096718048,NA,0.000309021929777482

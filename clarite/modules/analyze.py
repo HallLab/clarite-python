@@ -21,9 +21,9 @@ from numpy import nan
 from statsmodels.stats.multitest import multipletests
 from .survey import SurveyDesignSpec
 
-from ..internal.regression import Regression
-from ..internal.utilities import _get_dtypes
-
+from clarite.internal.regression import GLMRegression, WeightedGLMRegression
+from ..internal.utilities import _get_dtypes, requires, validate_ewas_params
+from ..r_code.r_utilities import ewasresult2py, df_pandas2r
 
 result_columns = ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
                   'LRT_pvalue', 'Diff_AIC', 'pvalue']
@@ -74,145 +74,153 @@ def ewas(
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
     Running EWAS on a continuous variable
     """
-    # Covariates must be a list
-    if type(covariates) != list:
-        raise ValueError("'covariates' must be specified as a list.  Use an empty list ([]) if there aren't any.")
-
-    # Make sure the index of each dataset is not a multiindex and give it a consistent name
-    if isinstance(data.index, pd.MultiIndex):
-        raise ValueError(f"Data must not have a multiindex")
-    data.index.name = "ID"
-
-    # Collects lists of regression variables
-    types = _get_dtypes(data)
-
-    rv_bin = [v for v, t in types.iteritems() if t == 'binary' and v not in covariates and v != phenotype]
-    rv_cat = [v for v, t in types.iteritems() if t == 'categorical' and v not in covariates and v != phenotype]
-    rv_cont = [v for v, t in types.iteritems() if t == 'continuous' and v not in covariates and v != phenotype]
-
-    # Ensure there are variables which can be regressed
-    if len(rv_bin + rv_cat + rv_cont) == 0:
-        raise ValueError(f"No variables are available to run regression on")
-
-    # Ensure covariates are all present and not unknown type
-    covariate_types = [types.get(c, None) for c in covariates]
-    missing_covariates = [c for c, dt in zip(covariates, covariate_types) if dt is None]
-    unknown_covariates = [c for c, dt in zip(covariates, covariate_types) if dt == 'unknown']
-    if len(missing_covariates) > 0:
-        raise ValueError(f"One or more covariates were not found in the data: {', '.join(missing_covariates)}")
-    if len(unknown_covariates) > 0:
-        raise ValueError(f"One or more covariates have an unknown datatype: {', '.join(unknown_covariates)}")
-
-    # Validate the type of the phenotype variable
-    pheno_kind = types.get(phenotype, None)
-    if phenotype in covariates:
-        raise ValueError(f"The phenotype ('{phenotype}') cannot also be a covariate.")
-    elif pheno_kind is None:
-        raise ValueError(f"The phenotype ('{phenotype}') was not found in the data.")
-    elif pheno_kind == 'unknown':
-        raise ValueError(f"The phenotype ('{phenotype}') has an unknown type.")
-    elif pheno_kind == 'constant':
-        raise ValueError(f"The phenotype ('{phenotype}') is a constant value.")
-    elif pheno_kind == 'categorical':
-        raise NotImplementedError("Categorical Phenotypes are not yet supported.")
-    elif pheno_kind == 'continuous':
-        click.echo(f"Running EWAS on a Continuous Outcome (family = Gaussian)")
-    elif pheno_kind == 'binary':
-        # Set phenotype categories so that the higher number is a success
-        categories = sorted(data[phenotype].unique(), reverse=True)
-        cat_type = pd.api.types.CategoricalDtype(categories=categories, ordered=True)
-        data[phenotype] = data[phenotype].astype(cat_type)
-        click.echo(click.style(f"Running EWAS on a Binary Outcome (family = Binomial)\n"
-                               f"\t(Success = '{categories[0]}', Failure = '{categories[1]}')", fg='green'))
-    else:
-        raise ValueError(f"The phenotype's type could not be determined.  Please report this error.")
-
-    # Print the survey design
-    if survey_design_spec is not None:
-        click.echo(click.style(f"Using a Survey Design:\n{survey_design_spec}", fg='green'))
+    rv_bin, rv_cat, rv_cont = validate_ewas_params(covariates, data, phenotype, survey_design_spec)
 
     # Run Regressions
-    return run_regressions(phenotype, covariates, data, rv_bin, rv_cat, rv_cont, pheno_kind, min_n, survey_design_spec, cov_method)
+    ewas_results = []
+    rvs = rv_bin + rv_cat + rv_cont
 
+    for rv in rvs:
+        # Set up regression object
+        if survey_design_spec is not None:
+            regression = WeightedGLMRegression(
+                data=data,
+                outcome_variable=phenotype,
+                test_variable=rv,
+                covariates=covariates,
+                min_n=min_n,
+                survey_design_spec=survey_design_spec,
+                cov_method=cov_method
+            )
+        else:
+            regression = GLMRegression(
+                data=data,
+                outcome_variable=phenotype,
+                test_variable=rv,
+                covariates=covariates,
+                min_n=min_n
+            )
 
-def run_regressions(phenotype: str,
-                    covariates: List[str],
-                    data: pd.DataFrame,
-                    rv_bin: List[str],
-                    rv_cat: List[str],
-                    rv_cont: List[str],
-                    pheno_kind: str,
-                    min_n: int,
-                    survey_design_spec: Optional[SurveyDesignSpec],
-                    cov_method: Optional[str]):
-    """Run a regressions on variables"""
-    result = []
+        # Run
+        result, warnings, error = regression.run()
 
-    # Continuous Variables
-    click.echo(f"\n####### Regressing {len(rv_cont)} Continuous Variables #######\n")
-    for rv in rv_cont:
-        # Set up the regression
-        regression = Regression(variable=rv,
-                                variable_kind='continuous',
-                                phenotype=phenotype,
-                                phenotype_kind=pheno_kind,
-                                data=data,
-                                covariates=covariates,
-                                survey_design_spec=survey_design_spec,
-                                cov_method=cov_method)
-        # Run the regression
-        try:
-            regression.run(min_n=min_n)
-        except Exception as e:
-            click.echo(f"{rv} = NULL due to: {e}")
-        # Save results
-        result.append(regression.get_results())
+        # Log errors and warnings
+        if error is not None:
+            click.echo(click.style(f"{rv} = NULL due to: {error}", fg='red'))
+        if len(warnings) > 0:
+            click.echo(click.style(f"{rv} had warnings:", fg='yellow'))
+            for warning in warnings:
+                click.echo(click.style(f"\t{warning}", fg='yellow'))
 
-    click.echo(f"\n####### Regressing {len(rv_bin)} Binary Variables #######\n")
-    for rv in rv_bin:
-        # Set up the regression
-        regression = Regression(variable=rv,
-                                variable_kind='binary',
-                                phenotype=phenotype,
-                                phenotype_kind=pheno_kind,
-                                data=data,
-                                covariates=covariates,
-                                survey_design_spec=survey_design_spec,
-                                cov_method=cov_method)
-        # Run the regression
-        try:
-            regression.run(min_n=min_n)
-        except Exception as e:
-            click.echo(f"{rv} = NULL due to: {e}")
-        # Save results
-        result.append(regression.get_results())
+        # Collect result
+        ewas_results.append(result)
 
-    click.echo(f"\n####### Regressing {len(rv_cat)} Categorical Variables #######\n")
-    for rv in rv_cat:
-        # Set up the regression
-        regression = Regression(variable=rv,
-                                variable_kind='categorical',
-                                phenotype=phenotype,
-                                phenotype_kind=pheno_kind,
-                                data=data,
-                                covariates=covariates,
-                                survey_design_spec=survey_design_spec,
-                                cov_method=cov_method)
-        # Run the regression
-        try:
-            regression.run(min_n=min_n)
-        except Exception as e:
-            click.echo(f"{rv} = NULL due to: {e}")
-        # Save results
-        result.append(regression.get_results())
-
-    # Gather All Results
-    result = pd.DataFrame(result)
-    result['Phenotype'] = phenotype  # Add phenotype
-    result = result.sort_values('pvalue').set_index(['Variable', 'Phenotype'])  # Sort and set index
-    result = result[['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
-                     'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
+    # Process Results
+    ewas_result = pd.DataFrame(ewas_results)
+    ewas_result['Phenotype'] = phenotype  # Add phenotype
+    ewas_result = ewas_result.sort_values('pvalue').set_index(['Variable', 'Phenotype'])  # Sort and set index
+    ewas_result = ewas_result[['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
+                               'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
     click.echo("Completed EWAS\n")
+    return ewas_result
+
+
+@requires('rpy2')
+def ewas_r(phenotype: str,
+           covariates: List[str],
+           data: pd.DataFrame,
+           survey_design_spec: Optional[SurveyDesignSpec] = None,
+           min_n: Optional[int] = 200):
+    """
+    Run EWAS using R
+    """
+
+    # Validate parameters
+    rv_bin, rv_cat, rv_cont = validate_ewas_params(covariates, data, phenotype, survey_design_spec)
+
+    # Make the first column "ID"
+    data = data.reset_index(drop=False)
+    data.columns = ["ID", ] + [c for c in data.columns if c != "ID"]
+
+    # Source R script to define the function
+    import rpy2.robjects as ro
+    from rpy2.robjects import pandas2ri
+    ro.r.source("../../r_code/ewas_r.R")
+
+    # Lists of variables and covariates
+    dtypes = _get_dtypes(data)
+    cat_vars = ro.StrVector(rv_bin + rv_cat)
+    cont_vars = ro.StrVector(rv_cont)
+    cat_covars = ro.StrVector([v for v in covariates if (dtypes.loc[v] == 'categorical') or (dtypes.loc[v] == 'binary')])
+    cont_covars = ro.StrVector([v for v in covariates if dtypes.loc[v] == 'continuous'])
+
+    # These lists must be passed as NULL if they are empty
+    if len(cat_vars) == 0:
+        cat_vars = ro.NULL
+    if len(cont_vars) == 0:
+        cont_vars = ro.NULL
+    if len(cat_covars) == 0:
+        cat_covars = ro.NULL
+    if len(cont_covars) == 0:
+        cont_covars = ro.NULL
+
+    # Regression Family
+    if dtypes.loc[phenotype] == 'binary':
+        regression_family = "binomial"
+    elif dtypes.loc[phenotype] == 'continuous':
+        regression_family = 'gaussian'
+    else:
+        raise ValueError("Phenotype must be 'binary' or 'continuous'")
+
+    # Run with or without survey design info
+    if survey_design_spec is None:
+        with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
+            data_r = df_pandas2r(data)
+            result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
+                               cat_covars=cat_covars, cont_covars=cont_covars,
+                               regression_family=regression_family, min_n=min_n)
+    else:
+        # Merge weights into data
+        data = pd.merge(data, survey_design_spec.weights, left_index=True, right_index=True, how='left')
+        if survey_design_spec.single_weight:
+            weights = survey_design_spec.weight_name
+        elif survey_design_spec.multi_weight:
+            weights = survey_design_spec.weight_names
+        else:
+            raise ValueError("Weights must be provided")
+        # Gather optional parts of survey parameters
+        kwargs = dict()
+        # Cluster IDs
+        if survey_design_spec.has_cluster:
+            kwargs['ids'] = ro.Formula(f"~{survey_design_spec.cluster_name}")
+            data[survey_design_spec.cluster_name] = survey_design_spec.cluster
+        else:
+            kwargs['ids'] = ro.Formula("~1")
+        # Strata
+        if survey_design_spec.has_strata:
+            kwargs['strat'] = ro.Formula(f"~{survey_design_spec.strata_name}")
+            data[survey_design_spec.strata_name] = survey_design_spec.strata
+        # Nest
+        if survey_design_spec.nest:
+            kwargs['nest'] = True
+        else:
+            kwargs['nest'] = False
+        # fpc
+        if survey_design_spec.has_fpc:
+            kwargs['fpc'] = ro.Formula(f"~{survey_design_spec.fpc_name}")
+            data[survey_design_spec.fpc_name] = survey_design_spec.fpc
+        # Single cluster setting
+        ro.r(f'options("survey.lonely.psu"="{survey_design_spec.single_cluster}")')
+        with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
+            data_r = df_pandas2r(data)
+            result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
+                               cat_covars=cat_covars, cont_covars=cont_covars,
+                               regression_family=regression_family,
+                               min_n=min_n,
+                               weights=weights,
+                               **kwargs)
+
+    result = ewasresult2py(result)
     return result
 
 

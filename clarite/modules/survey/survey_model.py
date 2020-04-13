@@ -104,11 +104,11 @@ class SurveyModel(object):
                   .set_index('strat', append=True)
 
         def center_strata(data, single_cluster, pop_mean):
-            if len(data) > 1 or single_cluster == 'scaled' or single_cluster == 'certainty':
+            if len(data) > 1 or single_cluster == 'average' or single_cluster == 'certainty':
                 # Substract the mean across clusters
                 # This results in a value of 0 for the strata when there is only 1 cluster
                 return data - data.mean()
-            elif len(data) == 1 and single_cluster == 'centered':
+            elif len(data) == 1 and single_cluster == 'adjust':
                 # Subtract the population mean from the single-cluster strata
                 return data - pop_mean
             elif len(data) == 1:
@@ -116,11 +116,11 @@ class SurveyModel(object):
                                  f"Adjust the 'single_cluster' SurveyDesign parameter or reassign the cluster to avoid this error.")
 
         # Center each stratum
-        single_cluster = self.design.single_cluster  # 'scaled', 'certainty', or 'centered'.  Anything else will throw an error for single-cluster-strata
+        single_cluster = self.design.single_cluster  # 'average', 'certainty', or 'adjust'.  Anything else will throw an error for single-cluster-strata
         jdata = jdata.groupby(axis=0, level='strat').apply(lambda g: center_strata(g, single_cluster, d_hat.mean()))
 
         # Scale after centering, if required
-        if single_cluster == 'scaled':
+        if single_cluster == 'average':
             single_cluster_scale = self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1))
             jdata *= single_cluster_scale
 
