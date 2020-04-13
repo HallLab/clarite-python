@@ -23,7 +23,6 @@ from .survey import SurveyDesignSpec
 
 from clarite.internal.regression import GLMRegression, WeightedGLMRegression
 from ..internal.utilities import _get_dtypes, requires, validate_ewas_params
-from ..r_code.r_utilities import ewasresult2py, df_pandas2r
 
 result_columns = ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
                   'LRT_pvalue', 'Diff_AIC', 'pvalue']
@@ -145,6 +144,7 @@ def ewas_r(phenotype: str,
     # Source R script to define the function
     import rpy2.robjects as ro
     from rpy2.robjects import pandas2ri
+    from ..r_code.r_utilities import ewasresult2py, df_pandas2r
     ro.r.source("../../r_code/ewas_r.R")
 
     # Lists of variables and covariates
