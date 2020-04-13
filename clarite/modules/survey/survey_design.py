@@ -291,7 +291,7 @@ class SurveyDesign(object):
         # Record inputs
         self.has_strata = False
         self.has_clusters = False
-        self.has_weight = False
+        self.has_weights = False
         self.has_fpc = False
         if strata is not None:
             self.has_strata = True

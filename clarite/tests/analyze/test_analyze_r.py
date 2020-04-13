@@ -304,6 +304,7 @@ def test_nhanes_lonely_adjust():
     # Compare
     compare_result(r_result, calculated_result)
 
+
 def test_nhanes_lonely_average():
     """Test the nhanes dataset with a lonely PSU and the value set to average"""
     # Load the data

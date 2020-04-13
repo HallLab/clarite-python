@@ -267,7 +267,9 @@ get_lonely_glm_results <- function(setting, binary_as_continuous=FALSE){
   if(binary_as_continuous){
     glm_result_nhanes_lonely <- rbind(
       get_glm_result("race", glm_nhanes_lonely,
-                     svyglm(HI_CHOL~agecat+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, na.action=na.omit),
+                     svyglm(HI_CHOL~agecat+RIAGENDR,
+                            design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR,
+                                             nest=TRUE, data=nhanes_lonely, na.action=na.omit),
                             family=binomial(link="logit"))),
       get_glm_result("agecat", glm_nhanes_lonely,
                      svyglm(HI_CHOL~race+RIAGENDR, design=svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_lonely, na.action=na.omit),
