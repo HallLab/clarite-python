@@ -2,7 +2,8 @@ include AUTHORS.rst
 include CONTRIBUTING.rst
 include LICENSE
 include README.rst
-include requirements/requirements.txt
+include requirements/*
+include clarite/r_code/*.R
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
