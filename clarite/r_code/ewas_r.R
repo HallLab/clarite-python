@@ -1,6 +1,8 @@
+library(survey)
+
 # Catch errors from glm and similar, warning instead
 warn_on_e <- function(var_name, e){
-  warning(paste("NULL result for ", var_name, " due to: ", e, sep=""), call=FALSE)
+  warning(paste0("NULL result for ", var_name, " due to: ", e), call=FALSE)
   return(NULL)
 }
 
@@ -14,13 +16,13 @@ get_varying_covariates <- function(df, covariates, phenotype, variable, allowed_
   not_allowed_nonvarying <- setdiff(nonvarying_covariates, allowed_nonvarying)
   if(length(not_allowed_nonvarying) > 0){
     # Null Result
-    print(paste("    NULL result: Some covariates don't vary when '", variable, "' is not NA and aren't specified as allowed: ",
-     paste(not_allowed_nonvarying, collapse=", "), sep=""))
+    print(paste0("    NULL result: Some covariates don't vary when '", variable, "' is not NA and aren't specified as allowed: ",
+                 paste(not_allowed_nonvarying, collapse = ", ")))
      return(NULL)
   } else if(length(nonvarying_covariates) > 0){
     # Ignore those
-    print(paste("    Some covariates don't vary when '", variable, "' is not NA but are allowed to do so: ",
-     paste(nonvarying_covariates, collapse=", "), sep=""))
+    print(paste0("    Some covariates don't vary when '", variable, "' is not NA but are allowed to do so: ",
+                 paste(nonvarying_covariates, collapse = ", ")))
   }
   # Return the list of covariates that are kept
   return(varying_covariates)
