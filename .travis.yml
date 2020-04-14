@@ -21,9 +21,11 @@ install:
   - source activate test-env
   # Install optional rpy2
   - conda install -c conda-forge rpy2
+  - pip freeze  # print current env
   # Install this package and the packages listed in requirements.txt.
   - pip install .
   # Install optional R packages
+  - clarite-cli  # test
   - clarite-cli utils install-r-packages
   # Install extra requirements for running tests
   - pip install -r requirements/requirements-dev.txt
