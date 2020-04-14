@@ -25,6 +25,7 @@ install:
   - python -m pip install .
   # Install optional R packages
   - which clarite-cli
+  - ls /home/travis/miniconda/envs/test-env/lib/python3.6/site-packages/clarite/
   - clarite-cli utils install-r-packages
   # Install extra requirements for running tests
   - pip install -r requirements/requirements-dev.txt
