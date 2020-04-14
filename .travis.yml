@@ -14,11 +14,14 @@ install:
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  - conda config --add channels conda-forge
   # Useful for debugging any issues with conda
   - conda info -a
+  # Create env
+  - conda create -q -n test-env python=3.6
+  - source activate test-env
+  - conda config --add channels conda-forge
   # Install optional rpy2
-  - conda install rpy2<3.2
+  - conda install rpy2
   # Install this package and the packages listed in requirements.txt.
   - pip install .
   # Install optional R packages
