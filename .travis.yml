@@ -18,14 +18,13 @@ install:
   - conda info -a
   # Create env
   - conda create -q -n test-env python=3.6
-  - source activate test-env
+  - conda activate test-env
   # Install optional rpy2
   - conda install -c conda-forge rpy2
-  - python -m pip freeze  # print current env
   # Install this package and the packages listed in requirements.txt.
   - python -m pip install .
   # Install optional R packages
-  - clarite-cli  # test
+  - which clarite-cli
   - clarite-cli utils install-r-packages
   # Install extra requirements for running tests
   - pip install -r requirements/requirements-dev.txt
