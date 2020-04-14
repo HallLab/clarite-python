@@ -19,9 +19,8 @@ install:
   # Create env
   - conda create -q -n test-env python=3.6
   - source activate test-env
-  - conda config --add channels conda-forge
   # Install optional rpy2
-  - conda install rpy2
+  - conda install -c conda-forge rpy
   # Install this package and the packages listed in requirements.txt.
   - pip install .
   # Install optional R packages
