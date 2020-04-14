@@ -12,7 +12,7 @@ EWAS and associated calculations
 
 
 """
-
+from pathlib import Path
 from typing import List, Optional
 
 import click
@@ -145,7 +145,9 @@ def ewas_r(phenotype: str,
     import rpy2.robjects as ro
     from rpy2.robjects import pandas2ri
     from ..r_code.r_utilities import ewasresult2py, df_pandas2r
-    ro.r.source("../../r_code/ewas_r.R")
+    r_code_folder = (Path(__file__).parent.parent / 'r_code')
+    filename = str(r_code_folder / "ewas_r.R")
+    ro.r.source(filename)
 
     # Lists of variables and covariates
     dtypes = _get_dtypes(data)
