@@ -44,7 +44,7 @@ def compare_result(loaded_r_result, calculated_result, rtol=1e-02):
             assert np.allclose(merged.loc[~either_nan, f"{var}_loaded"],
                                merged.loc[~either_nan, f"{var}_calculated"], equal_nan=True)
         except AssertionError:
-            raise ValueError(f"{var}: Loaded ({merged[f'{var}_r']}) != Calculated ({merged[f'{var}_python']})")
+            raise ValueError(f"{var}: Loaded ({merged[f'{var}_loaded']}) != Calculated ({merged[f'{var}_calculated']})")
 
 ###############
 # fpc Dataset #
@@ -122,6 +122,24 @@ def test_api_noweights():
     df = clarite.load.from_csv(DATA_PATH / "apipop_data.csv", index_col=None)
     # Load the expected results
     r_result = load_r_results(DATA_PATH / "api_apipop_result.csv")
+    # Process data
+    df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
+    df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"], data=df, min_n=1),
+        ], axis=0)
+    # Compare
+    compare_result(r_result, python_result)
+
+
+def test_api_noweights_withNA():
+    """Test the api dataset (with na) with no survey info"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "apipop_withna_data.csv", index_col=None)
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "api_apipop_withna_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])

@@ -169,8 +169,8 @@ class GLMRegression(Regression):
 
     def run_categorical(self):
         # Regress both models
-        est_restricted = smf.glm(self.formula_restricted, data=self.data, family=self.family, missing="drop").fit(use_t=True)
         est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=True)
+        est_restricted = smf.glm(self.formula_restricted, data=est.model.data.frame, family=self.family).fit(use_t=True)
         # Check convergence
         if not est.converged & est_restricted.converged:
             return

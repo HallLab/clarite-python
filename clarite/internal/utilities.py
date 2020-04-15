@@ -216,7 +216,7 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
         # Set phenotype categories so that the higher number is a success
         categories = sorted([c for c in data[phenotype].unique() if not pd.isna(c)], reverse=True)
         cat_type = pd.api.types.CategoricalDtype(categories=categories, ordered=True)
-        data[phenotype] = data[phenotype].astype(cat_type)
+        data.astype({phenotype: cat_type}, copy=False)
         click.echo(click.style(f"Running EWAS on a Binary Outcome (family = Binomial)\n"
                                f"\t(Success = '{categories[0]}', Failure = '{categories[1]}')", fg='green'))
     else:

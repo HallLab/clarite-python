@@ -133,7 +133,8 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
     # Results using surveyglm
     var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=d, na.action=na.omit),
                            error=function(e) warn_on_e(var_name, e))
-    restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), family=regression_family, design=d, na.action=na.omit),
+    restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), family=regression_family,
+                                                 design=var_result$survey.design),
                                   error=function(e) warn_on_e(var_name, e))
     if(!is.null(var_result) & !is.null(restricted_result)){
       # Get the LRT using anova
@@ -151,11 +152,13 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
     # Results using data.frame with stats::anova
     var_result <- tryCatch(glm(stats::as.formula(fmla), family=regression_family, data=d, na.action=na.omit),
                            error=function(e) warn_on_e(var_name, e))
-    restricted_result <- tryCatch(glm(stats::as.formula(fmla_restricted), family=regression_family, data=d, na.action=na.omit),
+    restricted_result <- tryCatch(glm(stats::as.formula(fmla_restricted), family=regression_family,
+                                      data=var_result$model),  # Use the same data as the full model
                                   error=function(e) warn_on_e(var_name, e))
     if(!is.null(var_result) & !is.null(restricted_result)){
       # Get the LRT using anova
-      lrt <- anova(var_result, restricted_result, test = "LRT")
+      lrt <- list(p=NA)  # Start with NA for p in case anova fails
+      tryCatch(lrt <- anova(var_result, restricted_result, test = "LRT"), error=function(e) warn_on_e(var_name, e))
       return(data.frame(
         N = length(var_result$residuals),
         Converged = var_result$converged,
@@ -352,7 +355,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     i <- i + 1
     # Update var name and phenotype
     ewas_result_df$Variable[i] <- var_name
-    ewas_result_df$phenotype <- y
+    ewas_result_df$phenotype[i] <- y
 
     # Skip regression if the min_n filter isn't met, just updating the N value
     non_na_obs <- sum(!is.na(d[var_name]))
