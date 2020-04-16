@@ -32,7 +32,7 @@ class WeightedGLMRegression(GLMRegression):
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                             init_args=dict(family=self.family, missing="drop"),
-                            fit_args=dict(use_t=True))
+                            fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Check convergence
         if not model.result.converged:
@@ -58,7 +58,7 @@ class WeightedGLMRegression(GLMRegression):
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                             init_args=dict(family=self.family, missing="drop"),
-                            fit_args=dict(use_t=True))
+                            fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Check convergence
         if not model.result.converged:
@@ -86,7 +86,7 @@ class WeightedGLMRegression(GLMRegression):
         y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                             init_args=dict(family=self.family),
-                            fit_args=dict(use_t=True))
+                            fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Regress restricted model
         # y doesn't change, but X should use the same observations as the full model (losing any where the variable is NA)
@@ -94,7 +94,7 @@ class WeightedGLMRegression(GLMRegression):
         X_restricted = X_restricted.loc[X.index]
         model_restricted = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                                        init_args=dict(family=self.family),
-                                       fit_args=dict(use_t=True))
+                                       fit_args=dict(use_t=self.use_t))
         model_restricted.fit(y=y, X=X_restricted)
         # Check convergence
         if not model.result.converged & model_restricted.result.converged:

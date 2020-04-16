@@ -9,6 +9,7 @@ def regTermTest(full_model, restricted_model, ddf, X_names, var_name):
     This is a limited adaption of the same function in the R 'survey' library.
     """
     # Get chisq
+    # Note: These are not the correct deviance values, which need to account for weights
     chisq = restricted_model.result.deviance - full_model.result.deviance
 
     # Get Misspec

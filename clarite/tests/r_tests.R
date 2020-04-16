@@ -263,6 +263,31 @@ glm_result_nhanes_complete <- update_binary_result(
   )
 write.csv(glm_result_nhanes_complete, 'nhanes_complete_result.csv', row.names=FALSE)
 
+
+# Full design: cluster, strata, weights with some categorical data missing
+dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_NAs)
+glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)
+glm_result_nhanes_complete <- rbind(
+  get_glm_result("race", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~agecat+RIAGENDR,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))),
+  get_glm_result("agecat", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~race+RIAGENDR,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))),
+  get_glm_result("RIAGENDR", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~race+agecat,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))))
+write.csv(glm_result_nhanes_complete, 'nhanes_complete_withna_result_r.csv', row.names=FALSE)
+# RIAGENDR is binary, need to change calculation to match python
+glm_result_nhanes_complete <- update_binary_result(
+  ewas_result = glm_result_nhanes_complete,
+  new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
+  )
+write.csv(glm_result_nhanes_complete, 'nhanes_complete_withna_result.csv', row.names=FALSE)
+
 # Weights Only
 dnhanes_weightsonly <- svydesign(id=~1, weights=~WTMEC2YR, data=nhanes)
 glm_nhanes_weightsonly <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"), na.action=na.omit)
