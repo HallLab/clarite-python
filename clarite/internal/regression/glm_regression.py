@@ -14,12 +14,13 @@ class GLMRegression(Regression):
     """
     Statsmodels GLM Regression.
     """
-    def __init__(self, data, outcome_variable, test_variable, covariates, min_n):
+    def __init__(self, data, outcome_variable, outcome_dtype, test_variable, covariates, min_n):
         """
         Parameters
         ----------
         data - pd.DataFrame
         outcome_variable - name of the outcome variable
+        outcome_kind - type of the outcome variable
         test_variable - name of the variable being tested
         covariates - other variables to include in the regression formula
         min_n - minimum number of observations (after discarding any with NA)
@@ -30,7 +31,7 @@ class GLMRegression(Regression):
         # Store passed parameters
         self.data = data
         self.outcome_variable = outcome_variable
-        self.outcome_dtype = _get_dtype(data[outcome_variable])
+        self.outcome_dtype = outcome_dtype
         self.test_variable = test_variable
         self.test_dtype = _get_dtype(data[test_variable])
         self.covariates = covariates

@@ -12,9 +12,9 @@ from clarite.internal.calculations import regTermTest
 
 class WeightedGLMRegression(GLMRegression):
     """Overwrite a few methods of the parent GLMRegression class to use survey weights"""
-    def __init__(self, data, outcome_variable, test_variable, covariates, min_n,
+    def __init__(self, data, outcome_variable, outcome_dtype, test_variable, covariates, min_n,
                  survey_design_spec: SurveyDesignSpec, cov_method: Optional[str] = 'error'):
-        super().__init__(data, outcome_variable, test_variable, covariates, min_n)
+        super().__init__(data, outcome_variable, outcome_dtype, test_variable, covariates, min_n)
         self.survey_design_spec = survey_design_spec
         self.survey_design = None
         self.cov_method = cov_method

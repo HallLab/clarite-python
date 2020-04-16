@@ -216,14 +216,14 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
     elif pheno_kind == 'continuous':
         click.echo(f"Running EWAS on a Continuous Outcome (family = Gaussian)")
     elif pheno_kind == 'binary':
-        # Set phenotype categories so that the higher number is a success
-        categories = sorted([c for c in data[phenotype].unique() if not pd.isna(c)], reverse=True)
-        cat_type = pd.api.types.CategoricalDtype(categories=categories, ordered=True)
-        data.astype({phenotype: cat_type}, copy=False)
+        # Use the order according to the categorical
         counts = data[phenotype].value_counts().to_dict()
+        categories = data[phenotype].cat.categories
+        codes, categories = zip(*enumerate(categories))
+        data[phenotype].replace(categories, codes, inplace=True)
         click.echo(click.style(f"Running EWAS on a Binary Outcome (family = Binomial)\n"
-                               f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as failure (0.0)\n"
-                               f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as success (1.0)",
+                               f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as 0\n"
+                               f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as 1",
                                fg='green'))
     else:
         raise ValueError(f"The phenotype's type could not be determined.  Please report this error.")
@@ -237,4 +237,5 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
     # Log Survey Design if it is being used
     if survey_design_spec is not None:
         click.echo(click.style(f"Using a Survey Design:\n{survey_design_spec}", fg='green'))
-    return rv_bin, rv_cat, rv_cont
+
+    return rv_bin, rv_cat, rv_cont, pheno_kind

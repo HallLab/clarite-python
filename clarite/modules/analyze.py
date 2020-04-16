@@ -73,7 +73,11 @@ def ewas(
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
     Running EWAS on a continuous variable
     """
-    rv_bin, rv_cat, rv_cont = validate_ewas_params(covariates, data, phenotype, survey_design_spec)
+    # Copy data to avoid modifying the original, in case it is changed
+    data = data.copy(deep=True)
+
+    # Get lists of variables to regress and validate parameters
+    rv_bin, rv_cat, rv_cont, pheno_kind = validate_ewas_params(covariates, data, phenotype, survey_design_spec)
 
     # Run Regressions
     ewas_results = []
@@ -85,6 +89,7 @@ def ewas(
             regression = WeightedGLMRegression(
                 data=data,
                 outcome_variable=phenotype,
+                outcome_dtype=pheno_kind,
                 test_variable=rv,
                 covariates=covariates,
                 min_n=min_n,
@@ -95,6 +100,7 @@ def ewas(
             regression = GLMRegression(
                 data=data,
                 outcome_variable=phenotype,
+                outcome_dtype=pheno_kind,
                 test_variable=rv,
                 covariates=covariates,
                 min_n=min_n
@@ -133,9 +139,11 @@ def ewas_r(phenotype: str,
     """
     Run EWAS using R
     """
+    # Copy data to avoid modifying the original, in case it is changed
+    data = data.copy(deep=True)
 
-    # Validate parameters
-    rv_bin, rv_cat, rv_cont = validate_ewas_params(covariates, data, phenotype, survey_design_spec)
+    # Get lists of variables to regress and validate parameters
+    rv_bin, rv_cat, rv_cont, pheno_kind = validate_ewas_params(covariates, data, phenotype, survey_design_spec)
 
     # Make the first column "ID"
     data = data.reset_index(drop=False)
@@ -167,9 +175,9 @@ def ewas_r(phenotype: str,
         cont_covars = ro.NULL
 
     # Regression Family
-    if dtypes.loc[phenotype] == 'binary':
+    if pheno_kind == 'binary':
         regression_family = "binomial"
-    elif dtypes.loc[phenotype] == 'continuous':
+    elif pheno_kind == 'continuous':
         regression_family = 'gaussian'
     else:
         raise ValueError("Phenotype must be 'binary' or 'continuous'")
