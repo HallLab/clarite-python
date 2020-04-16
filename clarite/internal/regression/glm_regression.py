@@ -14,12 +14,13 @@ class GLMRegression(Regression):
     """
     Statsmodels GLM Regression.
     """
-    def __init__(self, data, outcome_variable, test_variable, covariates, min_n):
+    def __init__(self, data, outcome_variable, outcome_dtype, test_variable, covariates, min_n):
         """
         Parameters
         ----------
         data - pd.DataFrame
         outcome_variable - name of the outcome variable
+        outcome_kind - type of the outcome variable
         test_variable - name of the variable being tested
         covariates - other variables to include in the regression formula
         min_n - minimum number of observations (after discarding any with NA)
@@ -30,7 +31,7 @@ class GLMRegression(Regression):
         # Store passed parameters
         self.data = data
         self.outcome_variable = outcome_variable
-        self.outcome_dtype = _get_dtype(data[outcome_variable])
+        self.outcome_dtype = outcome_dtype
         self.test_variable = test_variable
         self.test_dtype = _get_dtype(data[test_variable])
         self.covariates = covariates
@@ -42,6 +43,7 @@ class GLMRegression(Regression):
         self.formula_restricted = ""
         self.formula = ""
         self.family = None
+        self.use_t = True
 
         # Set default result values
         self.converged = False
@@ -108,8 +110,10 @@ class GLMRegression(Regression):
         # Select regression family
         if self.outcome_dtype == "continuous":
             self.family = sm.families.Gaussian(link=sm.families.links.identity())
+            self.use_t = True
         elif self.outcome_dtype == 'binary':
             self.family = sm.families.Binomial(link=sm.families.links.logit())
+            self.use_t = False
         else:
             raise NotImplementedError("Only continuous and binary phenotypes are currently supported for GLMRegression")
 
@@ -133,7 +137,7 @@ class GLMRegression(Regression):
 
     def run_continuous(self):
         # Regress
-        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=True)
+        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=self.use_t)
         # Check convergence
         if not est.converged:
             return
@@ -147,7 +151,7 @@ class GLMRegression(Regression):
 
     def run_binary(self):
         # Regress
-        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=True)
+        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=self.use_t)
         # Check convergence
         if not est.converged:
             return
@@ -169,8 +173,9 @@ class GLMRegression(Regression):
 
     def run_categorical(self):
         # Regress both models
-        est_restricted = smf.glm(self.formula_restricted, data=self.data, family=self.family, missing="drop").fit(use_t=True)
-        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=True)
+        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=self.use_t)
+        est_restricted = smf.glm(self.formula_restricted, data=self.data.drop(est.model.data.missing_row_idx),
+                                 family=self.family, missing="raise").fit(use_t=True)
         # Check convergence
         if not est.converged & est_restricted.converged:
             return

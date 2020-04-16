@@ -12,9 +12,9 @@ from clarite.internal.calculations import regTermTest
 
 class WeightedGLMRegression(GLMRegression):
     """Overwrite a few methods of the parent GLMRegression class to use survey weights"""
-    def __init__(self, data, outcome_variable, test_variable, covariates, min_n,
+    def __init__(self, data, outcome_variable, outcome_dtype, test_variable, covariates, min_n,
                  survey_design_spec: SurveyDesignSpec, cov_method: Optional[str] = 'error'):
-        super().__init__(data, outcome_variable, test_variable, covariates, min_n)
+        super().__init__(data, outcome_variable, outcome_dtype, test_variable, covariates, min_n)
         self.survey_design_spec = survey_design_spec
         self.survey_design = None
         self.cov_method = cov_method
@@ -32,7 +32,7 @@ class WeightedGLMRegression(GLMRegression):
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                             init_args=dict(family=self.family, missing="drop"),
-                            fit_args=dict(use_t=True))
+                            fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Check convergence
         if not model.result.converged:
@@ -58,7 +58,7 @@ class WeightedGLMRegression(GLMRegression):
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                             init_args=dict(family=self.family, missing="drop"),
-                            fit_args=dict(use_t=True))
+                            fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Check convergence
         if not model.result.converged:
@@ -82,18 +82,20 @@ class WeightedGLMRegression(GLMRegression):
     def run_categorical(self):
         # The change in deviance between a model and a nested version (with n fewer predictors) follows a chi-square distribution with n DoF
         # See https://en.wikipedia.org/wiki/Deviance_(statistics)
-        # Regress restricted model
-        y, X_restricted = patsy.dmatrices(self.formula_restricted, self.data, return_type='dataframe')
-        model_restricted = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                                       init_args=dict(family=self.family, missing="drop"),
-                                       fit_args=dict(use_t=True))
-        model_restricted.fit(y=y, X=X_restricted)
-        # Regress full model (Already have the survey_design and index objects)
-        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe')
+        # Regress full model
+        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                             init_args=dict(family=self.family),
-                            fit_args=dict(use_t=True))
+                            fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
+        # Regress restricted model
+        # y doesn't change, but X should use the same observations as the full model (losing any where the variable is NA)
+        _, X_restricted = patsy.dmatrices(self.formula_restricted, self.data, return_type='dataframe')
+        X_restricted = X_restricted.loc[X.index]
+        model_restricted = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
+                                       init_args=dict(family=self.family),
+                                       fit_args=dict(use_t=self.use_t))
+        model_restricted.fit(y=y, X=X_restricted)
         # Check convergence
         if not model.result.converged & model_restricted.result.converged:
             return
@@ -101,7 +103,8 @@ class WeightedGLMRegression(GLMRegression):
             self.converged = True
         # Calculate Results
         dof = self.survey_design.get_dof(X)
-        lr_pvalue = regTermTest(full_model=model, restricted_model=model_restricted, ddf=dof, X_names=X.columns, var_name=self.test_variable)
+        lr_pvalue = regTermTest(full_model=model, restricted_model=model_restricted,
+                                ddf=dof, X_names=X.columns, var_name=self.test_variable)
         # Gather Other Results
         self.LRT_pvalue = lr_pvalue
         self.pvalue = self.LRT_pvalue

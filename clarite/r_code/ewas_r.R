@@ -7,7 +7,7 @@ warn_on_e <- function(var_name, e){
 }
 
 # Get required data for regressing a specific variable
-get_varying_covariates <- function(df, covariates, phenotype, variable, allowed_nonvarying){
+get_varying_covariates <- function(df, covariates, variable, allowed_nonvarying){
   # Get number of unique values in covariates among observations where the variable is not NA
   cov_counts <- sapply(covariates, function(c) {length(unique(df[!is.na(df[c]) & !is.na(df[variable]), c]))})
   varying_covariates <- covariates[cov_counts >= 2]
@@ -38,18 +38,16 @@ regress_cont <- function(d, covariates, phenotype, var_name, regression_family, 
     use_survey <- TRUE
   }
 
-  # Check Covariates and subset the data to use only observations where the variable is not NA
+  # Check Covariates
   if (use_survey){
-    varying_covariates <- get_varying_covariates(d$variables, covariates, phenotype, var_name, allowed_nonvarying)
-    #subset_data <- subset(d, !is.na(d$variables[var_name]))  # Use the survey subset function
+    varying_covariates <- get_varying_covariates(d$variables, covariates, var_name, allowed_nonvarying)
   } else {
-    varying_covariates <- get_varying_covariates(d, covariates, phenotype, var_name, allowed_nonvarying)
-    #subset_data <- d[!is.na(d[var_name]),]  # use a subset of the data directly
+    varying_covariates <- get_varying_covariates(d, covariates, var_name, allowed_nonvarying)
   }
 
   # Return null if 'get_varying_covarites' returned NULL (b/c it found a nonvarying covariate the wasn't allowed)
-  if (is.null(varying_covariates)){
-    return()
+  if (is.null(varying_covariates) && !is.null(covariates)){
+    return(NULL)
   }
 
   # Create a regression formula
@@ -79,9 +77,7 @@ regress_cont <- function(d, covariates, phenotype, var_name, regression_family, 
     # Assume non-convergence if no p values are generated
     num_coeff_cols <- length(var_summary$coefficients)/nrow(var_summary$coefficients)
     if (num_coeff_cols < 4){
-      return(data.frame(
-        N = length(var_result$residuals),
-        Converged = FALSE))
+      return(NULL)
     } else {
       return(data.frame(
         N = length(var_result$residuals),
@@ -93,7 +89,7 @@ regress_cont <- function(d, covariates, phenotype, var_name, regression_family, 
       ))
     }
   } else{
-    return()
+    return(NULL)
   }
 }
 
@@ -108,19 +104,17 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
     use_survey <- TRUE
   }
 
-  # Check Covariates and subset the data to use only observations where the variable is not NA
+  # Check Covariates
   if (use_survey){
     # The GLM function in R can handle this
-    varying_covariates <- get_varying_covariates(d$variables, covariates, phenotype, var_name, allowed_nonvarying)
-    #subset_data <- subset(d, !is.na(d$variables[var_name]))  # Use the survey subset function
+    varying_covariates <- get_varying_covariates(d$variables, covariates, var_name, allowed_nonvarying)
   } else {
-    varying_covariates <- get_varying_covariates(d, covariates, phenotype, var_name, allowed_nonvarying)
-    #subset_data <- d[!is.na(d[var_name]),]  # use a subset of the data directly
+    varying_covariates <- get_varying_covariates(d, covariates, var_name, allowed_nonvarying)
   }
 
   # Return null if 'get_varying_covarites' returned NULL (b/c it found a nonvarying covariate the wasn't allowed)
-  if (is.null(varying_covariates)){
-    return()
+  if (is.null(varying_covariates) && !is.null(covariates)){
+    return(NULL)
   }
 
   # Create a regression formula and a restricted regression formula
@@ -133,19 +127,19 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
   }
   # Run GLM Functions
   if(use_survey){
-    # Update scope of the family and subset_data variables (surveyglm doesn't handle this well)
+    # Update scope of the family and d variables (surveyglm doesn't handle this well)
     regression_family <<- regression_family
     d <<- d
     # Results using surveyglm
-    print(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=d, na.action=na.omit))
     var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), family=regression_family, design=d, na.action=na.omit),
                            error=function(e) warn_on_e(var_name, e))
-    restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), family=regression_family, design=d, na.action=na.omit),
+    restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), family=regression_family,
+                                                 design=var_result$survey.design),
                                   error=function(e) warn_on_e(var_name, e))
-    print(summary(var_result))
     if(!is.null(var_result) & !is.null(restricted_result)){
       # Get the LRT using anova
-      lrt <- anova(var_result, restricted_result, method = "LRT")
+      lrt <- list(p=NA)  # Start with NA for p in case anova fails
+      tryCatch(lrt <- anova(var_result, restricted_result, method = "LRT"), error=function(e) warn_on_e(var_name, e))
       return(data.frame(
         N = length(var_result$residuals),
         Converged = var_result$converged,
@@ -158,11 +152,13 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
     # Results using data.frame with stats::anova
     var_result <- tryCatch(glm(stats::as.formula(fmla), family=regression_family, data=d, na.action=na.omit),
                            error=function(e) warn_on_e(var_name, e))
-    restricted_result <- tryCatch(glm(stats::as.formula(fmla_restricted), family=regression_family, data=d, na.action=na.omit),
+    restricted_result <- tryCatch(glm(stats::as.formula(fmla_restricted), family=regression_family,
+                                      data=var_result$model),  # Use the same data as the full model
                                   error=function(e) warn_on_e(var_name, e))
     if(!is.null(var_result) & !is.null(restricted_result)){
       # Get the LRT using anova
-      lrt <- anova(var_result, restricted_result, test = "LRT")
+      lrt <- list(p=NA)  # Start with NA for p in case anova fails
+      tryCatch(lrt <- anova(var_result, restricted_result, test = "LRT"), error=function(e) warn_on_e(var_name, e))
       return(data.frame(
         N = length(var_result$residuals),
         Converged = var_result$converged,
@@ -172,7 +168,7 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
       ))
     }
   }
-  return()
+  return(NULL)
 }
 
 #' ewas
@@ -196,17 +192,14 @@ regress_cat <- function(d, covariates, phenotype, var_name, regression_family, a
 #' ewas(d, cat_vars, cont_vars, y, cat_covars, cont_covars, regression_family)
 #' }
 ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_covars=NULL,
-                 regression_family="gaussian", allowed_nonvarying=NULL, weights=NULL, ...){
+                 regression_family="gaussian", min_n=1, allowed_nonvarying=NULL, weights=NULL, ...){
   # Record start time
   t1 <- Sys.time()
 
   # Validate inputs
   #################
   if(missing(y)){
-    stop("Please specify either 'continuous' or 'categorical' type for predictor variables")
-  }
-  if(missing(regression_family)){
-    stop("Please specify family type for glm()")
+    stop("Please specify an outcome 'y' variable")
   }
   if(is.null(cat_vars)){
     cat_vars <- list()
@@ -283,8 +276,8 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     }
   }
 
-  # Get a combined list of covariates
-  covariates <- c(cat_covars, cont_covars)
+  # Get a combined vector of covariates (must 'unlist' lists to vectors)
+  covariates <- c(unlist(cat_covars), unlist(cont_covars))
 
   # Run Regressions
   #################
@@ -302,9 +295,9 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
                               pval = numeric(n),
                               phenotype = character(n),
                               weight = character(n),
-                              stringsAsFactors = FALSE
-  )
+                              stringsAsFactors = FALSE)
   ewas_result_df[] <- NA  # Fill df with NA values
+  ewas_result_df$Converged <- FALSE  # Default to not converged
   i = 0 # Increment before processing each variable
   
   # Process categorical variables, if any
@@ -314,7 +307,15 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     i <- i + 1
     # Update var name and phenotype
     ewas_result_df$Variable[i] <- var_name
-    ewas_result_df$phenotype <- y
+    ewas_result_df$phenotype[i] <- y
+
+    # Skip regression if the min_n filter isn't met, just updating the N value
+    non_na_obs <- sum(!is.na(d[var_name]))
+    if (non_na_obs < min_n){
+      warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n))
+      ewas_result_df$N[i] <- non_na_obs
+      next
+    }
     
     # Run Regression for the single variable
     if(is.null(weights)){
@@ -343,7 +344,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     
     # Save results
     if(!is.null(result)){
-        ewas_result_df[i, c("N", "Converged", "LRT_pvalue", "Diff_AIC", "pval")] <- result
+        ewas_result_df[i, colnames(result)] <- result
     }
   }
 
@@ -354,8 +355,16 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     i <- i + 1
     # Update var name and phenotype
     ewas_result_df$Variable[i] <- var_name
-    ewas_result_df$phenotype <- y
-    
+    ewas_result_df$phenotype[i] <- y
+
+    # Skip regression if the min_n filter isn't met, just updating the N value
+    non_na_obs <- sum(!is.na(d[var_name]))
+    if (non_na_obs < min_n){
+      warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n))
+      ewas_result_df$N[i] <- non_na_obs
+      next
+    }
+
     # Run regression for the single variable
     if(is.null(weights)){
       result <- regress_cont(d, covariates, phenotype=y, var_name, regression_family, allowed_nonvarying)
@@ -381,7 +390,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
       result <- regress_cont(sd, covariates, phenotype=y, var_name, regression_family, allowed_nonvarying)
     }
     if(!is.null(result)){
-      ewas_result_df[i, c("N", "Converged", "Beta", "SE", "Variable_pvalue", "pval")] <- result
+      ewas_result_df[i, colnames(result)] <- result
     }
   }
 

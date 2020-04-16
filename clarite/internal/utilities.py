@@ -175,10 +175,12 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
     # Covariates must be a list
     if type(covariates) != list:
         raise ValueError("'covariates' must be specified as a list.  Use an empty list ([]) if there aren't any.")
+
     # Make sure the index of each dataset is not a multiindex and give it a consistent name
     if isinstance(data.index, pd.MultiIndex):
         raise ValueError(f"Data must not have a multiindex")
     data.index.name = "ID"
+
     # Collects lists of regression variables
     types = _get_dtypes(data)
     rv_bin = [v for v, t in types.iteritems() if t == 'binary' and v not in covariates and v != phenotype]
@@ -198,6 +200,7 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
         raise ValueError(f"One or more covariates were not found in the data: {', '.join(missing_covariates)}")
     if len(unknown_covariates) > 0:
         raise ValueError(f"One or more covariates have an unknown datatype: {', '.join(unknown_covariates)}")
+
     # Validate the type of the phenotype variable
     pheno_kind = types.get(phenotype, None)
     if phenotype in covariates:
@@ -213,15 +216,26 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
     elif pheno_kind == 'continuous':
         click.echo(f"Running EWAS on a Continuous Outcome (family = Gaussian)")
     elif pheno_kind == 'binary':
-        # Set phenotype categories so that the higher number is a success
-        categories = sorted([c for c in data[phenotype].unique() if not pd.isna(c)], reverse=True)
-        cat_type = pd.api.types.CategoricalDtype(categories=categories, ordered=True)
-        data[phenotype] = data[phenotype].astype(cat_type)
+        # Use the order according to the categorical
+        counts = data[phenotype].value_counts().to_dict()
+        categories = data[phenotype].cat.categories
+        codes, categories = zip(*enumerate(categories))
+        data[phenotype].replace(categories, codes, inplace=True)
         click.echo(click.style(f"Running EWAS on a Binary Outcome (family = Binomial)\n"
-                               f"\t(Success = '{categories[0]}', Failure = '{categories[1]}')", fg='green'))
+                               f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as 0\n"
+                               f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as 1",
+                               fg='green'))
     else:
         raise ValueError(f"The phenotype's type could not be determined.  Please report this error.")
+
+    # Log how many NA outcomes
+    na_outcome_count = data[phenotype].isna().sum()
+    click.echo(click.style(f"Using {len(data) - na_outcome_count:,} of {len(data):,} observations", fg="green"))
+    if na_outcome_count > 0:
+        click.echo(click.style(f"\t{na_outcome_count:,} are missing a value for the outcome variable", fg="green"))
+
     # Log Survey Design if it is being used
     if survey_design_spec is not None:
         click.echo(click.style(f"Using a Survey Design:\n{survey_design_spec}", fg='green'))
-    return rv_bin, rv_cat, rv_cont
+
+    return rv_bin, rv_cat, rv_cont, pheno_kind
