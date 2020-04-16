@@ -214,6 +214,30 @@ glm_result_nhanes_noweights <- update_binary_result(
   )
 write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result.csv', row.names=FALSE)
 
+# Full population no weights, with some categorical data missing
+nhanes_NAs <- nhanes
+nhanes_NAs$race[2:800] <- NA
+write.csv(nhanes_NAs, 'nhanes_NAs_data.csv', row.names=FALSE)
+glm_nhanes_noweights <- glm(HI_CHOL~race+agecat+RIAGENDR, family=binomial(link="logit"), data=nhanes_NAs, na.action=na.omit)
+glm_result_nhanes_noweights <- rbind(
+  get_glm_result("race", glm_nhanes_noweights,
+                 glm_restricted = glm(HI_CHOL~agecat+RIAGENDR, family=binomial(link="logit"), data=glm_nhanes_noweights$model),
+                 use_weights=FALSE),
+  get_glm_result("agecat", glm_nhanes_noweights,
+                 glm_restricted = glm(HI_CHOL~race+RIAGENDR, family=binomial(link="logit"), data=glm_nhanes_noweights$model),
+                 use_weights=FALSE),
+  get_glm_result("RIAGENDR", glm_nhanes_noweights,
+                 glm_restricted = glm(HI_CHOL~race+agecat, family=binomial(link="logit"), data=glm_nhanes_noweights$model),
+                 use_weights=FALSE)
+)
+write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_withna_result_r.csv', row.names=FALSE)
+# RIAGENDR is binary, need to change calculation to match python
+glm_result_nhanes_noweights <- update_binary_result(
+  ewas_result = glm_result_nhanes_noweights,
+  new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_noweights, glm_restricted=NULL, use_weights=FALSE, alt_name="RIAGENDR2")
+  )
+write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_withna_result.csv', row.names=FALSE)
+
 
 # Full design: cluster, strata, weights
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes)

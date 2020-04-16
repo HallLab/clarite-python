@@ -227,6 +227,25 @@ def test_nhanes_noweights():
     compare_result(r_result, python_result)
 
 
+def test_nhanes_noweights_withNA():
+    """Test the nhanes dataset with no survey info and some missing values in a categorical"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_NAs_data.csv", index_col=None)
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_noweights_withna_result.csv")
+    # Process data
+    df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
+    df = clarite.modify.make_categorical(df, only=["race", "agecat"])
+    df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df),
+        ], axis=0)
+    # Compare
+    compare_result(r_result, python_result)
+
+
 def test_nhanes_fulldesign():
     """Test the nhanes dataset with the full survey design"""
     # Load the data
