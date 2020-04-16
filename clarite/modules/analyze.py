@@ -73,6 +73,11 @@ def ewas(
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
     Running EWAS on a continuous variable
     """
+    # Warning for possibly incorrect results
+    if survey_design_spec is not None:
+        click.echo(click.style("WARNING: Results using survey designs may be incorrect in some circumstances. "
+                               "Using the ewas_r function instead may be preferable.", fg='red'))
+
     # Copy data to avoid modifying the original, in case it is changed
     data = data.copy(deep=True)
 
