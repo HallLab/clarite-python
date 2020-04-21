@@ -29,25 +29,13 @@ get_varying_covariates <- function(df, covariates, variable, allowed_nonvarying)
 }
 
 ###Continuous###
-regress_cont <- function(d, covariates, phenotype, var_name, regression_family, allowed_nonvarying){
+regress_cont <- function(d, varying_covariates, phenotype, var_name, regression_family){
 
   # Determine if a weighted ewas is being run
   if(class(d)[1] == "data.frame"){
     use_survey <- FALSE
   } else if(class(d)[2] == "survey.design") {
     use_survey <- TRUE
-  }
-
-  # Check Covariates
-  if (use_survey){
-    varying_covariates <- get_varying_covariates(d$variables, covariates, var_name, allowed_nonvarying)
-  } else {
-    varying_covariates <- get_varying_covariates(d, covariates, var_name, allowed_nonvarying)
-  }
-
-  # Return null if 'get_varying_covarites' returned NULL (b/c it found a nonvarying covariate the wasn't allowed)
-  if (is.null(varying_covariates) && !is.null(covariates)){
-    return(NULL)
   }
 
   # Create a regression formula
@@ -59,7 +47,7 @@ regress_cont <- function(d, covariates, phenotype, var_name, regression_family, 
 
   # Run GLM
   if(use_survey){
-    # Update scope of the regression_family and subset_data variables (surveyglm doesn't handle this well)
+    # Update scope of the regression_family and data variables (surveyglm doesn't handle this well)
     regression_family <<- regression_family
     d <<- d
     # Use survey::svyglm
@@ -95,26 +83,13 @@ regress_cont <- function(d, covariates, phenotype, var_name, regression_family, 
 
 ###Categorical###
 # Note categorical is trickier since the difference between survey and data.frame is more extensive than using a different function
-regress_cat <- function(d, covariates, phenotype, var_name, regression_family, allowed_nonvarying){
+regress_cat <- function(d, varying_covariates, phenotype, var_name, regression_family){
 
   # Determine if a weighted ewas is being run
   if(class(d)[1] == "data.frame"){
     use_survey <- FALSE
   } else if(class(d)[2] == "survey.design") {
     use_survey <- TRUE
-  }
-
-  # Check Covariates
-  if (use_survey){
-    # The GLM function in R can handle this
-    varying_covariates <- get_varying_covariates(d$variables, covariates, var_name, allowed_nonvarying)
-  } else {
-    varying_covariates <- get_varying_covariates(d, covariates, var_name, allowed_nonvarying)
-  }
-
-  # Return null if 'get_varying_covarites' returned NULL (b/c it found a nonvarying covariate the wasn't allowed)
-  if (is.null(varying_covariates) && !is.null(covariates)){
-    return(NULL)
   }
 
   # Create a regression formula and a restricted regression formula
@@ -309,17 +284,27 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$phenotype[i] <- y
 
-    # Skip regression if the min_n filter isn't met, just updating the N value
-    non_na_obs <- sum(!is.na(d[var_name]))
+    # Figure out which observations will drop due to NAs
+    subset_data <- complete.cases(d[, c(y, var_name, covariates)])  # Returns a boolean array
+    non_na_obs <- sum(subset_data)
+    ewas_result_df$N[i] <- non_na_obs
+
+    # Skip regression if the min_n filter isn't met
     if (non_na_obs < min_n){
       warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n))
-      ewas_result_df$N[i] <- non_na_obs
+      next
+    }
+
+    # Skip regression if any covariates are constant (after removing NAs) without being specified as allowed
+    varying_covariates <- get_varying_covariates(d[subset_data,], covariates, var_name, allowed_nonvarying)
+    # If 'get_varying_covarites' returned NULL it found a nonvarying covariate the wasn't allowed)
+    if (is.null(varying_covariates) && !is.null(covariates)){
       next
     }
     
     # Run Regression for the single variable
     if(is.null(weights)){
-      result <- regress_cat(d, covariates, phenotype=y, var_name, regression_family, allowed_nonvarying)
+      result <- regress_cat(d, varying_covariates, phenotype=y, var_name, regression_family)
     } else {
       # Get weight
       if(single_weight){
@@ -339,7 +324,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
                               data = d,
                               ...)
       # Regress, updating the dataframe if results were returned
-      result <- regress_cat(sd, covariates, phenotype=y, var_name, regression_family, allowed_nonvarying)
+      result <- regress_cat(sd, varying_covariates, phenotype=y, var_name, regression_family)
     }
     
     # Save results
@@ -357,17 +342,27 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$phenotype[i] <- y
 
-    # Skip regression if the min_n filter isn't met, just updating the N value
-    non_na_obs <- sum(!is.na(d[var_name]))
+    # Figure out which observations will drop due to NAs
+    subset_data <- complete.cases(d[, c(y, var_name, covariates)])  # Returns a boolean array
+    non_na_obs <- sum(subset_data)
+    ewas_result_df$N[i] <- non_na_obs
+
+    # Skip regression if the min_n filter isn't met
     if (non_na_obs < min_n){
       warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n))
-      ewas_result_df$N[i] <- non_na_obs
+      next
+    }
+
+    # Skip regression if any covariates are constant without being specified as allowed
+    varying_covariates <- get_varying_covariates(d[subset_data,], covariates, var_name, allowed_nonvarying)
+    # If 'get_varying_covarites' returned NULL it found a nonvarying covariate the wasn't allowed)
+    if (is.null(varying_covariates) && !is.null(covariates)){
       next
     }
 
     # Run regression for the single variable
     if(is.null(weights)){
-      result <- regress_cont(d, covariates, phenotype=y, var_name, regression_family, allowed_nonvarying)
+      result <- regress_cont(d, varying_covariates, phenotype=y, var_name, regression_family)
     } else {
       # Get weight
       if(single_weight){
@@ -387,7 +382,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
                               data = d,
                               ...)
       # Regress, updating the dataframe if results were returned
-      result <- regress_cont(sd, covariates, phenotype=y, var_name, regression_family, allowed_nonvarying)
+      result <- regress_cont(sd, varying_covariates, phenotype=y, var_name, regression_family)
     }
     if(!is.null(result)){
       ewas_result_df[i, colnames(result)] <- result

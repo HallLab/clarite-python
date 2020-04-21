@@ -16,22 +16,20 @@ class WeightedGLMRegression(GLMRegression):
                  survey_design_spec: SurveyDesignSpec, cov_method: Optional[str] = 'error'):
         super().__init__(data, outcome_variable, outcome_dtype, test_variable, covariates, min_n)
         self.survey_design_spec = survey_design_spec
-        self.survey_design = None
         self.cov_method = cov_method
+        self.survey_design = None
 
-    def subset_data(self):
-        """Count observations without missing data.  These will be dropped automatically in glm functions."""
-        subset_data = self.data.dropna(axis='index', how='any',
-                                       subset=[self.test_variable, self.outcome_variable] + self.covariates)
-        # Get a survey design object based on the data and subset the data to match
-        self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, subset_data.index)
-        self.N = len(subset_data)
+    def pre_run_setup(self):
+        # Get a survey design object based on the data (may raise an error that will be caught)
+        self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, self.complete_case_idx)
+        # Run the original pre-run setup
+        super().pre_run_setup()
 
     def run_continuous(self):
-        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe')
+        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                            init_args=dict(family=self.family, missing="drop"),
+                            init_args=dict(family=self.family),
                             fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Check convergence
@@ -54,10 +52,10 @@ class WeightedGLMRegression(GLMRegression):
         self.pvalue = self.var_pvalue
 
     def run_binary(self):
-        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe')
+        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                            init_args=dict(family=self.family, missing="drop"),
+                            init_args=dict(family=self.family),
                             fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Check convergence
@@ -89,13 +87,11 @@ class WeightedGLMRegression(GLMRegression):
                             fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Regress restricted model
-        # y doesn't change, but X should use the same observations as the full model (losing any where the variable is NA)
-        _, X_restricted = patsy.dmatrices(self.formula_restricted, self.data, return_type='dataframe')
-        X_restricted = X_restricted.loc[X.index]
+        # Use same X and y to ensure correct comparison
         model_restricted = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                                        init_args=dict(family=self.family),
                                        fit_args=dict(use_t=self.use_t))
-        model_restricted.fit(y=y, X=X_restricted)
+        model_restricted.fit(y=y, X=X)
         # Check convergence
         if not model.result.converged & model_restricted.result.converged:
             return

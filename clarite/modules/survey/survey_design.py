@@ -1,5 +1,6 @@
 from typing import Optional, Union, Dict
 
+import click
 import numpy as np
 import pandas as pd
 
@@ -120,6 +121,9 @@ class SurveyDesignSpec:
                     if weight_name not in self.survey_df:
                         raise KeyError(f"weights key for '{var_name}' ('{weight_name}') was not found in the survey_df")
                     else:
+                        # Replace zero weights with a small number to avoid divide by zero
+                        zero_weights = self.survey_df[weight_name] <= 0
+                        self.survey_df.loc[zero_weights, weight_name] = 1e-99
                         self.weights[var_name] = self.survey_df[weight_name]
             elif type(weights) == str:
                 self.single_weight = True
@@ -127,6 +131,8 @@ class SurveyDesignSpec:
                 if self.weight_name not in self.survey_df:
                     raise KeyError(f"the weight ('{self.weight_name}') was not found in the survey_df")
                 else:
+                    zero_weights = self.survey_df[self.weight_name] <= 0
+                    self.survey_df.loc[zero_weights, self.weight_name] = 1e-99
                     self.weights = self.survey_df[self.weight_name]
 
         # Load single_cluster
@@ -433,6 +439,11 @@ class SurveyDesign(object):
                     assert all((fpc >= 0) & (fpc <= 1))
                 except AssertionError:
                     raise ValueError("Error processing FPC- invalid values")
+
+        # Raise an error if there are any missing weights
+        missing_weights = weights.isna().sum()
+        if missing_weights > 0:
+            raise ValueError(f"{missing_weights:,} observations are missing weights")
         return strata, cluster, weights, fpc
 
     def get_jackknife_rep_weights(self, dropped_clust):

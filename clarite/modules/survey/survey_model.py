@@ -33,6 +33,7 @@ class SurveyModel(object):
         Standard error of cofficients
     """
     def __init__(self, design, model_class, cov_method='stata', init_args={}, fit_args={}):
+        # TODO: Take in original (full) data which may have more observations than the fitted data (due to NA dropouts)
         self.design = design
         self.model = model_class
         self.cov_method = cov_method
