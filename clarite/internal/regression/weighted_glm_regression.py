@@ -20,10 +20,10 @@ class WeightedGLMRegression(GLMRegression):
         self.survey_design = None
 
     def pre_run_setup(self):
-        # Get a survey design object based on the data (may raise an error that will be caught)
-        self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, self.complete_case_idx)
         # Run the original pre-run setup
         super().pre_run_setup()
+        # Get a survey design object based on the data (may raise an error that will be caught)
+        self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, self.complete_case_idx)
 
     def run_continuous(self):
         y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')
