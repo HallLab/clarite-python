@@ -87,11 +87,13 @@ class WeightedGLMRegression(GLMRegression):
                             fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Regress restricted model
-        # Use same X and y to ensure correct comparison
+        # Use same X and y (but fewer columns in X) to ensure correct comparison
+        _, X_restricted = patsy.dmatrices(self.formula_restricted, self.data, return_type='dataframe', NA_action='drop')
+        X_restricted = X_restricted.loc[X.index]
         model_restricted = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                                        init_args=dict(family=self.family),
                                        fit_args=dict(use_t=self.use_t))
-        model_restricted.fit(y=y, X=X)
+        model_restricted.fit(y=y, X=X_restricted)
         # Check convergence
         if not model.result.converged & model_restricted.result.converged:
             return
