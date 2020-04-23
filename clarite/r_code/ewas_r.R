@@ -53,7 +53,6 @@ regress_cont <- function(data, varying_covariates, phenotype, var_name, regressi
       return(NULL)
     } else {
       return(data.frame(
-        N = length(var_result$residuals),
         Converged = TRUE,
         Beta = var_summary$coefficients[2,1],
         SE = var_summary$coefficients[2,2],
@@ -106,7 +105,6 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
         return(NULL)
       } else {
         return(data.frame(
-          N = length(var_result$residuals),
           Converged = TRUE,
           Beta = var_summary$coefficients[2,1],
           SE = var_summary$coefficients[2,2],
@@ -143,7 +141,6 @@ regress_cat <- function(data, varying_covariates, phenotype, var_name, regressio
     lrt <- list(p=NA)  # Start with NA for p in case anova fails
     tryCatch(lrt <- anova(var_result, restricted_result, test = "LRT"), error=function(e) warn_on_e(var_name, e))
     return(data.frame(
-      N = length(var_result$residuals),
       Converged = var_result$converged,
       LRT_pvalue = lrt$`Pr(>Chi)`[2],
       Diff_AIC = var_result$aic - restricted_result$aic,
@@ -161,20 +158,19 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
   # Create survey design
   if(is.null(id_values)){
     survey_design <- survey::svydesign(ids = ~1,
-                            weights = weight_values,
-                            data = data,
-                            strata = strata_values,
-                            fpc = fpc_values,
-                            ...)
+                                       weights = weight_values,
+                                       data = data,
+                                       strata = strata_values,
+                                       fpc = fpc_values,
+                                       ...)
   } else{
     survey_design <- survey::svydesign(ids = id_values,
-                            weights = weight_values,
-                            data = data,
-                            strata = strata_values,
-                            fpc = fpc_values,
-                            ...)
+                                       weights = weight_values,
+                                       data = data,
+                                       strata = strata_values,
+                                       fpc = fpc_values,
+                                       ...)
   }
-
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
     fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
@@ -186,9 +182,13 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
 
   # Results using surveyglm
   survey_design <<- survey_design  # needed to make the anova function work
+  regression_family <<- regression_family  # needed to make the anova function work
   var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), design=survey_design, family=regression_family, na.action=na.omit),
                          error=function(e) warn_on_e(var_name, e))
-  restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), design=survey_design, family=regression_family, na.action=na.omit),
+  # Restricted result uses the design from the full result to ensure the same observations are used.
+  # Otherwise some dropped by 'na.omit' may be included in the restricted model.
+  restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), design=var_result$survey.design,
+                                               family=regression_family),
                                 error=function(e) warn_on_e(var_name, e))
 
   # Collect results
@@ -197,7 +197,6 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
     lrt <- list(p=NA)  # Start with NA for p in case anova fails
     tryCatch(lrt <- anova(var_result, restricted_result, method = "LRT"), error=function(e) warn_on_e(var_name, e))
     return(data.frame(
-      N = length(var_result$residuals),
       Converged = var_result$converged,
       LRT_pvalue = lrt$p,
       Diff_AIC = var_result$aic - restricted_result$aic,
@@ -222,14 +221,14 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
   # Skip regression if the min_n filter isn't met
   if (non_na_obs < min_n){
     warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n))
-    return(result)
+    return(data.frame(result, stringsAsFactors = FALSE))
   }
 
   # Skip regression if any covariates are constant (after removing NAs) without being specified as allowed
   varying_covariates <- get_varying_covariates(data[subset_data,], covariates, var_name, allowed_nonvarying)
   # If 'get_varying_covarites' returned NULL it found a nonvarying covariate the wasn't allowed)
   if (is.null(varying_covariates) && !is.null(covariates)){
-    return(result)
+    return(data.frame(result, stringsAsFactors = FALSE))
   }
 
   # Gather survey info if needed
@@ -252,10 +251,12 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
     # Get weight values, returning early if there is a problem with the weight
     if(!(weight %in% names(data))){
       warning(paste(var_name, " had a NULL result because its weight (", weight, ") was not found"))
-      return(result)
+      result$weight <- paste(weight, " (not found)")
+      return(data.frame(result, stringsAsFactors = FALSE))
     } else if (sum(is.na(data[weight])) > 0){
       warning(paste(var_name, " had a NULL result because its weight (", weight, ") had ", sum(is.na(data[weight])), " missing values"))
-      return(result)
+      result$weight <- paste(weight, " (missing values)")
+      return(data.frame(result, stringsAsFactors = FALSE))
     } else {
       weight_values <- data[weight]
     }
@@ -299,7 +300,7 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
   if(!is.null(regression_result)){
     regression_result[names(result)] <- result
   } else {
-    regression_result <- data.frame(result)
+    regression_result <- data.frame(result, stringsAsFactors = FALSE)
   }
 
   # Return
