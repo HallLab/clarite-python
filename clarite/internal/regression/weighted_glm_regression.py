@@ -22,8 +22,42 @@ class WeightedGLMRegression(GLMRegression):
     def pre_run_setup(self):
         # Run the original pre-run setup
         super().pre_run_setup()
-        # Get a survey design object based on the data (may raise an error that will be caught)
+        # Get a survey design object based on the non-missing data
         self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, self.complete_case_idx)
+        # Raise an error if the survey design is missing weights when the variable value is not
+        variable_na = self.data[self.test_variable].isna()
+        weight_na = self.survey_design.weights.isna()
+        values_with_missing = self.data.loc[~variable_na & weight_na, self.test_variable]
+        # Get unique values
+        unique_missing = values_with_missing.unique()
+        unique_not_missing = self.data.loc[~variable_na & ~weight_na, self.test_variable].unique()
+        sometimes_missing = sorted([str(v) for v in (set(unique_missing) & set(unique_not_missing))])
+        always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
+        # Log
+        if len(values_with_missing) > 0:
+            error = f"{len(values_with_missing):,} observations are missing weights when the variable is not missing."
+            # Log sometimes missing values
+            if len(sometimes_missing) == 0:
+                pass
+            elif len(sometimes_missing) == 1:
+                error += f"\n\tOne value has a missing weight sometimes: {sometimes_missing[0]}"
+            elif len(sometimes_missing) <= 5:
+                error += f"\n\t{len(sometimes_missing)} values have a missing weight sometimes: {', '.join(sometimes_missing)}"
+            elif len(sometimes_missing) > 5:
+                error += f"\n\t{len(sometimes_missing)} values have a missing weight sometimes: {', '.join(sometimes_missing[:5])}, ..."
+            # Log always missing values
+            if len(always_missing) == 0:
+                pass
+            elif len(always_missing) == 1:
+                error += f"\n\tOne value is always missing weights: {always_missing[0]}. Should it be encoded as NaN?"
+            elif len(always_missing) <= 5:
+                error += f"\n\t{len(always_missing)} values are always missing weights: {', '.join(always_missing)}." \
+                         f" Should they be encoded as NaN?"
+            elif len(always_missing) > 5:
+                error += f"\n\t{len(always_missing)} values are always missing weights: {', '.join(always_missing[:5])}, ..." \
+                         f" Should they be encoded as NaN?"
+            # Raise the error
+            raise ValueError(error)
 
     def run_continuous(self):
         y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')

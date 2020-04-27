@@ -122,7 +122,9 @@ class SurveyModel(object):
 
         # Scale after centering, if required
         if single_cluster == 'average':
-            single_cluster_scale = self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1))
+            single_cluster_scale = np.sqrt(self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1)))
+            print(single_cluster_scale)
+            print(sum(self.design.clust_per_strat == 1))
             jdata *= single_cluster_scale
 
         nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64)

@@ -253,8 +253,8 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
       warning(paste(var_name, " had a NULL result because its weight (", weight, ") was not found"))
       result$weight <- paste(weight, " (not found)")
       return(data.frame(result, stringsAsFactors = FALSE))
-    } else if (sum(is.na(data[weight])) > 0){
-      warning(paste(var_name, " had a NULL result because its weight (", weight, ") had ", sum(is.na(data[weight])), " missing values"))
+    } else if (sum(is.na(data[!(is.na(var_name)), weight])) > 0){
+      warning(paste(var_name, " had a NULL result because its weight (", weight, ") had ", sum(is.na(data[weight])), " missing values when the variable was not missing"))
       result$weight <- paste(weight, " (missing values)")
       return(data.frame(result, stringsAsFactors = FALSE))
     } else {

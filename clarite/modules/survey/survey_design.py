@@ -1,6 +1,5 @@
 from typing import Optional, Union, Dict
 
-import click
 import numpy as np
 import pandas as pd
 
@@ -198,7 +197,7 @@ class SurveyDesignSpec:
 
         # Get weights array
         if self.single_weight:
-            weights = self.weights.loc[index]
+            weights = self.weights
         elif self.multi_weight:
             if regression_variable is None:
                 raise ValueError("This SurveyDesignSpec uses variable-specific weights- "
@@ -207,29 +206,29 @@ class SurveyDesignSpec:
                 raise KeyError(f"The regression variable ({regression_variable}) "
                                f"was not found in the SurveyDesignSpec")
             else:
-                weights = self.weights[regression_variable].loc[index]
+                weights = self.weights[regression_variable]
         else:
             weights = None
 
         # Get strata array
         if self.has_strata:
-            strata = self.strata.loc[index]
+            strata = self.strata
         else:
             strata = None
 
         # Get cluster array
         if self.has_cluster:
-            cluster = self.cluster.loc[index]
+            cluster = self.cluster
         else:
             cluster = None
 
         # Get fpc array
         if self.has_fpc:
-            fpc = self.fpc.loc[index]
+            fpc = self.fpc
         else:
             fpc = None
 
-        sd = SurveyDesign(strata=strata, cluster=cluster, weights=weights, fpc=fpc,
+        sd = SurveyDesign(index=index, strata=strata, cluster=cluster, weights=weights, fpc=fpc,
                           nest=self.nest, single_cluster=self.single_cluster)
         return sd
 
@@ -240,6 +239,8 @@ class SurveyDesign(object):
 
     Parameters
     -------
+    index: pd.Index
+        Index of the associated data where values are not missing
     strata : array-like or None
         Strata for each observation. If none, an array of ones is constructed
     cluster : array-like or None
@@ -287,6 +288,7 @@ class SurveyDesign(object):
     """
 
     def __init__(self,
+                 index: pd.Index,
                  strata: Optional[pd.Series] = None,
                  cluster: Optional[pd.Series] = None,
                  weights: Optional[pd.Series] = None,
@@ -295,33 +297,37 @@ class SurveyDesign(object):
                  single_cluster: str = 'fail'):
 
         # Record inputs
-        self.has_strata = False
-        self.has_clusters = False
-        self.has_weights = False
-        self.has_fpc = False
-        if strata is not None:
-            self.has_strata = True
-        if cluster is not None:
-            self.has_clusters = True
-        if weights is not None:
-            self.has_weights = True
-        if fpc is not None:
-            self.has_fpc = True
-
-        strata, cluster, self.weights, self.fpc = self._check_args(strata, cluster, weights, fpc)
+        self.has_strata = (strata is not None)
+        self.has_clusters = (cluster is not None)
+        self.has_weights = (weights is not None)
+        self.has_fpc = (fpc is not None)
 
         # If requested, recode the PSUs to be sure that the same PSU # in
         # different strata are treated as distinct PSUs. This is the same
         # as the nest option in R.
-        if nest:
+        if nest and self.has_strata and self.has_clusters:
             cluster = strata.astype(str) + "-" + cluster.astype(str)
+        else:
+            # Ignore the nest parameter
+            pass
+
+        # Check arguments, replacing None as needed
+        strata, cluster, weights, fpc = self._check_args(strata, cluster, weights, fpc)
+
+        # Record number of strat/clust (not limited by the index)
+        self.n_strat = None
+        self.n_clust = None
+        if self.has_strata:
+            self.n_strat = len(strata.unique())
+        if self.has_clusters:
+            self.n_clust = len(cluster.unique())
 
         # Make strata and cluster into categoricals
-        self.strat = strata.astype('category').rename('strat')
-        self.clust = cluster.astype('category').rename('clust')
+        strata = strata.astype('category').rename('strat')
+        cluster = cluster.astype('category').rename('clust')
 
         # Get a combined dataframe to map the relationships
-        combined = pd.concat([self.strat, self.clust, self.fpc], axis=1)
+        combined = pd.concat([strata, cluster, fpc], axis=1)
 
         # The number of clusters per stratum
         self.clust_per_strat = combined.groupby('strat')['clust'].nunique()
@@ -330,18 +336,20 @@ class SurveyDesign(object):
         self.strat_for_clust = combined.groupby('clust')['strat'].unique().apply(lambda l: l[0])
 
         # The fpc for each cluster
-        self.fpc = combined.groupby('clust')['fpc'].unique().apply(lambda l: l[0])
+        fpc = combined.groupby('clust')['fpc'].unique().apply(lambda l: l[0])
 
         # Clusters within each stratum
         self.ii = combined.groupby('strat')['clust'].unique()
 
         # Record names
-        self.strat_names = self.strat.cat.categories
-        self.clust_names = self.clust.cat.categories
+        self.strat_names = strata.cat.categories
+        self.clust_names = cluster.cat.categories
 
-        # Record number of strat/clust
-        self.n_strat = len(self.strat_names)
-        self.n_clust = len(self.clust_names)
+        # Store values indexed by the (potential) subset of the data with complete cases
+        self.weights = weights.loc[index]
+        self.strat = strata.loc[index]
+        self.clust = cluster.loc[index]
+        self.fpc = fpc
 
         # Record single cluster setting
         self.single_cluster = single_cluster
@@ -440,10 +448,6 @@ class SurveyDesign(object):
                 except AssertionError:
                     raise ValueError("Error processing FPC- invalid values")
 
-        # Raise an error if there are any missing weights
-        missing_weights = weights.isna().sum()
-        if missing_weights > 0:
-            raise ValueError(f"{missing_weights:,} observations are missing weights")
         return strata, cluster, weights, fpc
 
     def get_jackknife_rep_weights(self, dropped_clust):
@@ -485,4 +489,11 @@ class SurveyDesign(object):
             Degrees of freedom
         """
         # num of clusters minus num of strata minus (num of predictors - 1)
-        return self.clust.loc[X.index].nunique() - self.strat.loc[X.index].nunique() - (X.shape[1] - 1)
+        if self.has_clusters and self.has_strata:
+            return self.n_clust - self.n_strat - (X.shape[1] - 1)
+        elif self.has_clusters and not self.has_strata:
+            return self.n_clust - 1 - (X.shape[1] - 1)
+        elif not self.has_clusters and self.has_strata:
+            return X.shape[0] - self.n_strat - (X.shape[1] - 1)
+        else:
+            return X.shape[0] - (X.shape[1]) - 1
