@@ -33,6 +33,7 @@ class SurveyModel(object):
         Standard error of cofficients
     """
     def __init__(self, design, model_class, cov_method='stata', init_args={}, fit_args={}):
+        # TODO: Take in original (full) data which may have more observations than the fitted data (due to NA dropouts)
         self.design = design
         self.model = model_class
         self.cov_method = cov_method
@@ -121,7 +122,9 @@ class SurveyModel(object):
 
         # Scale after centering, if required
         if single_cluster == 'average':
-            single_cluster_scale = self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1))
+            single_cluster_scale = np.sqrt(self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1)))
+            print(single_cluster_scale)
+            print(sum(self.design.clust_per_strat == 1))
             jdata *= single_cluster_scale
 
         nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64)

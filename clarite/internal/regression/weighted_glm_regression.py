@@ -16,22 +16,54 @@ class WeightedGLMRegression(GLMRegression):
                  survey_design_spec: SurveyDesignSpec, cov_method: Optional[str] = 'error'):
         super().__init__(data, outcome_variable, outcome_dtype, test_variable, covariates, min_n)
         self.survey_design_spec = survey_design_spec
-        self.survey_design = None
         self.cov_method = cov_method
+        self.survey_design = None
 
-    def subset_data(self):
-        """Count observations without missing data.  These will be dropped automatically in glm functions."""
-        subset_data = self.data.dropna(axis='index', how='any',
-                                       subset=[self.test_variable, self.outcome_variable] + self.covariates)
-        # Get a survey design object based on the data and subset the data to match
-        self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, subset_data.index)
-        self.N = len(subset_data)
+    def pre_run_setup(self):
+        # Run the original pre-run setup
+        super().pre_run_setup()
+        # Get a survey design object based on the non-missing data
+        self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, self.complete_case_idx)
+        # Raise an error if the survey design is missing weights when the variable value is not
+        variable_na = self.data[self.test_variable].isna()
+        weight_na = self.survey_design.weights.isna()
+        values_with_missing = self.data.loc[~variable_na & weight_na, self.test_variable]
+        # Get unique values
+        unique_missing = values_with_missing.unique()
+        unique_not_missing = self.data.loc[~variable_na & ~weight_na, self.test_variable].unique()
+        sometimes_missing = sorted([str(v) for v in (set(unique_missing) & set(unique_not_missing))])
+        always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
+        # Log
+        if len(values_with_missing) > 0:
+            error = f"{len(values_with_missing):,} observations are missing weights when the variable is not missing."
+            # Log sometimes missing values
+            if len(sometimes_missing) == 0:
+                pass
+            elif len(sometimes_missing) == 1:
+                error += f"\n\tOne value has a missing weight sometimes: {sometimes_missing[0]}"
+            elif len(sometimes_missing) <= 5:
+                error += f"\n\t{len(sometimes_missing)} values have a missing weight sometimes: {', '.join(sometimes_missing)}"
+            elif len(sometimes_missing) > 5:
+                error += f"\n\t{len(sometimes_missing)} values have a missing weight sometimes: {', '.join(sometimes_missing[:5])}, ..."
+            # Log always missing values
+            if len(always_missing) == 0:
+                pass
+            elif len(always_missing) == 1:
+                error += f"\n\tOne value is always missing weights: {always_missing[0]}. Should it be encoded as NaN?"
+            elif len(always_missing) <= 5:
+                error += f"\n\t{len(always_missing)} values are always missing weights: {', '.join(always_missing)}." \
+                         f" Should they be encoded as NaN?"
+            elif len(always_missing) > 5:
+                error += f"\n\t{len(always_missing)} values are always missing weights: {', '.join(always_missing[:5])}, ..." \
+                         f" Should they be encoded as NaN?"
+            # Raise the error
+            raise ValueError(error)
 
     def run_continuous(self):
-        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe')
+        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                            init_args=dict(family=self.family, missing="drop"),
+                            init_args=dict(family=self.family),
                             fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Check convergence
@@ -54,10 +86,10 @@ class WeightedGLMRegression(GLMRegression):
         self.pvalue = self.var_pvalue
 
     def run_binary(self):
-        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe')
+        y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')
         # Create and fit the model
         model = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                            init_args=dict(family=self.family, missing="drop"),
+                            init_args=dict(family=self.family),
                             fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Check convergence
@@ -89,8 +121,8 @@ class WeightedGLMRegression(GLMRegression):
                             fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
         # Regress restricted model
-        # y doesn't change, but X should use the same observations as the full model (losing any where the variable is NA)
-        _, X_restricted = patsy.dmatrices(self.formula_restricted, self.data, return_type='dataframe')
+        # Use same X and y (but fewer columns in X) to ensure correct comparison
+        _, X_restricted = patsy.dmatrices(self.formula_restricted, self.data, return_type='dataframe', NA_action='drop')
         X_restricted = X_restricted.loc[X.index]
         model_restricted = SurveyModel(design=self.survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                                        init_args=dict(family=self.family),

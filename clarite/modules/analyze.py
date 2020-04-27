@@ -207,13 +207,13 @@ def ewas_r(phenotype: str,
         kwargs = dict()
         # Cluster IDs
         if survey_design_spec.has_cluster:
-            kwargs['ids'] = ro.Formula(f"~{survey_design_spec.cluster_name}")
+            kwargs['ids'] = f"{survey_design_spec.cluster_name}"
             data[survey_design_spec.cluster_name] = survey_design_spec.cluster
         else:
-            kwargs['ids'] = ro.Formula("~1")
+            kwargs['ids'] = ro.NULL
         # Strata
         if survey_design_spec.has_strata:
-            kwargs['strat'] = ro.Formula(f"~{survey_design_spec.strata_name}")
+            kwargs['strata'] = f"{survey_design_spec.strata_name}"
             data[survey_design_spec.strata_name] = survey_design_spec.strata
         # Nest
         if survey_design_spec.nest:
@@ -222,7 +222,7 @@ def ewas_r(phenotype: str,
             kwargs['nest'] = False
         # fpc
         if survey_design_spec.has_fpc:
-            kwargs['fpc'] = ro.Formula(f"~{survey_design_spec.fpc_name}")
+            kwargs['fpc'] = f"{survey_design_spec.fpc_name}"
             data[survey_design_spec.fpc_name] = survey_design_spec.fpc
         # Single cluster setting
         ro.r(f'options("survey.lonely.psu"="{survey_design_spec.single_cluster}")')

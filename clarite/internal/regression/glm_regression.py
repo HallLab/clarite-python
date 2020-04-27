@@ -47,22 +47,23 @@ class GLMRegression(Regression):
 
         # Set default result values
         self.converged = False
-        self.N = len(self.data)
+        self.N = np.nan
+        self.N_original = len(self.data)
         self.beta = np.nan
         self.SE = np.nan
         self.var_pvalue = np.nan
         self.LRT_pvalue = np.nan
         self.diff_AIC = np.nan
 
-    def subset_data(self):
-        """Count observations without missing data.  These will be dropped automatically in glm functions."""
-        subset_data = self.data.dropna(axis='index', how='any',
-                                       subset=[self.test_variable, self.outcome_variable] + self.covariates)
-        self.N = len(subset_data)
+        # Remove incomplete cases
+        self.complete_case_idx = self.data\
+                                     .dropna(axis='index', how='any',
+                                             subset=[self.test_variable, self.outcome_variable] + self.covariates)\
+                                     .index
 
     def check_covariate_values(self):
         """Remove covariates that do not vary"""
-        unique_values = self.data[self.covariates].nunique()
+        unique_values = self.data.loc[self.complete_case_idx, self.covariates].nunique()
         self.varying_covars = list(unique_values[unique_values > 1].index.values)
         self.non_varying_covars = list(unique_values[unique_values <= 1].index.values)
         if len(self.non_varying_covars) > 0:
@@ -92,10 +93,8 @@ class GLMRegression(Regression):
             self.formula = self.formula_restricted + f" + {self.test_variable}"
 
     def pre_run_setup(self):
-        # Subset Data
-        self.subset_data()
-
         # Minimum complete cases filter
+        self.N = len(self.complete_case_idx)
         if self.N < self.min_n:
             raise ValueError(f"too few complete observations (min_n filter: "
                              f"{self.N} < {self.min_n})")
@@ -137,7 +136,7 @@ class GLMRegression(Regression):
 
     def run_continuous(self):
         # Regress
-        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=self.use_t)
+        est = smf.glm(self.formula, data=self.data.loc[self.complete_case_idx], family=self.family).fit(use_t=self.use_t)
         # Check convergence
         if not est.converged:
             return
@@ -151,7 +150,7 @@ class GLMRegression(Regression):
 
     def run_binary(self):
         # Regress
-        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=self.use_t)
+        est = smf.glm(self.formula, data=self.data.loc[self.complete_case_idx], family=self.family).fit(use_t=self.use_t)
         # Check convergence
         if not est.converged:
             return
@@ -173,9 +172,9 @@ class GLMRegression(Regression):
 
     def run_categorical(self):
         # Regress both models
-        est = smf.glm(self.formula, data=self.data, family=self.family, missing="drop").fit(use_t=self.use_t)
-        est_restricted = smf.glm(self.formula_restricted, data=self.data.drop(est.model.data.missing_row_idx),
-                                 family=self.family, missing="raise").fit(use_t=True)
+        est = smf.glm(self.formula, data=self.data.loc[self.complete_case_idx], family=self.family).fit(use_t=self.use_t)
+        est_restricted = smf.glm(self.formula_restricted, data=self.data.loc[self.complete_case_idx],
+                                 family=self.family).fit(use_t=True)
         # Check convergence
         if not est.converged & est_restricted.converged:
             return
