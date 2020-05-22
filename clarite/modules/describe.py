@@ -11,6 +11,7 @@ Functions that are used to gather information about some data
      freq_table
      get_types
      percent_na
+     skewness
      summarize
 
 """
@@ -20,6 +21,7 @@ Functions that are used to gather information about some data
 import click
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 from ..internal.utilities import _get_dtypes
 
@@ -186,6 +188,56 @@ def percent_na(data: pd.DataFrame):
     result = 100 * (1 - (data.count() / data.apply(len)))
     result = result.reset_index()
     result.columns = ['Variable', 'percent_na']
+    return result
+
+
+def skewness(data: pd.DataFrame, dropna: bool = False):
+    """
+    Return the skewness of each continuous variable
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The DataFrame to be described
+    dropna: bool
+        If True, drop rows with NA values before calculating skew.  Otherwise the NA values propagate.
+
+    Returns
+    -------
+    result: pd.DataFrame
+        DataFrame listing three values for each continuous variable and NA for others: skew, zscore, and pvalue
+        The test null hypothesis is that the skewness of the samples population is the same as the corresponding
+         normal distribution.  The pvalue is the two-sided pvalue for the hypothesis test
+
+    Examples
+    --------
+    >>> import clarite
+    >>> clarite.describe.skewness(df)
+         Variable      skew    zscore        pvalue
+    0       pdias       NaN       NaN           NaN
+    1   longindex       NaN       NaN           NaN
+    2     durflow  2.754286  8.183515  2.756827e-16
+    3      height  0.583514  2.735605  6.226567e-03
+    4     begflow -0.316648 -1.549449  1.212738e-01
+    """
+    # Get continuous variables
+    dtypes = _get_dtypes(data)
+    continuous_idx = dtypes[dtypes == 'continuous'].index
+
+    # Format result df, starting with NA
+    result = pd.DataFrame(data=None, index=dtypes.index, columns=["skew", "zscore", "pvalue"], dtype=float)
+
+    # Calculate skew and statistical test
+    if dropna:
+        nan_policy = 'omit'
+    else:
+        nan_policy = 'propagate'
+    result['skew'] = data[continuous_idx].apply(stats.skew, nan_policy=nan_policy)
+    result['zscore'], result['pvalue'] = zip(*data[continuous_idx].apply(stats.skewtest, nan_policy=nan_policy))
+
+    # Format
+    result.index.name = "Variable"
+    result = result.reset_index()
     return result
 
 
