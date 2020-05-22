@@ -10,6 +10,8 @@ Functions that generate plots
      histogram
      distributions
      manhattan
+     dotplot
+
 """
 
 from copy import copy
@@ -722,7 +724,7 @@ def manhattan_fdr(
 def dotplot(
         ewas_result: pd.DataFrame,
         pvalue_name: str = "pvalue",
-        pvalue_line: float = 0.05,
+        cutoff: float = 0.05,
         num_rows: int = 20,
         filename: Optional[str] = None
 ):
@@ -735,7 +737,7 @@ def dotplot(
         EWAS Result to plot
     pvalue_name: str
         'pvalue', 'pvalue_fdr', or 'pvalue_bonferroni'
-    pvalue_line: float (default 0.05)
+    cutoff: float (default 0.05)
         A vertical line is drawn in the pvalue column to show a significance cutoff
     num_rows: int (default 20)
         How many rows to show in the plot
@@ -763,7 +765,7 @@ def dotplot(
     # Sort and filter data
     df = ewas_result.sort_values(pvalue_name, ascending=True).head(num_rows).reset_index()
     df["Variable, Phenotype"] = df[["Variable", "Phenotype"]].apply(lambda r: ', '.join(r), axis=1)
-    df["Significant"] = df[pvalue_name] <= pvalue_line
+    df["Significant"] = df[pvalue_name] <= cutoff
 
     # Plot
     sns.set(style="whitegrid")
@@ -774,7 +776,7 @@ def dotplot(
                      height=10, aspect=0.50,
                      layout_pad=1.3)
     # Draw vertical lines before plotting points
-    g.axes.flat[0].axvline(x=pvalue_line, ls='-', color='black')  # Significance cutoff
+    g.axes.flat[0].axvline(x=cutoff, ls='-', color='black')  # Significance cutoff
     g.axes.flat[1].axvline(x=0, ls='-', color='black')  # 0 Beta
 
     # Plot points
@@ -793,7 +795,7 @@ def dotplot(
     # pvalue
     g.axes.flat[0].set_xscale('log')
     g.axes.flat[0].set_xlim(0.1 * df[pvalue_name].min(), 100)
-    g.axes.flat[0].set_xlabel(f"{pvalue_name} (cutoff = {pvalue_line:.3f})")
+    g.axes.flat[0].set_xlabel(f"{pvalue_name} (cutoff = {cutoff:.3f})")
     # Beta
     max_beta = df['Beta'].abs().max()
     g.axes.flat[1].set_xlim(-1.10 * max_beta, 1.1 * max_beta)  # max value +/- 10%
