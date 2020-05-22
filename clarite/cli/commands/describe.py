@@ -62,3 +62,16 @@ def percent_na(data, output):
     results.to_csv(output, sep="\t", index=False)
     # Log
     click.echo(click.style(f"Done: Saved results for {len(results):,} variables to {output}", fg='green'))
+
+
+@describe_cli.command(help="Report and test the skewness for each continuous variable")
+@arg_data
+@arg_output
+@click.option('--dropna/--keepna', default=False, help="Omit NA values before calculating skew")
+def skewness(data, output, dropna):
+    # Describe
+    results = describe.skewness(data.df, dropna)
+    # Save results
+    results.to_csv(output, sep="\t", index=False)
+    # Log
+    click.echo(click.style(f"Done: Saved results for {len(results):,} variables to {output}", fg='green'))
