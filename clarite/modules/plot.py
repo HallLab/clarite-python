@@ -10,7 +10,7 @@ Functions that generate plots
      histogram
      distributions
      manhattan
-     dotplot
+     top_results
 
 """
 
@@ -721,7 +721,7 @@ def manhattan_fdr(
     )
 
 
-def dotplot(
+def top_results(
         ewas_result: pd.DataFrame,
         pvalue_name: str = "pvalue",
         cutoff: float = 0.05,
@@ -750,7 +750,7 @@ def dotplot(
 
     Examples
     --------
-    >>> clarite.plot.dotplot(ewas_result)
+    >>> clarite.plot.top_results(ewas_result)
     """
     # Ensure corrected pvalues are present
     if pvalue_name == 'pvalue_fdr' or pvalue_name == 'pvalue_bonferroni':
