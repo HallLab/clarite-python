@@ -121,3 +121,15 @@ def manhattan_fdr(ewas_result, output, categories, cutoff, other, nlabeled, labe
                        num_labeled=nlabeled, label_vars=label, filename=output)
     # Log
     click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
+
+
+@click.argument('ewas_result', type=EWAS_RESULT)
+@arg_output
+@click.option('--pvalue_name', type=click.Choice(['pvalue', 'pvalue_bonferroni', 'pvalue_FDR']), default='pvalue',
+              help='Which pvalues to use in the plot')
+@click.option('--cutoff', type=click.FLOAT, default=0.05, help="cutoff value for plotting the significance line")
+@click.option('--num_rows', type=click.INT, default=20, help="How many EWAS result rows to plot")
+def top_results(ewas_result, output, pvalue_name, cutoff, num_rows):
+    plot.top_results(ewas_result, pvalue_name=pvalue_name, cutoff=cutoff, num_rows=num_rows, filename=output)
+    # Log
+    click.echo(click.style(f"Done: Saved plot to {output}", fg='green'))
