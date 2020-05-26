@@ -1,6 +1,7 @@
 import pytest
 from statsmodels import datasets
 
+
 # Datasets for testing
 @pytest.fixture
 def plantTraits():

@@ -136,8 +136,8 @@ class SurveyDesignSpec:
 
         # Load single_cluster
         if single_cluster not in {'fail', 'adjust', 'average', 'certainty'}:
-            raise ValueError(f"if provided, 'single_cluster' must be one of "
-                             f"'fail', 'adjust', 'average', or 'certainty'.")
+            raise ValueError("if provided, 'single_cluster' must be one of "
+                             "'fail', 'adjust', 'average', or 'certainty'.")
         else:
             self.single_cluster = single_cluster
 
@@ -148,19 +148,19 @@ class SurveyDesignSpec:
         if self.has_strata:
             result += f"\tStrata: {len(self.strata.unique())} unique values of {self.strata_name}\n"
         else:
-            result += f"\tStrata: None\n"
+            result += "\tStrata: None\n"
         # Clusters
         if self.has_cluster:
             result += f"\tCluster: {len(self.cluster.unique())} unique values of {self.cluster_name}\n"
             # Nest
             result += f"\t\tClusters nested in Strata: {self.nest}\n"
         else:
-            result += f"\tCluster: None\n"
+            result += "\tCluster: None\n"
         # FPC
         if self.has_fpc:
             result += f"\tFPC: {self.fpc_name}\n"
         else:
-            result += f"\tFPC: None\n"
+            result += "\tFPC: None\n"
         # Weights
         if self.single_weight:
             result += f"\tWeight: {self.weight_name}\n"
@@ -168,7 +168,7 @@ class SurveyDesignSpec:
             result += f"\tMultiple Weights: {len(set(self.weight_names.values())):,} " \
                       f"unique weights associated with {len(set(self.weight_names.keys())):,} variables\n"
         else:
-            result += f"\tWeights: None\n"
+            result += "\tWeights: None\n"
         # single cluster
         result += f"\tSingle Cluster ('Lonely PSU') Option: {self.single_cluster}"
 

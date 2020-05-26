@@ -526,7 +526,7 @@ def recode_values(data, replacement_dict,
     if cells_with_changes > 0:
         click.echo(f"Replaced {cells_with_changes:,} values from {len(data):,} observations in {cols_with_changes:,} variables")
     else:
-        click.echo(f"No occurences of replaceable values were found, so nothing was replaced.")
+        click.echo("No occurences of replaceable values were found, so nothing was replaced.")
 
     # Return
     return result
@@ -897,7 +897,7 @@ def drop_extra_categories(data: pd.DataFrame,
         message = f"\t{str(var)} had categories with no occurrences: {', '.join([str(c) for c in cats])}"
         click.echo(message)
     elif len(removed_cats) > 1:
-        message = f"\tMultiple categorical variables had categories with no occurrences:"
+        message = "\tMultiple categorical variables had categories with no occurrences:"
         for var, cats in removed_cats.items():
             message += f"\n\t{str(var)}: {', '.join([str(c) for c in cats])}"
         click.echo(message)

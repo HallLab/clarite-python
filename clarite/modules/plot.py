@@ -755,12 +755,12 @@ def top_results(
     # Ensure corrected pvalues are present
     if pvalue_name == 'pvalue_fdr' or pvalue_name == 'pvalue_bonferroni':
         if pvalue_name not in list(ewas_result):
-            raise ValueError(f"Missing corrected pvalues in ewas result.  Run clarite.analyze.add_corrected_pvalues")
+            raise ValueError("Missing corrected pvalues in ewas result.  Run clarite.analyze.add_corrected_pvalues")
     elif pvalue_name == 'pvalue':
         pass
     else:
-        raise ValueError(f"Incorrect value specified for 'pvalue_name': must be one of 'pvalue', 'pvalue_fdr',"
-                         f" or 'pvalue_bonferroni'.")
+        raise ValueError("Incorrect value specified for 'pvalue_name': must be one of 'pvalue', 'pvalue_fdr',"
+                         " or 'pvalue_bonferroni'.")
 
     # Sort and filter data
     df = ewas_result.sort_values(pvalue_name, ascending=True).head(num_rows).reset_index()

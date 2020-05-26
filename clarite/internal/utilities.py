@@ -49,7 +49,7 @@ def _validate_skip_only(
         only = [only]
 
     if skip is not None and only is not None:
-        raise ValueError(f"It isn't possible to specify 'skip' and 'only' at the same time.")
+        raise ValueError("It isn't possible to specify 'skip' and 'only' at the same time.")
     elif skip is not None and only is None:
         invalid_cols = set(skip) - set(list(data))
         if len(invalid_cols) > 0:
@@ -178,7 +178,7 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
 
     # Make sure the index of each dataset is not a multiindex and give it a consistent name
     if isinstance(data.index, pd.MultiIndex):
-        raise ValueError(f"Data must not have a multiindex")
+        raise ValueError("Data must not have a multiindex")
     data.index.name = "ID"
 
     # Collects lists of regression variables
@@ -188,7 +188,7 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
     rv_cont = [v for v, t in types.iteritems() if t == 'continuous' and v not in covariates and v != phenotype]
     # Ensure there are variables which can be regressed
     if len(rv_bin + rv_cat + rv_cont) == 0:
-        raise ValueError(f"No variables are available to run regression on")
+        raise ValueError("No variables are available to run regression on")
     else:
         click.echo(
             f"Running {len(rv_bin):,} binary, {len(rv_cat):,} categorical, and {len(rv_cont):,} continuous variables")
@@ -214,7 +214,7 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
     elif pheno_kind == 'categorical':
         raise NotImplementedError("Categorical Phenotypes are not yet supported.")
     elif pheno_kind == 'continuous':
-        click.echo(f"Running EWAS on a Continuous Outcome (family = Gaussian)")
+        click.echo("Running EWAS on a Continuous Outcome (family = Gaussian)")
     elif pheno_kind == 'binary':
         # Use the order according to the categorical
         counts = data[phenotype].value_counts().to_dict()
@@ -226,7 +226,7 @@ def validate_ewas_params(covariates, data, phenotype, survey_design_spec):
                                f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as 1",
                                fg='green'))
     else:
-        raise ValueError(f"The phenotype's type could not be determined.  Please report this error.")
+        raise ValueError("The phenotype's type could not be determined.  Please report this error.")
 
     # Log how many NA outcomes
     na_outcome_count = data[phenotype].isna().sum()
