@@ -31,7 +31,7 @@ class SurveyDesignSpec:
         'adjust': use the average of all observations (more conservative)
         'average': use the average value of other strata
         'certainty': that strata doesn't contribute to the variance (0 variance)
-    drop_unweighted: bool (default False)
+    drop_unweighted: bool, default False
         If True, drop observations that are missing a weight value.  This may not be statistically sound.
         Otherwise the result for variables with missing weights (when the variable is not missing) is NULL.
 

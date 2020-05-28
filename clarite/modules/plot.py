@@ -10,6 +10,8 @@ Functions that generate plots
      histogram
      distributions
      manhattan
+     manhattan_fdr
+     manhattan_bonferroni
      top_results
 
 """
@@ -615,6 +617,8 @@ def manhattan_bonferroni(
     --------
     >>> clarite.plot.manhattan_bonferroni({'discovery':disc_df, 'replication':repl_df},
      categories=data_categories, title="EWAS Results")
+
+    .. image:: ../../_static/plot/manhattan_bonferroni.png
     """
     # Ensure corrected values are present
     for name, df in dfs.items():
@@ -694,6 +698,8 @@ def manhattan_fdr(
     --------
     >>> clarite.plot.manhattan_fdr({'discovery':disc_df, 'replication':repl_df},
      categories=data_categories, title="EWAS Results")
+
+    .. image:: ../../_static/plot/manhattan_fdr.png
     """
     # Ensure corrected values are present
     for name, df in dfs.items():
@@ -751,6 +757,8 @@ def top_results(
     Examples
     --------
     >>> clarite.plot.top_results(ewas_result)
+
+    .. image:: ../../_static/plot/top_results.png
     """
     # Ensure corrected pvalues are present
     if pvalue_name == 'pvalue_fdr' or pvalue_name == 'pvalue_bonferroni':
@@ -764,7 +772,7 @@ def top_results(
 
     # Sort and filter data
     df = ewas_result.sort_values(pvalue_name, ascending=True).head(num_rows).reset_index()
-    df["Variable, Phenotype"] = df[["Variable", "Phenotype"]].apply(lambda r: ', '.join(r), axis=1)
+    df["Variable, Phenotype"] = df[["Variable", "Phenotype"]].apply(lambda r: ' => '.join(r), axis=1)
     df["Significant"] = df[pvalue_name] <= cutoff
 
     # Plot
