@@ -42,6 +42,10 @@ def _validate_skip_only(
         skip: Optional[Union[str, List[str]]] = None,
         only: Optional[Union[str, List[str]]] = None):
     """Validate use of the 'skip' and 'only' parameters, returning a boolean series for the columns where True = use the column"""
+    # Ensure that 'data' is a DataFrame and not a Series
+    if type(data) != pd.DataFrame:
+        raise ValueError("The passed 'data' is not a Pandas DataFrame")
+
     # Convert string to a list
     if type(skip) == str:
         skip = [skip]
@@ -71,6 +75,10 @@ def _validate_skip_only(
 
 def _get_dtypes(data: pd.DataFrame):
     """Return a Series of CLARITE dtypes indexed by variable name"""
+    # Ensure that 'data' is a DataFrame and not a Series
+    if type(data) != pd.DataFrame:
+        raise ValueError("The passed 'data' is not a Pandas DataFrame")
+
     # Start with all as unknown
     dtypes = pd.Series('unknown', index=data.columns)
 

@@ -75,6 +75,7 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
     assert cat_min > 2
     assert cat_min <= cat_max
     assert cont_min > cat_max
+    assert type(data) == pd.DataFrame
 
     # Count the number of variables to start with
     total_vars = len(data.columns)
@@ -231,6 +232,7 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]
     Testing 47 of 47 categorical variables
             Removed 36 (76.60%) tested categorical variables which had a category with less than 200 values
     """
+    assert type(data) == pd.DataFrame
     min_category_counts = data.apply(lambda col: col.value_counts().min())
     fail_filter = min_category_counts < n
 
@@ -279,6 +281,7 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
     Testing 483 of 483 continuous variables
             Removed 8 (1.66%) tested continuous variables which had less than 200 non-null values
     """
+    assert type(data) == pd.DataFrame
     counts = data.count()  # by default axis=0 (rows) so counts number of non-NA rows in each column
     fail_filter = counts < n
 
@@ -324,6 +327,7 @@ def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
     Testing 483 of 483 continuous variables
             Removed 30 (6.21%) tested continuous variables which were equal to zero in at least 90.00% of non-NA observations.
     """
+    assert type(data) == pd.DataFrame
     percent_value = 100 * data.apply(lambda col: (col == 0).sum() / col.count())
     fail_filter = percent_value >= filter_percent
 
@@ -715,16 +719,18 @@ def merge_observations(top: pd.DataFrame,
 
 
 @print_wrap
-def merge_variables(left: pd.DataFrame, right: pd.DataFrame, how: str = 'outer'):
+def merge_variables(left: Union[pd.DataFrame, pd.Series],
+                    right: Union[pd.DataFrame, pd.Series],
+                    how: str = 'outer'):
     """
     Merge a list of dataframes with different variables side-by-side.  Keep all observations ('outer' merge) by default.
 
     Parameters
     ----------
-    left: pd.Dataframe
-        "left" DataFrame
-    right: pd.DataFrame
-        "right" DataFrame which uses the same index
+    left: pd.Dataframe or pd.Series
+        "left" DataFrame or Series
+    right: pd.DataFrame or pd.Series
+        "right" DataFrame or Series which uses the same index
     how: merge method, one of {'left', 'right', 'inner', 'outer'}
         Keep only rows present in the left data, the right data, both datasets, or either dataset.
 
@@ -733,6 +739,12 @@ def merge_variables(left: pd.DataFrame, right: pd.DataFrame, how: str = 'outer')
     >>> import clarite
     >>> df = clarite.modify.merge_variables(df_bin, df_cat, how='outer')
     """
+    # Convert to DataFrame if a series was passed
+    if type(left) == pd.Series:
+        left = pd.DataFrame(left)
+    if type(right) == pd.Series:
+        right = pd.DataFrame(right)
+
     click.echo(f"{how} Merge:\n"
                f"\tleft = {len(left):,} observations of {len(left.columns):,} variables\n"
                f"\tright = {len(right):,} observations of {len(right.columns):,} variables")
@@ -742,7 +754,7 @@ def merge_variables(left: pd.DataFrame, right: pd.DataFrame, how: str = 'outer')
 
 
 @print_wrap
-def move_variables(left: pd.DataFrame, right: pd.DataFrame,
+def move_variables(left: pd.DataFrame, right: Union[pd.DataFrame, pd.Series],
                    skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
     """
     Move one or more variables from one DataFrame to another
@@ -751,8 +763,8 @@ def move_variables(left: pd.DataFrame, right: pd.DataFrame,
     ----------
     left: pd.Dataframe
         DataFrame containing the variable(s) to be moved
-    right: pd.DataFrame
-        DataFrame (which uses the same index) that the variable(s) will be moved to
+    right: pd.DataFrame or pd.Series
+        DataFrame or Series (which uses the same index) that the variable(s) will be moved to
     skip: str, list or None (default is None)
         List of variables that will *not* be moved
     only: str, list or None (default is None)
