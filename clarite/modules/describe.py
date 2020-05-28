@@ -54,6 +54,7 @@ def correlations(data: pd.DataFrame, threshold: float = 0.75):
     3          DRD370FQ  DRD370UQ     0.987974
     4          DR1TS160  DR1TSFAT     0.984733
     """
+    assert type(data) == pd.DataFrame
     # Get correlaton matrix
     correlation = data.corr()
     # Keep only the upper triangle to avoid listing both a-b and b-a correlations
@@ -106,6 +107,8 @@ def freq_table(data: pd.DataFrame):
     8  how_many_years_in_house                         4   1419
     9                  LBXPFDO  <Non-Categorical Values>   1032
     """
+    assert type(data) == pd.DataFrame
+
     # Define a function to be applied to each categorical variable
     def formatted_value_counts(var_name: str, df: pd.DataFrame):
         if str(df[var_name].dtype) == "category":
@@ -185,6 +188,7 @@ def percent_na(data: pd.DataFrame):
     2    LBXHBC     4.99321
     3    LBXHBS     4.98730
     """
+    assert type(data) == pd.DataFrame
     result = 100 * (1 - (data.count() / data.apply(len)))
     result = result.reset_index()
     result.columns = ['Variable', 'percent_na']

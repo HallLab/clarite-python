@@ -45,6 +45,7 @@ def from_tsv(filename: str, index_col: Optional[Union[str, int]] = 0, **kwargs):
     """
     # Load data
     data = pd.read_csv(filename, index_col=index_col, sep="\t", **kwargs)
+    # read_csv always returns a dataframe, so data.columns is okay here
     click.echo(f"Loaded {len(data):,} observations of {len(data.columns):,} variables")
 
     # Rename index to ID
