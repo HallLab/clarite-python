@@ -35,29 +35,43 @@ class WeightedGLMRegression(GLMRegression):
         always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
         # Log
         if len(values_with_missing) > 0:
-            error = f"{len(values_with_missing):,} observations are missing weights when the variable is not missing."
-            # Log sometimes missing values
-            if len(sometimes_missing) == 0:
-                pass
-            elif len(sometimes_missing) == 1:
-                error += f"\n\tOne value has a missing weight sometimes: {sometimes_missing[0]}"
-            elif len(sometimes_missing) <= 5:
-                error += f"\n\t{len(sometimes_missing)} values have a missing weight sometimes: {', '.join(sometimes_missing)}"
-            elif len(sometimes_missing) > 5:
-                error += f"\n\t{len(sometimes_missing)} values have a missing weight sometimes: {', '.join(sometimes_missing[:5])}, ..."
-            # Log always missing values
-            if len(always_missing) == 0:
-                pass
-            elif len(always_missing) == 1:
-                error += f"\n\tOne value is always missing weights: {always_missing[0]}. Should it be encoded as NaN?"
-            elif len(always_missing) <= 5:
-                error += f"\n\t{len(always_missing)} values are always missing weights: {', '.join(always_missing)}." \
-                         f" Should they be encoded as NaN?"
-            elif len(always_missing) > 5:
-                error += f"\n\t{len(always_missing)} values are always missing weights: {', '.join(always_missing[:5])}, ..." \
-                         f" Should they be encoded as NaN?"
-            # Raise the error
-            raise ValueError(error)
+            # Depending on the setting in survey design spec, handle missing weights
+            if self.survey_design_spec.drop_unweighted:
+                # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
+                # Reset existing warnings from super().pre_run_setup() since this will be run again
+                self.warnings = [f"Dropped {len(values_with_missing):,} non-missing observation(s) due to missing weights"]
+                self.data.loc[~variable_na & weight_na, self.test_variable] = np.nan  # Set values to nan when the weight is missing
+                self.complete_case_idx = self.get_complete_case_idx()  # Update complete case idx
+                super().pre_run_setup()
+                self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable,
+                                                                               self.complete_case_idx)
+            else:
+                error = f"{len(values_with_missing):,} observations are missing weights when the variable is not missing."
+                # Add more information to the error and raise it, skipping analysis of this variable
+                if len(sometimes_missing) == 0:
+                    pass
+                elif len(sometimes_missing) == 1:
+                    error += f"\n\tOne value sometimes occurs in observations with missing weight: {sometimes_missing[0]}"
+                elif len(sometimes_missing) <= 5:
+                    error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
+                             f" {', '.join(sometimes_missing)}"
+                elif len(sometimes_missing) > 5:
+                    error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
+                             f" {', '.join(sometimes_missing[:5])}, ..."
+                # Log always missing values
+                if len(always_missing) == 0:
+                    pass
+                elif len(always_missing) == 1:
+                    error += f"\n\tOne value is only found in observations with missing weights: {always_missing[0]}." \
+                             " Should it be encoded as NaN?"
+                elif len(always_missing) <= 5:
+                    error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
+                             f"{', '.join(always_missing)}. Should they be encoded as NaN?"
+                elif len(always_missing) > 5:
+                    error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
+                             f"{', '.join(always_missing[:5])}, ... Should they be encoded as NaN?"
+                # Raise the error
+                raise ValueError(error)
 
     def run_continuous(self):
         y, X = patsy.dmatrices(self.formula, self.data, return_type='dataframe', NA_action='drop')
