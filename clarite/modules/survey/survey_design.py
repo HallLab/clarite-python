@@ -1,5 +1,6 @@
 from typing import Optional, Union, Dict
 
+import click
 import numpy as np
 import pandas as pd
 
@@ -30,6 +31,9 @@ class SurveyDesignSpec:
         'adjust': use the average of all observations (more conservative)
         'average': use the average value of other strata
         'certainty': that strata doesn't contribute to the variance (0 variance)
+    drop_unweighted: bool (default False)
+        If True, drop observations that are missing a weight value.  This may not be statistically sound.
+        Otherwise the result for variables with missing weights (when the variable is not missing) is NULL.
 
     Attributes
     ----------
@@ -52,7 +56,8 @@ class SurveyDesignSpec:
                  nest: bool = False,
                  weights: Union[str, Dict[str, str]] = None,
                  fpc: Optional[str] = None,
-                 single_cluster: Optional[str] = 'fail'):
+                 single_cluster: Optional[str] = 'fail',
+                 drop_unweighted: bool = False):
 
         # Validate index
         if isinstance(survey_df.index, pd.MultiIndex):
@@ -82,6 +87,13 @@ class SurveyDesignSpec:
         self.fpc = None
         self.fpc_name = None
         self.has_fpc = False
+
+        # Unweighted, warn if set to True
+        self.drop_unweighted = drop_unweighted
+        if self.drop_unweighted:
+            click.echo(click.style("WARNING: Dropping observations with missing weights. "
+                                   "This may not be statistically sound, and the cause of missing weights "
+                                   "should be determined.", fg='red'))
 
         # Load Strata
         if strata is not None:

@@ -56,10 +56,14 @@ class GLMRegression(Regression):
         self.diff_AIC = np.nan
 
         # Remove incomplete cases
-        self.complete_case_idx = self.data\
-                                     .dropna(axis='index', how='any',
-                                             subset=[self.test_variable, self.outcome_variable] + self.covariates)\
-                                     .index
+        self.complete_case_idx = self.get_complete_case_idx()
+
+    def get_complete_case_idx(self):
+        """Get index of observations that are not missing in the test variable, the outcome variable, and covariates"""
+        return self.data\
+                   .dropna(axis='index', how='any',
+                           subset=[self.test_variable, self.outcome_variable] + self.covariates)\
+                   .index
 
     def check_covariate_values(self):
         """Remove covariates that do not vary"""
