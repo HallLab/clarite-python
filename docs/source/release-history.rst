@@ -2,6 +2,32 @@
 Release History
 ===============
 
+v0.10.0 (2020-05-28)
+--------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Manhattan plot split into three functions (raw, bonferroni, and fdr) and now has a custom threshold parameter
+* Use Pandas v1.0+
+* Refactored regression objects to simplify internal code and potentially allow for more types of regression in the future
+* Added an ewas_r function that seamlessly runs the ewas analysis in R, using the R *survey* library
+  * This is recommended when using weights, as the python version has some inconsistencies in some edge cases
+* Added a skewness function
+* Added a *top_results* plot
+* Add a *drop_unweighted* parameter to the *SurveyDesignSpec* to provide an easy (if potentially incorrect) workaround for observations with missing weights
+
+Fixes
+^^^^^
+* Provide a warning and a convenience function when categorical types have categories with no occurrences
+* Catch errors when categorizing variables with many unique string values
+* Corrected some edge-case EWAS results when using weights in the presence of missing values
+* Avoid some cryptic errors by ensuring the input to some functions is a DataFrame and not a Series
+
+Tests
+^^^^^
+Many additional tests were added, especially related to EWAS
+
+
 v0.9.1 (2019-11-20)
 -------------------
 
