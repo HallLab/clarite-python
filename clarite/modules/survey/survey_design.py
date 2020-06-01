@@ -81,8 +81,8 @@ class SurveyDesignSpec:
         self.weights = None
         self.weight_names = None
         self.weight_name = None
-        self.single_weight = False
-        self.multi_weight = False
+        self.single_weight = False  # If True, weights is a Series
+        self.multi_weight = False  # If True, weights is a dict of weight name : Series
         # FPC
         self.fpc = None
         self.fpc_name = None
@@ -125,23 +125,26 @@ class SurveyDesignSpec:
         # Load Weights
         if weights is not None:
             if type(weights) == dict:
+                # self.weights will be a dictionary of weight_name: Series of weight values
                 self.multi_weight = True
                 self.weight_names = weights
-                self.weights = dict()
+                self.weights = dict()  # dict of weight name : weight values
                 for var_name, weight_name in weights.items():
                     if weight_name not in self.survey_df:
                         raise KeyError(f"weights key for '{var_name}' ('{weight_name}') was not found in the survey_df")
-                    else:
+                    elif weight_name not in self.weights:
                         # Replace zero weights with a small number to avoid divide by zero
                         zero_weights = self.survey_df[weight_name] <= 0
                         self.survey_df.loc[zero_weights, weight_name] = 1e-99
-                        self.weights[var_name] = self.survey_df[weight_name]
+                        self.weights[weight_name] = self.survey_df[weight_name]
             elif type(weights) == str:
+                # self.weights will be a Series of weight values
                 self.single_weight = True
                 self.weight_name = weights
                 if self.weight_name not in self.survey_df:
                     raise KeyError(f"the weight ('{self.weight_name}') was not found in the survey_df")
                 else:
+                    # Replace zero weights with a small number to avoid divide by zero
                     zero_weights = self.survey_df[self.weight_name] <= 0
                     self.survey_df.loc[zero_weights, self.weight_name] = 1e-99
                     self.weights = self.survey_df[self.weight_name]
@@ -214,11 +217,11 @@ class SurveyDesignSpec:
             if regression_variable is None:
                 raise ValueError("This SurveyDesignSpec uses variable-specific weights- "
                                  "a variable name is required to create a SurveyDesign object.")
-            elif regression_variable not in self.weight_names:
+            weight_name = self.weight_names.get(regression_variable, None)
+            if weight_name is None:
                 raise KeyError(f"The regression variable ({regression_variable}) "
                                f"was not found in the SurveyDesignSpec")
-            else:
-                weights = self.weights[regression_variable]
+            weights = self.weights[weight_name]
         else:
             weights = None
 

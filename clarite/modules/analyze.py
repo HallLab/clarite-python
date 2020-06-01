@@ -150,9 +150,8 @@ def ewas_r(phenotype: str,
     # Get lists of variables to regress and validate parameters
     rv_bin, rv_cat, rv_cont, pheno_kind = validate_ewas_params(covariates, data, phenotype, survey_design_spec)
 
-    # Make the first column "ID"
-    data = data.reset_index(drop=False)
-    data.columns = ["ID", ] + [c for c in data.columns if c != "ID"]
+    # Name the index "ID" (SurveyDesignSpec already does this)
+    data.index = data.index.rename("ID")
 
     # Source R script to define the function
     import rpy2.robjects as ro
@@ -168,6 +167,9 @@ def ewas_r(phenotype: str,
     cont_vars = ro.StrVector(rv_cont)
     cat_covars = ro.StrVector([v for v in covariates if (dtypes.loc[v] == 'categorical') or (dtypes.loc[v] == 'binary')])
     cont_covars = ro.StrVector([v for v in covariates if dtypes.loc[v] == 'continuous'])
+
+    # Allow nonvarying covariates by default to match python ewas (warn instead of error)
+    allowed_nonvarying = cat_covars + cont_covars
 
     # These lists must be passed as NULL if they are empty
     if len(cat_vars) == 0:
@@ -193,14 +195,18 @@ def ewas_r(phenotype: str,
             data_r = df_pandas2r(data)
             result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
                                cat_covars=cat_covars, cont_covars=cont_covars,
-                               regression_family=regression_family, min_n=min_n)
+                               regression_family=regression_family,
+                               allowed_nonvarying=allowed_nonvarying,
+                               min_n=min_n)
     else:
-        # Merge weights into data
-        data = pd.merge(data, survey_design_spec.weights, left_index=True, right_index=True, how='left')
+        # Merge weights into data and get weight name(s)
         if survey_design_spec.single_weight:
             weights = survey_design_spec.weight_name
+            data = pd.merge(data, survey_design_spec.weights, left_index=True, right_index=True, how='left')
         elif survey_design_spec.multi_weight:
             weights = survey_design_spec.weight_names
+            data = pd.merge(data, pd.DataFrame(survey_design_spec.weights),
+                            left_index=True, right_index=True, how='left')
         else:
             raise ValueError("Weights must be provided")
         # Gather optional parts of survey parameters
@@ -224,18 +230,35 @@ def ewas_r(phenotype: str,
         if survey_design_spec.has_fpc:
             kwargs['fpc'] = f"{survey_design_spec.fpc_name}"
             data[survey_design_spec.fpc_name] = survey_design_spec.fpc
+
         # Single cluster setting
         ro.r(f'options("survey.lonely.psu"="{survey_design_spec.single_cluster}")')
+
+        # Reset the index on data so that the first column is "ID"
+        data = data.reset_index(drop=False)
+        data = data[["ID", ] + [c for c in data.columns if c != "ID"]]
+
         with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
             data_r = df_pandas2r(data)
+
+            if survey_design_spec.multi_weight:
+                # Must convert python dict of var:weight name to a named list in R
+                weights = ro.ListVector(weights)
+
             result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
                                cat_covars=cat_covars, cont_covars=cont_covars,
                                regression_family=regression_family,
+                               allowed_nonvarying=allowed_nonvarying,
                                min_n=min_n,
                                weights=weights,
                                **kwargs)
 
     result = ewasresult2py(result)
+
+    # Ensure correct dtypes (float may be objects if the are all NaN)
+    float_cols = ['Beta', 'SE', 'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue']
+    result[float_cols] = result[float_cols].astype('float64')
+
     return result
 
 
