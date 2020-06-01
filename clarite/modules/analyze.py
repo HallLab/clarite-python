@@ -169,7 +169,7 @@ def ewas_r(phenotype: str,
     cont_covars = ro.StrVector([v for v in covariates if dtypes.loc[v] == 'continuous'])
 
     # Allow nonvarying covariates by default to match python ewas (warn instead of error)
-    allowed_nonvarying = cat_covars + cont_covars
+    allowed_nonvarying = ro.StrVector(covariates)
 
     # These lists must be passed as NULL if they are empty
     if len(cat_vars) == 0:

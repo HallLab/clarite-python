@@ -2,8 +2,6 @@
 
 library(devtools)
 if (!require('survey')) install.packages('survey', repos = "http://cran.us.r-project.org"); library('survey')
-#install_github('HallLab/clarite')
-#library('clarite')
 
 ####################
 # Useful Functions #
@@ -72,6 +70,7 @@ setwd(output_dir)
 #################
 # fpc Test data #
 #################
+print("fpc Test data")
 # One outcome (y) and one variable (x)
 data(fpc)
 # Add an outcome variable
@@ -110,6 +109,7 @@ write.csv(glm_result_withfpc_nostrata, 'fpc_withfpc_nostrat_result.csv', row.nam
 #################
 # api Test data #
 #################
+print("api Test data")
 # one outcome (api00) and 3 continuous variables (ell, meals, mobility)
 data(api)
 write.csv(apipop, 'apipop_data.csv', row.names=FALSE)
@@ -170,6 +170,7 @@ write.csv(glm_result_apiclus1, 'api_apiclus1_result.csv', row.names=FALSE)
 ####################
 # NHANES Test data #
 ####################
+print("NHANES Test data")
 # A data frame with 8591 observations on the following 7 variables.
 # SDMVPSU - Primary sampling units
 # SDMVSTRA - Sampling strata
@@ -194,6 +195,7 @@ nhanes$agecat <- as.factor(nhanes$agecat)
 nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)
 
 # Full population no weights
+print("Full population no weights")
 glm_nhanes_noweights <- glm(HI_CHOL~race+agecat+RIAGENDR, family=binomial(link="logit"), data=nhanes, na.action=na.omit)
 glm_result_nhanes_noweights <- rbind(
   get_glm_result("race", glm_nhanes_noweights,
@@ -215,6 +217,7 @@ glm_result_nhanes_noweights <- update_binary_result(
 write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result.csv', row.names=FALSE)
 
 # Full population no weights, with some categorical data missing
+print("Full population no weights, with some categorical data missing")
 nhanes_NAs <- nhanes
 nhanes_NAs$race[2:800] <- NA
 write.csv(nhanes_NAs, 'nhanes_NAs_data.csv', row.names=FALSE)
@@ -240,6 +243,7 @@ write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_withna_result.csv', row
 
 
 # Full design: cluster, strata, weights
+print("Full Design")
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes)
 glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)
 glm_result_nhanes_complete <- rbind(
@@ -265,6 +269,7 @@ write.csv(glm_result_nhanes_complete, 'nhanes_complete_result.csv', row.names=FA
 
 
 # Full design: cluster, strata, weights with some categorical data missing
+print("Full Design with missing")
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_NAs)
 glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)
 glm_result_nhanes_complete <- rbind(
@@ -289,6 +294,7 @@ glm_result_nhanes_complete <- update_binary_result(
 write.csv(glm_result_nhanes_complete, 'nhanes_complete_withna_result.csv', row.names=FALSE)
 
 # Weights Only
+print("Weights Only")
 dnhanes_weightsonly <- svydesign(id=~1, weights=~WTMEC2YR, data=nhanes)
 glm_nhanes_weightsonly <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_weightsonly, family=binomial(link="logit"), na.action=na.omit)
 glm_result_nhanes_weightsonly <- rbind(
@@ -309,6 +315,7 @@ write.csv(glm_result_nhanes_weightsonly, 'nhanes_weightsonly_result.csv', row.na
 #################
 # NHANES Lonely #
 #################
+print("NHANES Lonely Tests")
 # Lonely PSU (only one PSU in a stratum)
 nhanes_lonely <- nhanes
 # Make Lonely PSUs by dropping some rows
@@ -366,3 +373,77 @@ glm_result_nhanes_adjust <- get_lonely_glm_results("average", binary_as_continuo
 write.csv(glm_result_nhanes_adjust, 'nhanes_average_result_r.csv', row.names=FALSE)
 glm_result_nhanes_adjust <- get_lonely_glm_results("average", binary_as_continuous=TRUE)
 write.csv(glm_result_nhanes_adjust, 'nhanes_average_result.csv', row.names=FALSE)
+
+#########################
+# Realistic NHANES Test #
+#########################
+print("Realistic NHANES Test")
+
+# Multiple weights, missing data, etc
+data <- read.table("../test_data_files/nhanes_real.txt", sep="\t", header=TRUE)
+data$RHQ570 <- as.factor(data$RHQ570)
+data$first_degree_support <- as.factor(data$first_degree_support)
+data$SDDSRVYR <- as.factor(data$SDDSRVYR)
+data$female <- as.factor(data$female)
+data$black <- as.factor(data$black)
+data$mexican <- as.factor(data$mexican)
+data$other_hispanic <- as.factor(data$other_hispanic)
+data$other_eth <- as.factor(data$other_eth)
+data$SES_LEVEL <- as.factor(data$SES_LEVEL)
+
+# Missing values in weights for chave to be replaced with 0
+data[is.na(data$WTSHM4YR), "WTSHM4YR"] <- 0
+
+# RHQ570
+glm_full_RHQ570 <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+black+mexican+other_hispanic+other_eth+RIDAGEYR+RHQ570),
+                          design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                          na.action=na.omit)
+glm_restricted <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+black+mexican+other_hispanic+other_eth+RIDAGEYR),
+                         design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                         na.action=na.omit)
+result_RHQ570 <- get_glm_result("RHQ570",
+                                glm_full=glm_full_RHQ570,
+                                glm_restricted=glm_restricted,
+                                use_weights=TRUE)
+# first_degree_support
+glm_full_first_degree_support <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+female+black+mexican+other_hispanic+other_eth+RIDAGEYR+first_degree_support),
+                                        design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                                        na.action=na.omit)
+result_first_degree_support <- get_glm_result("first_degree_support",
+                                              glm_full_first_degree_support,
+                                              glm_restricted,
+                                              use_weights=TRUE)
+# URXUPT
+glm_full <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+female+black+mexican+other_hispanic+other_eth+RIDAGEYR+URXUPT),
+                   design=svydesign(weights=~WTSHM4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                   na.action=na.omit)
+result_URXUPT <- get_glm_result("URXUPT",
+                                glm_full,
+                                glm_restricted=NULL,
+                                use_weights=TRUE)
+# Merge and save R results
+result <- rbind(
+    result_RHQ570,
+    result_first_degree_support,
+    result_URXUPT
+)
+write.csv(result, 'nhanes_real_r.csv', row.names=FALSE)
+
+# Update python results (use regression directly for binary, not an LRT)
+result_RHQ570_py <- update_binary_result(ewas_result = result_RHQ570,
+                               new_bin_result = get_glm_result("RHQ570",
+                                                               glm_full_RHQ570,
+                                                               glm_restricted=NULL,
+                                                               alt_name="RHQ5701"))
+result_first_degree_support_py <- update_binary_result(ewas_result = result_first_degree_support,
+                               new_bin_result = get_glm_result("first_degree_support",
+                                                               glm_full_first_degree_support,
+                                                               glm_restricted=NULL,
+                                                               alt_name="first_degree_support1"))
+# Save python results
+result <- rbind(
+    result_RHQ570_py,
+    result_first_degree_support_py,
+    result_URXUPT
+)
+write.csv(result, 'nhanes_real_python.csv', row.names=FALSE)
