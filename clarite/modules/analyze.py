@@ -191,6 +191,10 @@ def ewas_r(phenotype: str,
 
     # Run with or without survey design info
     if survey_design_spec is None:
+        # Reset the index on data so that the first column is "ID"
+        data = data.reset_index(drop=False)
+        data = data[["ID", ] + [c for c in data.columns if c != "ID"]]
+
         with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
             data_r = df_pandas2r(data)
             result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=phenotype,
