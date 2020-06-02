@@ -406,7 +406,7 @@ def test_nhanes_realistic():
     # Process data
 
     # Split out survey info
-    survey_cols = ["SDMVPSU", "SDMVSTRA", "WTMEC4YR", "WTSHM4YR"]
+    survey_cols = ["SDMVPSU", "SDMVSTRA", "WTMEC4YR", "WTSHM4YR", "WTSVOC4Y"]
     survey_df = df[survey_cols]
     df = df.drop(columns=survey_cols)
 
@@ -418,7 +418,9 @@ def test_nhanes_realistic():
     design = clarite.survey.SurveyDesignSpec(survey_df,
                                              weights={"RHQ570": "WTMEC4YR",
                                                       "first_degree_support": "WTMEC4YR",
-                                                      "URXUPT": "WTSHM4YR"},
+                                                      "URXUPT": "WTSHM4YR",
+                                                      "LBXV3A": "WTSVOC4Y",
+                                                      "LBXBEC": "WTMEC4YR"},
                                              cluster="SDMVPSU",
                                              strata="SDMVSTRA",
                                              fpc=None,

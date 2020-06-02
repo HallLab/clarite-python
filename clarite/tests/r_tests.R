@@ -396,8 +396,9 @@ data$other_hispanic <- as.factor(data$other_hispanic)
 data$other_eth <- as.factor(data$other_eth)
 data$SES_LEVEL <- as.factor(data$SES_LEVEL)
 
-# Missing values in weights for chave to be replaced with 0
+# Missing values in weights have to be replaced with 0 to pass a check in the survey library
 data[is.na(data$WTSHM4YR), "WTSHM4YR"] <- 0
+data[is.na(data$WTSVOC4Y), "WTSVOC4Y"] <- 0
 
 # RHQ570 - skip nonvarying 'female' covariate
 glm_full_RHQ570 <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+black+mexican+other_hispanic+other_eth+RIDAGEYR+RHQ570),
@@ -433,11 +434,32 @@ result_URXUPT <- get_glm_result("URXUPT",
                                 glm_full,
                                 glm_restricted=NULL,
                                 use_weights=TRUE)
+
+# LBXV3A - skip nonvarying 'SDDSRVYR' covariate
+glm_full <- svyglm(as.formula(BMXBMI~SES_LEVEL+female+black+mexican+other_hispanic+other_eth+RIDAGEYR+LBXV3A),
+                   design=svydesign(weights=~WTSVOC4Y, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                   na.action=na.omit)
+result_LBXV3A <- get_glm_result("LBXV3A",
+                                glm_full,
+                                glm_restricted=NULL,
+                                use_weights=TRUE)
+
+# LBXBEC - skip nonvarying 'SDDSRVYR' covariate
+glm_full <- svyglm(as.formula(BMXBMI~SES_LEVEL+female+black+mexican+other_hispanic+other_eth+RIDAGEYR+LBXBEC),
+                   design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                   na.action=na.omit)
+result_LBXBEC <- get_glm_result("LBXBEC",
+                                glm_full,
+                                glm_restricted=NULL,
+                                use_weights=TRUE)
+
 # Merge and save R results
 result <- rbind(
     result_RHQ570,
     result_first_degree_support,
-    result_URXUPT
+    result_URXUPT,
+    result_LBXV3A,
+    result_LBXBEC
 )
 write.csv(result, 'nhanes_real_r.csv', row.names=FALSE)
 
@@ -456,6 +478,8 @@ result_first_degree_support_py <- update_binary_result(ewas_result = result_firs
 result <- rbind(
     result_RHQ570_py,
     result_first_degree_support_py,
-    result_URXUPT
+    result_URXUPT,
+    result_LBXV3A,
+    result_LBXBEC
 )
 write.csv(result, 'nhanes_real_python.csv', row.names=FALSE)
