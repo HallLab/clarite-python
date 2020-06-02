@@ -394,12 +394,12 @@ data$SES_LEVEL <- as.factor(data$SES_LEVEL)
 # Missing values in weights for chave to be replaced with 0
 data[is.na(data$WTSHM4YR), "WTSHM4YR"] <- 0
 
-# RHQ570
+# RHQ570 - skip nonvarying 'female' covariate
 glm_full_RHQ570 <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+black+mexican+other_hispanic+other_eth+RIDAGEYR+RHQ570),
                           design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
                           na.action=na.omit)
 glm_restricted <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+black+mexican+other_hispanic+other_eth+RIDAGEYR),
-                         design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                         design=glm_full_RHQ570$survey.design,
                          na.action=na.omit)
 result_RHQ570 <- get_glm_result("RHQ570",
                                 glm_full=glm_full_RHQ570,
@@ -409,6 +409,9 @@ result_RHQ570 <- get_glm_result("RHQ570",
 glm_full_first_degree_support <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+female+black+mexican+other_hispanic+other_eth+RIDAGEYR+first_degree_support),
                                         design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
                                         na.action=na.omit)
+glm_restricted <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+female+black+mexican+other_hispanic+other_eth+RIDAGEYR),
+                         design=glm_full_first_degree_support$survey.design,
+                         na.action=na.omit)
 result_first_degree_support <- get_glm_result("first_degree_support",
                                               glm_full_first_degree_support,
                                               glm_restricted,
