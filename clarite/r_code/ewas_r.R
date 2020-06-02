@@ -170,6 +170,14 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
                                        fpc = fpc_values,
                                        ...)
   }
+
+  # Manually subset the survey design to drop observations with NA for the tested variable.
+  # This seems correct:
+  #   It aligns the resulting pvalue for binary variables with the simple regression result.
+  #   It prevents the overrepresentation of categorical variables in the top results
+  # I'm not sure why the survey library doesn't seem to handle NAs correctly in the LRT test.
+  survey_design <- subset(survey_design, !is.na(data[var_name]))
+
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
     fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")

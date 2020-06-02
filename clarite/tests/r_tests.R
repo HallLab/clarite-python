@@ -272,10 +272,15 @@ write.csv(glm_result_nhanes_complete, 'nhanes_complete_result.csv', row.names=FA
 print("Full Design with missing")
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_NAs)
 glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)
+glm_nhanes_complete_race <- svyglm(
+    HI_CHOL~race+agecat+RIAGENDR,
+    design=subset(dnhanes_complete, !is.na(dnhanes_complete$variables$race)),
+    family=binomial(link="logit"),
+    na.action=na.omit)
 glm_result_nhanes_complete <- rbind(
-  get_glm_result("race", glm_nhanes_complete,
+  get_glm_result("race", glm_nhanes_complete_race,
                  glm_restricted = svyglm(HI_CHOL~agecat+RIAGENDR,
-                                         design=glm_nhanes_complete$survey.design,
+                                         design=glm_nhanes_complete_race$survey.design,
                                          family=binomial(link="logit"))),
   get_glm_result("agecat", glm_nhanes_complete,
                  glm_restricted = svyglm(HI_CHOL~race+RIAGENDR,
@@ -396,7 +401,9 @@ data[is.na(data$WTSHM4YR), "WTSHM4YR"] <- 0
 
 # RHQ570 - skip nonvarying 'female' covariate
 glm_full_RHQ570 <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+black+mexican+other_hispanic+other_eth+RIDAGEYR+RHQ570),
-                          design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                          design=subset(
+                            svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                            !is.na(data$RHQ570)),
                           na.action=na.omit)
 glm_restricted <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+black+mexican+other_hispanic+other_eth+RIDAGEYR),
                          design=glm_full_RHQ570$survey.design,
@@ -407,7 +414,9 @@ result_RHQ570 <- get_glm_result("RHQ570",
                                 use_weights=TRUE)
 # first_degree_support
 glm_full_first_degree_support <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+female+black+mexican+other_hispanic+other_eth+RIDAGEYR+first_degree_support),
-                                        design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                                        design=subset(
+                                          svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
+                                          !is.na(data$first_degree_support)),
                                         na.action=na.omit)
 glm_restricted <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+female+black+mexican+other_hispanic+other_eth+RIDAGEYR),
                          design=glm_full_first_degree_support$survey.design,

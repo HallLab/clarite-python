@@ -14,7 +14,7 @@ def load_r_results(filename):
     return r_result
 
 
-def compare_result(loaded_r_result, calculated_result, rtol=1e-04):
+def compare_result(loaded_r_result, calculated_result, atol=0, rtol=1e-04):
     """Binary variables must be specified, since there are expected differences"""
     # Remove "Phenotype" from the index in calculated results
     calculated_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
@@ -31,7 +31,8 @@ def compare_result(loaded_r_result, calculated_result, rtol=1e-04):
     # Close-enough equality of numeric values
     for var in ["N", "Beta", "SE", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=rtol)
+            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"],
+                               equal_nan=True, atol=atol, rtol=rtol)
         except AssertionError:
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_loaded']}\n"
@@ -275,9 +276,6 @@ def test_nhanes_fulldesign():
 
 def test_nhanes_fulldesign_withna():
     """Test the nhanes dataset with the full survey design"""
-    print("THIS TEST IS NOT CURRENTLY RUN")
-    # The result for 'race' doesn't work due to a different deviance result compared to the survey library
-    return
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_NAs_data.csv", index_col=None)
     # Load the expected results
