@@ -774,13 +774,14 @@ def top_results(
     df = ewas_result.sort_values(pvalue_name, ascending=True).head(num_rows).reset_index()
     df["Variable, Phenotype"] = df[["Variable", "Phenotype"]].apply(lambda r: ' => '.join(r), axis=1)
     df["Significant"] = df[pvalue_name] <= cutoff
+    for c in list(df):
+        print(df[c])
 
     # Plot
     sns.set(style="whitegrid")
     g = sns.PairGrid(df,
                      x_vars=[pvalue_name, 'Beta'],
                      y_vars=["Variable, Phenotype"],
-                     hue="Significant",
                      height=10, aspect=0.50,
                      layout_pad=1.3)
     # Draw vertical lines before plotting points
