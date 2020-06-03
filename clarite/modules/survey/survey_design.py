@@ -329,14 +329,6 @@ class SurveyDesign(object):
         # Check arguments, replacing None as needed
         strata, cluster, weights, fpc = self._check_args(strata, cluster, weights, fpc)
 
-        # Record number of strat/clust (not limited by the index)
-        self.n_strat = None
-        self.n_clust = None
-        if self.has_strata:
-            self.n_strat = len(strata.unique())
-        if self.has_clusters:
-            self.n_clust = len(cluster.unique())
-
         # Make strata and cluster into categoricals
         strata = strata.astype('category').rename('strat')
         cluster = cluster.astype('category').rename('clust')
@@ -365,6 +357,14 @@ class SurveyDesign(object):
         self.strat = strata.loc[index]
         self.clust = cluster.loc[index]
         self.fpc = fpc
+
+        # Record number of strat/clust
+        self.n_strat = None
+        self.n_clust = None
+        if self.has_strata:
+            self.n_strat = len(self.strat.unique())
+        if self.has_clusters:
+            self.n_clust = len(self.clust.unique())
 
         # Record single cluster setting
         self.single_cluster = single_cluster
@@ -440,9 +440,7 @@ class SurveyDesign(object):
         else:
             cluster = cluster.rename('cluster')
         if weights is None:
-            weights = pd.Series(np.ones(n), index=index, name='weights')
-        else:
-            weights = weights.rename('weights')
+            weights = pd.Series(np.ones(n), index=index, name='None')
         if fpc is None:
             fpc = pd.Series(np.zeros(n), index=index, name='fpc')
         else:

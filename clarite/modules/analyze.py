@@ -129,7 +129,7 @@ def ewas(
     ewas_result = pd.DataFrame(ewas_results)
     ewas_result['Phenotype'] = phenotype  # Add phenotype
     ewas_result = ewas_result.sort_values('pvalue').set_index(['Variable', 'Phenotype'])  # Sort and set index
-    ewas_result = ewas_result[['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
+    ewas_result = ewas_result[['Variable_type', 'Weight', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
                                'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
     click.echo("Completed EWAS\n")
     return ewas_result

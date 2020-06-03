@@ -85,6 +85,9 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
                               ...)
     }
 
+    # Subset survey design for missing the tested variable value
+    survey_design <- subset(survey_design, !is.na(data[var_name]))
+
     # Create a regression formula
     if(length(varying_covariates)>0){
       fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
@@ -171,12 +174,14 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
                                        ...)
   }
 
-  # Manually subset the survey design to drop observations with NA for the tested variable.
+  # Manually subset the survey design to drop observations missing the tested variable value
   # This seems correct:
   #   It aligns the resulting pvalue for binary variables with the simple regression result.
   #   It prevents the overrepresentation of categorical variables in the top results
+  #   It keeps results concordant with running in R and passing the weight as a formula
   # I'm not sure why the survey library doesn't seem to handle NAs correctly in the LRT test.
   survey_design <- subset(survey_design, !is.na(data[var_name]))
+
 
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
@@ -265,6 +270,7 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
       result$weight <- paste(weight, " (missing values)")
       return(data.frame(result, stringsAsFactors = FALSE))
     } else {
+      # Get weights
       weight_values <- data[weight]
       # Fill NA weight values with 0 to pass an internal check by survey
       weight_values[is.na(weight_values),] <- 0
