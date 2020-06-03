@@ -395,3 +395,40 @@ def test_nhanes_lonely_average():
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
+
+
+def test_nhanes_realistic():
+    """Test a more realistic set of NHANES data, specifically using multiple weights and missing values"""
+    # Load the data
+    df = clarite.load.from_tsv(DATA_PATH.parent / "test_data_files" / "nhanes_real.txt", index_col="ID")
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_real_r.csv")
+    # Process data
+
+    # Split out survey info
+    survey_cols = ["SDMVPSU", "SDMVSTRA", "WTMEC4YR", "WTSHM4YR", "WTSVOC4Y"]
+    survey_df = df[survey_cols]
+    df = df.drop(columns=survey_cols)
+
+    df = clarite.modify.make_binary(df, only=["RHQ570", "first_degree_support", "SDDSRVYR",
+                                              "female", "black", "mexican",
+                                              "other_hispanic", "other_eth"
+                                              ])
+    df = clarite.modify.make_categorical(df, only=["SES_LEVEL"])
+    design = clarite.survey.SurveyDesignSpec(survey_df,
+                                             weights={"RHQ570": "WTMEC4YR",
+                                                      "first_degree_support": "WTMEC4YR",
+                                                      "URXUPT": "WTSHM4YR",
+                                                      "LBXV3A": "WTSVOC4Y",
+                                                      "LBXBEC": "WTMEC4YR"},
+                                             cluster="SDMVPSU",
+                                             strata="SDMVSTRA",
+                                             fpc=None,
+                                             nest=True)
+    calculated_result = clarite.analyze.ewas_r(
+        phenotype="BMXBMI",
+        covariates=["SES_LEVEL", "SDDSRVYR", "female", "black", "mexican", "other_hispanic", "other_eth", "RIDAGEYR"],
+        data=df,
+        survey_design_spec=design)
+    # Compare
+    compare_result(r_result, calculated_result)

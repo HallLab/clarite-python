@@ -44,6 +44,7 @@ class GLMRegression(Regression):
         self.formula = ""
         self.family = None
         self.use_t = True
+        self.weight_name = None
 
         # Set default result values
         self.converged = False
@@ -127,6 +128,7 @@ class GLMRegression(Regression):
         result = {
             'Variable': self.test_variable,
             'Variable_type': self.test_dtype,
+            'Weight': self.weight_name,
             'Converged': self.converged,
             'N': self.N,
             'Beta': self.beta,

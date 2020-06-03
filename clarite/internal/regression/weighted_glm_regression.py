@@ -24,6 +24,9 @@ class WeightedGLMRegression(GLMRegression):
         super().pre_run_setup()
         # Get a survey design object based on the non-missing data
         self.survey_design = self.survey_design_spec.get_survey_design(self.test_variable, self.complete_case_idx)
+        # Update weight name from None to the series of weights
+        if self.survey_design.weights is not None:
+            self.weight_name = self.survey_design.weights.name
         # Raise an error if the survey design is missing weights when the variable value is not
         variable_na = self.data[self.test_variable].isna()
         weight_na = self.survey_design.weights.isna()
@@ -35,6 +38,7 @@ class WeightedGLMRegression(GLMRegression):
         always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
         # Log
         if len(values_with_missing) > 0:
+            self.weight_name += f" ({len(values_with_missing):,} missing)"
             # Depending on the setting in survey design spec, handle missing weights
             if self.survey_design_spec.drop_unweighted:
                 # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
@@ -155,5 +159,4 @@ class WeightedGLMRegression(GLMRegression):
         self.LRT_pvalue = lr_pvalue
         self.pvalue = self.LRT_pvalue
         # Don't report AIC values for weighted categorical analysis since they may be incorrect
-        # self.diff_AIC = model.result.aic - model_restricted.result.aic
         self.diff_AIC = np.nan

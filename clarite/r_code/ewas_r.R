@@ -85,6 +85,9 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
                               ...)
     }
 
+    # Subset survey design for missing the tested variable value
+    survey_design <- subset(survey_design, !is.na(data[var_name]))
+
     # Create a regression formula
     if(length(varying_covariates)>0){
       fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
@@ -94,7 +97,6 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
 
     var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), survey_design, family=regression_family, na.action=na.omit),
                            error=function(e) warn_on_e(var_name, e))
-
     # Collect Results
     if (!is.null(var_result)){
       var_summary <- summary(var_result)
@@ -171,6 +173,16 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
                                        fpc = fpc_values,
                                        ...)
   }
+
+  # Manually subset the survey design to drop observations missing the tested variable value
+  # This seems correct:
+  #   It aligns the resulting pvalue for binary variables with the simple regression result.
+  #   It prevents the overrepresentation of categorical variables in the top results
+  #   It keeps results concordant with running in R and passing the weight as a formula
+  # I'm not sure why the survey library doesn't seem to handle NAs correctly in the LRT test.
+  survey_design <- subset(survey_design, !is.na(data[var_name]))
+
+
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
     fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
@@ -237,7 +249,7 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
     if(single_weight){
       weight <- weights
     } else {
-      weight = weights[[var_name]]
+      weight <- weights[[var_name]]
     }
 
     # Record weight name
@@ -253,12 +265,15 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
       warning(paste(var_name, " had a NULL result because its weight (", weight, ") was not found"))
       result$weight <- paste(weight, " (not found)")
       return(data.frame(result, stringsAsFactors = FALSE))
-    } else if (sum(is.na(data[!(is.na(var_name)), weight])) > 0){
+    } else if(sum(!(is.na(data[var_name])) & is.na(data[weight])) > 0){
       warning(paste(var_name, " had a NULL result because its weight (", weight, ") had ", sum(is.na(data[weight])), " missing values when the variable was not missing"))
       result$weight <- paste(weight, " (missing values)")
       return(data.frame(result, stringsAsFactors = FALSE))
     } else {
+      # Get weights
       weight_values <- data[weight]
+      # Fill NA weight values with 0 to pass an internal check by survey
+      weight_values[is.na(weight_values),] <- 0
     }
 
     # Load strata, fpc, and ids
@@ -452,20 +467,21 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
   # Create a placeholder dataframe for results, anything not updated will be NA
   n <- length(cat_vars) + length(cont_vars)
   ewas_result_df <- data.frame(Variable = character(n),
-                              N = numeric(n),
-                              Converged = logical(n),
-                              Beta = numeric(n),
-                              SE = numeric(n),
-                              Variable_pvalue = numeric(n),
-                              LRT_pvalue = numeric(n),
-                              Diff_AIC = numeric(n),
-                              pval = numeric(n),
-                              phenotype = character(n),
-                              weight = character(n),
-                              stringsAsFactors = FALSE)
+                               Variable_type = character(n),
+                               N = numeric(n),
+                               Converged = logical(n),
+                               Beta = numeric(n),
+                               SE = numeric(n),
+                               Variable_pvalue = numeric(n),
+                               LRT_pvalue = numeric(n),
+                               Diff_AIC = numeric(n),
+                               pval = numeric(n),
+                               phenotype = character(n),
+                               weight = character(n),
+                               stringsAsFactors = FALSE)
   ewas_result_df[] <- NA  # Fill df with NA values
   ewas_result_df$Converged <- FALSE  # Default to not converged
-  i = 0 # Increment before processing each variable
+  i <- 0 # Increment before processing each variable
 
   # Process categorical variables, if any
   print(paste("Processing ", length(cat_vars), " categorical variables", sep=""))
@@ -475,6 +491,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     # Update var name and phenotype
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$phenotype[i] <- y
+    ewas_result_df$Variable_type[i] <- "Categorial/Binary"
 
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="cat",
                       use_survey, single_weight, weights, strata, fpc, ids, ...)
@@ -493,6 +510,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     # Update var name and phenotype
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$phenotype[i] <- y
+    ewas_result_df$Variable_type[i] <- "Continuous"
 
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="cont",
                       use_survey, single_weight, weights, strata, fpc, ids, ...)

@@ -14,7 +14,7 @@ def load_r_results(filename):
     return r_result
 
 
-def compare_result(loaded_r_result, calculated_result, rtol=1e-04):
+def compare_result(loaded_r_result, calculated_result, atol=0, rtol=1e-04):
     """Binary variables must be specified, since there are expected differences"""
     # Remove "Phenotype" from the index in calculated results
     calculated_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
@@ -31,7 +31,8 @@ def compare_result(loaded_r_result, calculated_result, rtol=1e-04):
     # Close-enough equality of numeric values
     for var in ["N", "Beta", "SE", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"], equal_nan=True, atol=0, rtol=rtol)
+            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"],
+                               equal_nan=True, atol=atol, rtol=rtol)
         except AssertionError:
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_loaded']}\n"
@@ -275,9 +276,6 @@ def test_nhanes_fulldesign():
 
 def test_nhanes_fulldesign_withna():
     """Test the nhanes dataset with the full survey design"""
-    print("THIS TEST IS NOT CURRENTLY RUN")
-    # The result for 'race' doesn't work due to a different deviance result compared to the survey library
-    return
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_NAs_data.csv", index_col=None)
     # Load the expected results
@@ -393,3 +391,40 @@ def test_nhanes_lonely_average():
         ], axis=0)
     # Compare
     compare_result(r_result, python_result)
+
+
+def test_nhanes_realistic():
+    """Test a more realistic set of NHANES data, specifically using multiple weights and missing values"""
+    # Load the data
+    df = clarite.load.from_tsv(DATA_PATH.parent / "test_data_files" / "nhanes_real.txt", index_col="ID")
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_real_python.csv")
+    # Process data
+
+    # Split out survey info
+    survey_cols = ["SDMVPSU", "SDMVSTRA", "WTMEC4YR", "WTSHM4YR", "WTSVOC4Y"]
+    survey_df = df[survey_cols]
+    df = df.drop(columns=survey_cols)
+
+    df = clarite.modify.make_binary(df, only=["RHQ570", "first_degree_support", "SDDSRVYR",
+                                              "female", "black", "mexican",
+                                              "other_hispanic", "other_eth"
+                                              ])
+    df = clarite.modify.make_categorical(df, only=["SES_LEVEL"])
+    design = clarite.survey.SurveyDesignSpec(survey_df,
+                                             weights={"RHQ570": "WTMEC4YR",
+                                                      "first_degree_support": "WTMEC4YR",
+                                                      "URXUPT": "WTSHM4YR",
+                                                      "LBXV3A": "WTSVOC4Y",
+                                                      "LBXBEC": "WTMEC4YR"},
+                                             cluster="SDMVPSU",
+                                             strata="SDMVSTRA",
+                                             fpc=None,
+                                             nest=True)
+    calculated_result = clarite.analyze.ewas(
+        phenotype="BMXBMI",
+        covariates=["SES_LEVEL", "SDDSRVYR", "female", "black", "mexican", "other_hispanic", "other_eth", "RIDAGEYR"],
+        data=df,
+        survey_design_spec=design)
+    # Compare
+    compare_result(r_result, calculated_result)

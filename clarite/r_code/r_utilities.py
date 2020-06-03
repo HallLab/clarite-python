@@ -8,7 +8,7 @@ def ewasresult2py(r_result):
     Convert EWAS results from R into a pandas DataFrame.
     """
     df = ro.conversion.rpy2py(r_result)
-    df = df.rename(columns={'phenotype': 'Phenotype', 'pval': 'pvalue'})
+    df = df.rename(columns={'phenotype': 'Phenotype', 'weight': 'Weight', 'pval': 'pvalue'})
     df['Converged'] = df['Converged'].astype(bool)
     df = df.replace("None", np.nan)  # The EWAS R function specifically returns 'None' instead of NA
     df = df.set_index(['Variable', 'Phenotype'])
