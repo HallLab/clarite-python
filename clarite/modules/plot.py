@@ -760,6 +760,14 @@ def top_results(
 
     .. image:: ../../_static/plot/top_results.png
     """
+    # TODO
+    # Work with multiple phenotypes (subplots)
+    # Clearly show what the colors mean
+    # Custom colors
+    # Error if multiple phenotypes are present
+    if len(ewas_result.reset_index(drop=False)["Phenotype"].unique()) > 1:
+        raise ValueError("The 'top_results' plot is limited to displaying results for a single phenotype at a time.")
+
     # Ensure corrected pvalues are present
     if pvalue_name == 'pvalue_fdr' or pvalue_name == 'pvalue_bonferroni':
         if pvalue_name not in list(ewas_result):
@@ -772,26 +780,43 @@ def top_results(
 
     # Sort and filter data
     df = ewas_result.sort_values(pvalue_name, ascending=True).head(num_rows).reset_index()
-    df["Variable, Phenotype"] = df[["Variable", "Phenotype"]].apply(lambda r: ' => '.join(r), axis=1)
     df["Significant"] = df[pvalue_name] <= cutoff
+
+    df["Beta"] = df["Beta"].fillna(0.0)  # Still want to show a point
+
+    # Colors
+    type_colors = {
+              "binary": "#53868B",  # Has beta (Python)
+              "continuous": "#53868B",  # Has beta (Both)
+              "categorical": "#4D4D4D",  # No beta (Python)
+              "categorical/binary": "#4D4D4D"  # No beta (R)
+          }
+    palette = df[["Variable", "Variable_type"]]\
+        .set_index("Variable")\
+        .squeeze()\
+        .str.lower()
+    palette = palette.to_dict()
+    palette = {k: type_colors.get(v, "red") for k, v in palette.items()}
 
     # Plot
     sns.set(style="whitegrid")
     g = sns.PairGrid(df,
                      x_vars=[pvalue_name, 'Beta'],
-                     y_vars=["Variable, Phenotype"],
-                     hue="Significant",
-                     height=10, aspect=0.50,
+                     y_vars="Variable",
+                     height=len(df)*1.1, aspect=5/len(df),
                      layout_pad=1.3)
     # Draw vertical lines before plotting points
     g.axes.flat[0].axvline(x=cutoff, ls='-', color='black')  # Significance cutoff
     g.axes.flat[1].axvline(x=0, ls='-', color='black')  # 0 Beta
 
     # Plot points
-    g.map(sns.stripplot, size=10, orient='h',
-          palette="ch:s=1,r=-0.1,h=1_r",
+    g.map(sns.stripplot,
+          size=10,
+          orient='h',
+          palette=palette,
           linewidth=1,
-          edgecolor='w')
+          edgecolor='w',
+          jitter=False)
 
     # Format
     for ax in g.axes.flat:
@@ -800,6 +825,8 @@ def top_results(
     sns.despine(left=True, bottom=True)
 
     # Update Axes
+    # y-axis labels
+    g.axes.flat[0].set_yticklabels(g.axes.flat[0].get_yticklabels(), rotation=90, va="center")
     # pvalue
     g.axes.flat[0].set_xscale('log')
     g.axes.flat[0].set_xlim(0.1 * df[pvalue_name].min(), 100)
