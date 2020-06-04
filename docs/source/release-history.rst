@@ -2,6 +2,22 @@
 Release History
 ===============
 
+v1.0.0 (2020-06-04)
+-------------------
+
+Fixes
+^^^^^
+* Fixed *ewas_r* not working for some parameter combinations
+* Improved the *top_results* plot to work with non-continuous values (which don't have Betas)
+* Corrected ewas results for some scenarios (strata and clusters) related to missing data (incorrect degrees of freedom)
+
+Tests
+^^^^^
+* Added additional analysis tests with realistic data (more missing values)
+* All analysis tests are now passing with 1E-4 relative tolerance
+* Added the first plot tests
+
+
 v0.10.0 (2020-05-28)
 --------------------
 
