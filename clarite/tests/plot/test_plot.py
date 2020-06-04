@@ -7,6 +7,7 @@ import clarite
 R_DATA_PATH = Path(__file__).parent.parent / 'r_test_output'
 PY_DATA_PATH = Path(__file__).parent.parent / 'py_test_output'
 
+
 @pytest.fixture
 def resultNHANESReal():
     # Load the data
