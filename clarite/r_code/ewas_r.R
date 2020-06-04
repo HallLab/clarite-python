@@ -491,7 +491,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     # Update var name and phenotype
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$phenotype[i] <- y
-    ewas_result_df$Variable_type[i] <- "Categorial/Binary"
+    ewas_result_df$Variable_type[i] <- "Categorical/Binary"
 
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="cat",
                       use_survey, single_weight, weights, strata, fpc, ids, ...)
