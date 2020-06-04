@@ -70,3 +70,14 @@ def test_top_results_nhanesreal(resultNHANESReal, capfd):
 def test_top_results_nhanessmall(resultNHANESsmall, capfd):
     clarite.plot.top_results(resultNHANESsmall, "pvalue_bonferroni", cutoff=0.05,
                              filename=PY_DATA_PATH / "top_results_nhanessmall.png")
+
+
+def test_top_results_multiphenotype(resultNHANESsmall, capfd):
+    data = resultNHANESsmall.copy().reset_index()
+    data.loc[0, "Phenotype"] = "Other"
+    data.set_index(["Variable", "Phenotype"])
+    with pytest.raises(ValueError):
+        clarite.plot.top_results(data,
+                                 "pvalue_bonferroni",
+                                 cutoff=0.05,
+                                 filename=PY_DATA_PATH / "top_results_multiphenotype.png")

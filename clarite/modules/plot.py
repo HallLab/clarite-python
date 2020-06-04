@@ -760,6 +760,14 @@ def top_results(
 
     .. image:: ../../_static/plot/top_results.png
     """
+    # TODO
+    # Work with multiple phenotypes (subplots)
+    # Clearly show what the colors mean
+    # Custom colors
+    # Error if multiple phenotypes are present
+    if len(ewas_result.reset_index(drop=False)["Phenotype"].unique()) > 1:
+        raise ValueError("The 'top_results' plot is limited to displaying results for a single phenotype at a time.")
+
     # Ensure corrected pvalues are present
     if pvalue_name == 'pvalue_fdr' or pvalue_name == 'pvalue_bonferroni':
         if pvalue_name not in list(ewas_result):
