@@ -2,7 +2,7 @@ import click
 
 from clarite import __version__
 
-from .commands import analyze_cli, describe_cli, load_cli, modify_cli, plot_cli, utils_cli
+from .commands import analyze_cli, describe_cli, load_cli, modify_cli, plot_cli
 
 
 @click.group()
@@ -16,4 +16,3 @@ entry_point.add_command(describe_cli)
 entry_point.add_command(load_cli)
 entry_point.add_command(modify_cli)
 entry_point.add_command(plot_cli)
-entry_point.add_command(utils_cli)
