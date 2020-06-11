@@ -178,10 +178,12 @@ class SurveyDesignSpec:
             result += "\tFPC: None\n"
         # Weights
         if self.single_weight:
-            result += f"\tWeight: {self.weight_name}\n"
+            result += f"\tWeight: {self.weight_name}\n" \
+                      f"\tDrop Unweighted: {self.drop_unweighted}\n"
         elif self.multi_weight:
             result += f"\tMultiple Weights: {len(set(self.weight_names.values())):,} " \
-                      f"unique weights associated with {len(set(self.weight_names.keys())):,} variables\n"
+                      f"unique weights associated with {len(set(self.weight_names.keys())):,} variables\n" \
+                      f"\tDrop Unweighted: {self.drop_unweighted}\n"
         else:
             result += "\tWeights: None\n"
         # single cluster
