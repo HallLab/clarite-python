@@ -19,9 +19,11 @@ In order to use the *ewas_r* function, it is recommended to install CLARITE usin
     $ conda create -n clarite python=3.7
     $ conda activate clarite
 
-2. Install rpy2 (optional). CLARITE has a version of the EWAS function that calls R code using the *survey* library::
+2. Install rpy2 and related dependencies (optional). CLARITE has a version of the EWAS function that calls R code using the *survey* library::
 
     $ conda install -c conda-forge rpy2
+    $ conda install r-essentials
+    $ conda install r-survey
 
 3. Install CLARITE::
 

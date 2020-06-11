@@ -47,7 +47,7 @@ Using Conda
 3. Install CLARITE::
 
     $ pip install clarite
-
+    
 Citing CLARITE
 ^^^^^^^^^^^^^^
 

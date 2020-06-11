@@ -29,7 +29,7 @@ def analyze_cli():
 @click.option('--weight', '-w', type=click.STRING, default=None,
               help="Name of a survey weight column found in the survey data.  This option can't be used with --weights-file")
 @click.option('--fpc', type=click.STRING, default=None, help="Name of the finite population correction column in the survey data")
-@click.option('--single-cluster', type=click.Choice(['fail', 'adjust', 'average', 'certainty']), default='error', help="How to handle singular clusters")
+@click.option('--single-cluster', type=click.Choice(['fail', 'adjust', 'average', 'certainty']), default='fail', help="How to handle singular clusters")
 def ewas(phenotype, data, output, covariate, covariance_calc, min_n,
          survey_data, strata, cluster, nested, weights_file, weight, fpc, single_cluster):
     """Run EWAS and add corrected pvalues"""
@@ -86,7 +86,7 @@ def ewas(phenotype, data, output, covariate, covariance_calc, min_n,
 @click.option('--weight', '-w', type=click.STRING, default=None,
               help="Name of a survey weight column found in the survey data.  This option can't be used with --weights-file")
 @click.option('--fpc', type=click.STRING, default=None, help="Name of the finite population correction column in the survey data")
-@click.option('--single-cluster', type=click.Choice(['fail', 'adjust', 'average', 'certainty']), default='error', help="How to handle singular clusters")
+@click.option('--single-cluster', type=click.Choice(['fail', 'adjust', 'average', 'certainty']), default='fail', help="How to handle singular clusters")
 def ewas_r(phenotype, data, output, covariate, covariance_calc, min_n,
            survey_data, strata, cluster, nested, weights_file, weight, fpc, single_cluster):
     """Run EWAS using R and add corrected pvalues"""
