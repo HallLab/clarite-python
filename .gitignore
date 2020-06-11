@@ -63,6 +63,7 @@ docs/source/generated/
 
 # pytest
 .pytest_cache/
+clarite/tests/py_test_output
 
 # PyBuilder
 target/
@@ -79,9 +80,12 @@ target/
 #pycharm
 .idea/*
 
-
 #Ipython Notebook
 .ipynb_checkpoints
 
 # VS Code
 .vscode
+
+# Pipenv
+Pipfile
+Pipfile.lock
