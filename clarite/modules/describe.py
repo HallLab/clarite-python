@@ -217,12 +217,12 @@ def skewness(data: pd.DataFrame, dropna: bool = False):
     --------
     >>> import clarite
     >>> clarite.describe.skewness(df)
-         Variable      skew    zscore        pvalue
-    0       pdias       NaN       NaN           NaN
-    1   longindex       NaN       NaN           NaN
-    2     durflow  2.754286  8.183515  2.756827e-16
-    3      height  0.583514  2.735605  6.226567e-03
-    4     begflow -0.316648 -1.549449  1.212738e-01
+         Variable         type      skew    zscore        pvalue
+    0       pdias  categorical       NaN       NaN           NaN
+    1   longindex  categorical       NaN       NaN           NaN
+    2     durflow   continuous  2.754286  8.183515  2.756827e-16
+    3      height   continuous  0.583514  2.735605  6.226567e-03
+    4     begflow   continuous -0.316648 -1.549449  1.212738e-01
     """
     # Get continuous variables
     dtypes = _get_dtypes(data)
