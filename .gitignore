@@ -63,7 +63,6 @@ docs/source/generated/
 
 # pytest
 .pytest_cache/
-clarite/tests/py_test_output
 
 # PyBuilder
 target/
