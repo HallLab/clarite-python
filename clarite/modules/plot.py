@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Tuple
 
 from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
@@ -731,7 +732,7 @@ def manhattan_fdr(
 def top_results(
         ewas_result: pd.DataFrame,
         pvalue_name: str = "pvalue",
-        cutoff: float = 0.05,
+        cutoff: Optional[float] = 0.05,
         num_rows: int = 20,
         figsize: Optional[Tuple[int, int]] = None,
         dpi: int = 300,
@@ -793,7 +794,6 @@ def top_results(
 
     # Sort and filter data
     df = ewas_result.sort_values(pvalue_name, ascending=True).head(num_rows).reset_index()
-    df["Significant"] = df[pvalue_name] <= cutoff
 
     df["Beta"] = df["Beta"].fillna(0.0)  # Still want to show a point
 
@@ -821,7 +821,7 @@ def top_results(
 
     # Draw vertical lines before plotting points
     if cutoff is not None:
-        axes[0].axvline(x=cutoff, ls='--', color='red', label=f"Pvalue cutoff: {cutoff:.3f}")  # Significance cutoff
+        axes[0].axvline(x=cutoff, ls='--', color='red')  # Significance cutoff
     axes[0].axvline(x=1, ls='-', color='black')  # 1 Pvalue
     axes[1].axvline(x=0, ls='-', color='black')  # 0 Beta
 
@@ -840,13 +840,19 @@ def top_results(
 
     # Update Axes
     # y-axis labels
-    axes[0].set_yticklabels(axes[0].get_yticklabels(), rotation=90, va="center")
+    axes[0].set_yticklabels(axes[0].get_yticklabels(), rotation=0, va="center")
     axes[1].set_yticklabels([])
     axes[1].set_ylabel("")
     # pvalue
     axes[0].set_xscale('log')
-    axes[0].set_xlim(0.1 * df[pvalue_name].min(), 1)
-    axes[0].set_xlabel(f"{pvalue_name} (cutoff = {cutoff:.3f})")
+    if cutoff is not None:
+        xmin = min(df[pvalue_name].min(), cutoff)
+        xlabel = f"{pvalue_name} (cutoff = {cutoff:.3f})"
+    else:
+        xmin = df[pvalue_name].min()
+        xlabel = f"{pvalue_name}"
+    axes[0].set_xlim(0.1 * xmin, 1)
+    axes[0].set_xlabel(xlabel)
     # Beta
     max_beta = df['Beta'].abs().max()
     axes[1].set_xlim(-1.10 * max_beta, 1.1 * max_beta)  # max value +/- 10%
@@ -857,7 +863,16 @@ def top_results(
     figure.suptitle(title, fontsize=20)
 
     # legend
-    axes[0].legend(loc="lower left")
+    legend_elements = []
+    if cutoff is not None:
+        legend_elements.append(Line2D([0], [0], color='red', ls='--', label=f"Pvalue cutoff: {cutoff:.3f}"))
+    for var_type in list(df["Variable_type"].unique()):
+        color = type_colors.get(var_type)
+        legend_elements.append(Line2D([0], [0], marker='o', color=color, label=var_type, markersize=10))
+    axes[0].legend(handles=legend_elements, loc="lower left")
+
+    # Format
+    figure.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     # Save
     if filename is not None:
