@@ -21,7 +21,7 @@ install:
   - conda activate test-env
   # Install optional rpy2 and the survey library
   - conda install -c conda-forge rpy2
-  - conda install r-survey
+  - conda install -c bioconda r-survey
   # Install this package and the packages listed in requirements.txt.
   - python -m pip install .
   # Install extra requirements for running tests
