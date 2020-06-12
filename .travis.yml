@@ -1,6 +1,6 @@
 language: python
 python:
-  - 3.7
+  - 3.6
 cache:
   directories:
     - $HOME/.cache/pip
@@ -17,11 +17,11 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
   # Create env
-  - conda create -q -n test-env python=3.7
+  - conda create -q -n test-env python=3.6
   - conda activate test-env
   # Install optional rpy2 and the survey library
   - conda install -c conda-forge rpy2
-  - conda install -c bioconda r-survey
+  - conda install -c conda-forge r-survey
   # Install this package and the packages listed in requirements.txt.
   - python -m pip install .
   # Install extra requirements for running tests
