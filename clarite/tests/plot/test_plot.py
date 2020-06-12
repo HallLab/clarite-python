@@ -68,6 +68,11 @@ def test_top_results_nhanesreal(resultNHANESReal, capfd):
                              filename=PY_DATA_PATH/"top_results_nhanesreal.png")
 
 
+def test_top_results_nhanesreal_no_cutoff(resultNHANESReal, capfd):
+    clarite.plot.top_results(resultNHANESReal, "pvalue", cutoff=None, num_rows=3,
+                             filename=PY_DATA_PATH/"top_results_nhanesreal_no_cutoff.png")
+
+
 def test_top_results_nhanessmall(resultNHANESsmall, capfd):
     clarite.plot.top_results(resultNHANESsmall, "pvalue_bonferroni", cutoff=0.05,
                              filename=PY_DATA_PATH / "top_results_nhanessmall.png")

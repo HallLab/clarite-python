@@ -229,7 +229,8 @@ def skewness(data: pd.DataFrame, dropna: bool = False):
     continuous_idx = dtypes[dtypes == 'continuous'].index
 
     # Format result df, starting with NA
-    result = pd.DataFrame(data=None, index=dtypes.index, columns=["skew", "zscore", "pvalue"], dtype=float)
+    result = pd.DataFrame(data=None, index=dtypes.index, columns=["type", "skew", "zscore", "pvalue"], dtype=float)
+    result["type"] = dtypes
 
     # Calculate skew and statistical test
     if dropna:
@@ -237,7 +238,8 @@ def skewness(data: pd.DataFrame, dropna: bool = False):
     else:
         nan_policy = 'propagate'
     result['skew'] = data[continuous_idx].apply(stats.skew, nan_policy=nan_policy)
-    result['zscore'], result['pvalue'] = zip(*data[continuous_idx].apply(stats.skewtest, nan_policy=nan_policy))
+    result.loc[continuous_idx, 'zscore'], result.loc[continuous_idx, 'pvalue'] = \
+        zip(*data[continuous_idx].apply(stats.skewtest, nan_policy=nan_policy))
 
     # Format
     result.index.name = "Variable"

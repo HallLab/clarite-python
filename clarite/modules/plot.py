@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Tuple
 
 from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
@@ -460,7 +461,8 @@ def _plot_manhattan(
     # Save
     if filename is not None:
         plt.savefig(filename, bbox_inches="tight")
-    plt.show()
+    else:
+        plt.show()
 
 
 def manhattan(
@@ -508,7 +510,7 @@ def manhattan(
     background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
         A list of background colors to use for alternating categories (must be same length as 'colors')
     filename: Optional str
-        If provided, a copy of the plot will be saved to the specified file
+        If provided, a copy of the plot will be saved to the specified file instead of being shown
 
     Returns
     -------
@@ -607,7 +609,7 @@ def manhattan_bonferroni(
     background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
         A list of background colors to use for alternating categories (must be same length as 'colors')
     filename: Optional str
-        If provided, a copy of the plot will be saved to the specified file
+        If provided, a copy of the plot will be saved to the specified file instead of being shown
 
     Returns
     -------
@@ -688,7 +690,7 @@ def manhattan_fdr(
     background_colors: List(string, string), default ["#EBEBEB", "#FFFFFF"]
         A list of background colors to use for alternating categories (must be same length as 'colors')
     filename: Optional str
-        If provided, a copy of the plot will be saved to the specified file
+        If provided, a copy of the plot will be saved to the specified file instead of being shown
 
     Returns
     -------
@@ -730,8 +732,12 @@ def manhattan_fdr(
 def top_results(
         ewas_result: pd.DataFrame,
         pvalue_name: str = "pvalue",
-        cutoff: float = 0.05,
+        cutoff: Optional[float] = 0.05,
         num_rows: int = 20,
+        figsize: Optional[Tuple[int, int]] = None,
+        dpi: int = 300,
+        title: Optional[str] = None,
+        figure: Optional[plt.figure] = None,
         filename: Optional[str] = None
 ):
     """
@@ -747,8 +753,16 @@ def top_results(
         A vertical line is drawn in the pvalue column to show a significance cutoff
     num_rows: int (default 20)
         How many rows to show in the plot
+    figsize: tuple(int, int), default (12, 6)
+        The figure size of the resulting plot in inches
+    dpi: int, default 300
+        The figure dots-per-inch
+    title: string or None, default None
+        The title used for the plot
+    figure: matplotlib Figure or None, default None
+        Pass in an existing figure to plot to that instead of creating a new one (ignoring figsize and dpi)
     filename: Optional str
-        If provided, a copy of the plot will be saved to the specified file
+        If provided, a copy of the plot will be saved to the specified file instead of being shown
 
     Returns
     -------
@@ -780,7 +794,6 @@ def top_results(
 
     # Sort and filter data
     df = ewas_result.sort_values(pvalue_name, ascending=True).head(num_rows).reset_index()
-    df["Significant"] = df[pvalue_name] <= cutoff
 
     df["Beta"] = df["Beta"].fillna(0.0)  # Still want to show a point
 
@@ -798,44 +811,71 @@ def top_results(
     palette = palette.to_dict()
     palette = {k: type_colors.get(v, "red") for k, v in palette.items()}
 
-    # Plot
+    # Build figure
     sns.set(style="whitegrid")
-    g = sns.PairGrid(df,
-                     x_vars=[pvalue_name, 'Beta'],
-                     y_vars="Variable",
-                     height=len(df)*1.1, aspect=5/len(df),
-                     layout_pad=1.3)
+    # Create Plot and structures to hold category info
+    if figure is None:
+        figure, axes = plt.subplots(nrows=1, ncols=2, figsize=figsize, dpi=dpi)
+    else:
+        axes = figure.subplots(nrows=1, ncols=2)
+
     # Draw vertical lines before plotting points
-    g.axes.flat[0].axvline(x=cutoff, ls='-', color='black')  # Significance cutoff
-    g.axes.flat[1].axvline(x=0, ls='-', color='black')  # 0 Beta
+    if cutoff is not None:
+        axes[0].axvline(x=cutoff, ls='--', color='red')  # Significance cutoff
+    axes[0].axvline(x=1, ls='-', color='black')  # 1 Pvalue
+    axes[1].axvline(x=0, ls='-', color='black')  # 0 Beta
 
     # Plot points
-    g.map(sns.stripplot,
-          size=10,
-          orient='h',
-          palette=palette,
-          linewidth=1,
-          edgecolor='w',
-          jitter=False)
+    sns.stripplot(x=pvalue_name, y="Variable", data=df, ax=axes[0],
+                  size=10, orient='h', palette=palette,
+                  linewidth=1, edgecolor='w', jitter=False)
+    sns.stripplot(x='Beta', y="Variable", data=df, ax=axes[1],
+                  size=10, orient='h', palette=palette,
+                  linewidth=1, edgecolor='w', jitter=False)
 
     # Format
-    for ax in g.axes.flat:
+    for ax in axes:
         ax.xaxis.grid(False)
         ax.yaxis.grid(True)
-    sns.despine(left=True, bottom=True)
 
     # Update Axes
     # y-axis labels
-    g.axes.flat[0].set_yticklabels(g.axes.flat[0].get_yticklabels(), rotation=90, va="center")
+    axes[0].set_yticklabels(axes[0].get_yticklabels(), rotation=0, va="center")
+    axes[1].set_yticklabels([])
+    axes[1].set_ylabel("")
     # pvalue
-    g.axes.flat[0].set_xscale('log')
-    g.axes.flat[0].set_xlim(0.1 * df[pvalue_name].min(), 100)
-    g.axes.flat[0].set_xlabel(f"{pvalue_name} (cutoff = {cutoff:.3f})")
+    axes[0].set_xscale('log')
+    if cutoff is not None:
+        xmin = min(df[pvalue_name].min(), cutoff)
+        xlabel = f"{pvalue_name} (cutoff = {cutoff:.3f})"
+    else:
+        xmin = df[pvalue_name].min()
+        xlabel = f"{pvalue_name}"
+    axes[0].set_xlim(0.1 * xmin, 1)
+    axes[0].set_xlabel(xlabel)
     # Beta
     max_beta = df['Beta'].abs().max()
-    g.axes.flat[1].set_xlim(-1.10 * max_beta, 1.1 * max_beta)  # max value +/- 10%
+    axes[1].set_xlim(-1.10 * max_beta, 1.1 * max_beta)  # max value +/- 10%
+
+    # Title
+    if title is None:
+        title = "Top Results"
+    figure.suptitle(title, fontsize=20)
+
+    # legend
+    legend_elements = []
+    if cutoff is not None:
+        legend_elements.append(Line2D([0], [0], color='red', ls='--', label=f"Pvalue cutoff: {cutoff:.3f}"))
+    for var_type in list(df["Variable_type"].unique()):
+        color = type_colors.get(var_type)
+        legend_elements.append(Line2D([0], [0], marker='o', color=color, label=var_type, markersize=10))
+    axes[0].legend(handles=legend_elements, loc="lower left")
+
+    # Format
+    figure.tight_layout(rect=[0, 0.03, 1, 0.95])
 
     # Save
     if filename is not None:
         plt.savefig(filename, bbox_inches="tight")
-    plt.show()
+    else:
+        plt.show()
