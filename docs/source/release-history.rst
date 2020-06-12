@@ -2,6 +2,24 @@
 Release History
 ===============
 
+v1.0.1 (2020-06-12)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Improve the legend in the top_results plot and add additional parameters similar to the manhattan plots
+
+Fixes
+^^^^^
+* Update the default names for the ewas parameter *single_cluster* in the CLI
+* Add the "drop_unweighted" parameter to the printed result of Survey Designs
+* Fix an IndexError caused by non-continuous variables being passed to describe.skewness
+* Fix the travis build (the bioconda channel must be specified to install r-survey)
+
+Tests
+^^^^^
+* Added a plot test for passing "None" as the cutoff to the top results plot
+
 v1.0.0 (2020-06-04)
 -------------------
 
