@@ -20,7 +20,7 @@ A SurveyDesignSpec can be created, which is used to obtain survey design objects
 There are a few different options for the 'single_cluster' parameter, which controls how strata with single clusters are handled in the linearized covariance calculation:
     
     * *fail* - Throw an error (default)
-    * *adjust* - Use the average value of all observaitons (conservative)
+    * *adjust* - Use the average value of all observations (conservative)
     * *average* - Use the average of other strata
     * *certainty* - Single-cluster strata don't contribute to the variance
 
