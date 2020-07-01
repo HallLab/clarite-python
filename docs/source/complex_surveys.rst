@@ -13,19 +13,25 @@ A SurveyDesignSpec can be created, which is used to obtain survey design objects
                                                    cluster="SDMVPSU",
                                                    nest=True,
                                                    weights=weights_discovery,
-                                                   single_cluster='scaled')
+                                                   single_cluster='adjust',
+                                                   drop_unweighted=False)
 
 
 There are a few different options for the 'single_cluster' parameter, which controls how strata with single clusters are handled in the linearized covariance calculation:
     
-    * *error* - Throw an error
-    * *scaled* - Use the average value of other strata
-    * *centered* - Use the average of all observations
+    * *fail* - Throw an error (default)
+    * *adjust* - Use the average value of all observations (conservative)
+    * *average* - Use the average of other strata
     * *certainty* - Single-cluster strata don't contribute to the variance
 
-After a SurveyDesignSpec is created, it can be passed into the ewas function to utilize the survey design parameters:
+The `drop_unweighted` parameter is False by default- any variables with missing weights will return a missing result.  Setting it to True will simply drop those observations (which may not be strictly correct).
+
+After a SurveyDesignSpec is created, it can be passed into an ewas function to utilize the survey design parameters:
 
 .. code-block:: python
 
-    ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery_bin, nhanes_discovery_cat, nhanes_discovery_cont, sd_discovery, cov_method='stata')
+    ewas_discovery = clarite.analyze.ewas(phenotype="logBMI",
+                                          covariates=covariates,
+                                          data=nhanes_discovery,
+                                          survey_design_spec=sd_discovery)
 
