@@ -4,6 +4,8 @@ import click
 import numpy as np
 import pandas as pd
 
+from clarite.internal.formulas import SubsetFormula
+
 
 class SurveyDesignSpec:
     """
@@ -49,6 +51,7 @@ class SurveyDesignSpec:
                                          fpc=None,
                                          single_cluster='fail')
     """
+
     def __init__(self,
                  survey_df: pd.DataFrame,
                  strata: Optional[str] = None,
@@ -156,6 +159,9 @@ class SurveyDesignSpec:
         else:
             self.single_cluster = single_cluster
 
+        # Start without subsets
+        self.subsets = []
+
     def __str__(self):
         """String version of the survey design specification, used in logging"""
         result = f"Survey Design\n\t{len(self.survey_df):,} rows in the survey design data\n"
@@ -189,7 +195,18 @@ class SurveyDesignSpec:
         # single cluster
         result += f"\tSingle Cluster ('Lonely PSU') Option: {self.single_cluster}"
 
+        if len(self.subsets) > 0:
+            print(f"\t{len(self.subsets):,} Subsets:")
+            for s in self.subsets:
+                print(f"{s.variable}{s.operator}{repr(s.value)}")
+
         return result
+
+    def subset(self, formula_str: str) -> None:
+        # TODO: Write doctring explaining formula string
+        subset = SubsetFormula(formula_str)
+        self.subsets.append(subset)
+        print(f"Added subset: {str(subset)}")
 
     def get_survey_design(self, regression_variable: Optional[str] = None, index: Optional[pd.Index] = None):
         """
@@ -453,11 +470,11 @@ class SurveyDesign(object):
                     # Divide the sampled strata size by the fpc
                     combined = pd.merge(strata, fpc, left_index=True, right_index=True)
                     sampled_strata_size = combined.groupby('strata')['fpc'].transform('size')
-                    fpc = sampled_strata_size/fpc
+                    fpc = sampled_strata_size / fpc
                 elif self.has_clusters and not self.has_strata:
                     # Clustered sampling: Divide sampled clusters by the fpc
                     sampled_cluster_size = len(cluster.unique())
-                    fpc = sampled_cluster_size/fpc
+                    fpc = sampled_cluster_size / fpc
                 try:
                     assert all((fpc >= 0) & (fpc <= 1))
                 except AssertionError:
