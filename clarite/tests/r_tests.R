@@ -7,6 +7,16 @@ if (!require('survey')) install.packages('survey', repos = "http://cran.us.r-pro
 # Useful Functions #
 ####################
 
+write_result <- function(data, filename) {
+  # Round columns to limit precision
+  data$Beta <- round(data$Beta, digits = 10)
+  data$SE <- round(data$SE, digits = 10)
+  data$Diff_AIC <- round(data$Diff_AIC, digits = 10)
+  data$pvalue <- round(data$pvalue, digits = 10)
+
+  write.csv(data, filename, row.names=FALSE)
+}
+
 get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=TRUE, alt_name=NULL) {
   # Gathers results from the glm for continuous variables
   # Calculates results from two glms for categorical/binary variables
@@ -82,19 +92,19 @@ fpc <- read.csv(file = 'fpc_data.csv')
 # No weights
 glm_result_fpcnoweights <- rbind(get_glm_result("x", glm(y~x, data=fpc, na.action=na.omit), use_weights=FALSE))
 # No binary variables- python should match
-write.csv(glm_result_fpcnoweights, 'fpc_noweights_result.csv', row.names=FALSE)
+write_result(glm_result_fpcnoweights, 'fpc_noweights_result.csv')
 
 # Test without specifying fpc
 withoutfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, data=fpc, nest=TRUE)
 glm_result_withoutfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withoutfpc, na.action=na.omit)))
 # No binary variables- python should match
-write.csv(glm_result_withoutfpc, 'fpc_withoutfpc_result.csv', row.names=FALSE)
+write_result(glm_result_withoutfpc, 'fpc_withoutfpc_result.csv')
 
 # Test with specifying fpc
 withfpc <- svydesign(weights=~weight, ids=~psuid, strata=~stratid, fpc=~Nh, data=fpc, nest=TRUE)
 glm_result_withfpc <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc, na.action=na.omit)))
 # No binary variables- python should match
-write.csv(glm_result_withfpc, 'fpc_withfpc_result.csv', row.names=FALSE)
+write_result(glm_result_withfpc, 'fpc_withfpc_result.csv')
 
 # Test with specifying fpc and no strata
 # Have to make fpc identical now that it is one strata
@@ -104,7 +114,7 @@ write.csv(fpc_nostrat, 'fpc_nostrat_data.csv', row.names=FALSE)
 withfpc_nostrata <- svydesign(weights=~weight, ids=~psuid, strata=NULL, fpc=~Nh, data=fpc_nostrat)
 glm_result_withfpc_nostrata <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc_nostrata, na.action=na.omit)))
 # No binary variables- python should match
-write.csv(glm_result_withfpc_nostrata, 'fpc_withfpc_nostrat_result.csv', row.names=FALSE)
+write_result(glm_result_withfpc_nostrata, 'fpc_withfpc_nostrat_result.csv')
 
 #################
 # api Test data #
@@ -133,7 +143,7 @@ glm_result_apipop <- rbind(
   get_glm_result("mobility", glm_apipop, use_weights = FALSE)
 )
 # No binary variables- python should match
-write.csv(glm_result_apipop, 'api_apipop_result.csv', row.names=FALSE)
+write_result(glm_result_apipop, 'api_apipop_result.csv')
 
 # Full population no weights, with NA
 glm_apipop_withna <- glm(api00~ell+meals+mobility, data=apipop_withna, na.action=na.omit)
@@ -143,7 +153,7 @@ glm_result_apipop_withna <- rbind(
   get_glm_result("mobility", glm_apipop_withna, use_weights = FALSE)
 )
 # No binary variables- python should match
-write.csv(glm_result_apipop_withna, 'api_apipop_withna_result.csv', row.names=FALSE)
+write_result(glm_result_apipop_withna, 'api_apipop_withna_result.csv')
 
 # stratified sample (no clusters) with fpc
 dstrat <- svydesign(id=~1, strata=~stype, weights=~pw, data=apistrat, fpc=~fpc)
@@ -154,7 +164,7 @@ glm_result_apistrat <- rbind(
   get_glm_result("mobility", glm_apistrat)
 )
 # No binary variables- python should match
-write.csv(glm_result_apistrat, 'api_apistrat_result.csv', row.names=FALSE)
+write_result(glm_result_apistrat, 'api_apistrat_result.csv')
 
 # one-stage cluster sample (no strata) with fpc
 dclus1 <- svydesign(id=~dnum, weights=~pw, data=apiclus1, fpc=~fpc)
@@ -165,7 +175,7 @@ glm_result_apiclus1 <- rbind(
   get_glm_result("mobility", glm_apiclus1)
 )
 # No binary variables- python should match
-write.csv(glm_result_apiclus1, 'api_apiclus1_result.csv', row.names=FALSE)
+write_result(glm_result_apiclus1, 'api_apiclus1_result.csv')
 
 ####################
 # NHANES Test data #
@@ -208,13 +218,13 @@ glm_result_nhanes_noweights <- rbind(
                  glm_restricted = glm(HI_CHOL~race+agecat, family=binomial(link="logit"), data=glm_nhanes_noweights$model),
                  use_weights=FALSE)
 )
-write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result_r.csv', row.names=FALSE)
+write_result(glm_result_nhanes_noweights, 'nhanes_noweights_result_r.csv')
 # RIAGENDR is binary, need to change calculation to match python
 glm_result_nhanes_noweights <- update_binary_result(
   ewas_result = glm_result_nhanes_noweights,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_noweights, glm_restricted=NULL, use_weights=FALSE, alt_name="RIAGENDR2")
   )
-write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_noweights, 'nhanes_noweights_result.csv')
 
 # Full population no weights, with some categorical data missing
 print("Full population no weights, with some categorical data missing")
@@ -233,13 +243,13 @@ glm_result_nhanes_noweights <- rbind(
                  glm_restricted = glm(HI_CHOL~race+agecat, family=binomial(link="logit"), data=glm_nhanes_noweights$model),
                  use_weights=FALSE)
 )
-write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_withna_result_r.csv', row.names=FALSE)
+write_result(glm_result_nhanes_noweights, 'nhanes_noweights_withna_result_r.csv')
 # RIAGENDR is binary, need to change calculation to match python
 glm_result_nhanes_noweights <- update_binary_result(
   ewas_result = glm_result_nhanes_noweights,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_noweights, glm_restricted=NULL, use_weights=FALSE, alt_name="RIAGENDR2")
   )
-write.csv(glm_result_nhanes_noweights, 'nhanes_noweights_withna_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_noweights, 'nhanes_noweights_withna_result.csv')
 
 
 # Full design: cluster, strata, weights
@@ -259,13 +269,13 @@ glm_result_nhanes_complete <- rbind(
                  glm_restricted = svyglm(HI_CHOL~race+agecat,
                                          design=glm_nhanes_complete$survey.design,
                                          family=binomial(link="logit"))))
-write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_r.csv', row.names=FALSE)
+write_result(glm_result_nhanes_complete, 'nhanes_complete_result_r.csv')
 # RIAGENDR is binary, need to change calculation to match python
 glm_result_nhanes_complete <- update_binary_result(
   ewas_result = glm_result_nhanes_complete,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
   )
-write.csv(glm_result_nhanes_complete, 'nhanes_complete_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_complete, 'nhanes_complete_result.csv')
 
 
 # Full design: cluster, strata, weights with some categorical data missing
@@ -296,7 +306,35 @@ glm_result_nhanes_complete <- update_binary_result(
   ewas_result = glm_result_nhanes_complete,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
   )
-write.csv(glm_result_nhanes_complete, 'nhanes_complete_withna_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_complete, 'nhanes_complete_withna_result.csv')
+
+# Full design: cluster, strata, weights with subset agecat != (19,39]
+print("Full Design with subset")
+dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes)
+dnhanes_subset <- subset(dnhanes_complete, agecat!="(19,39]")
+glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_subset, family=binomial(link="logit"), na.action=na.omit)
+glm_result_nhanes_complete <- rbind(
+  get_glm_result("race", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~agecat+RIAGENDR,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))),
+  get_glm_result("agecat", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~race+RIAGENDR,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))),
+  get_glm_result("RIAGENDR", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~race+agecat,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))))
+write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_subset_r.csv', row.names=FALSE)
+# RIAGENDR is binary, need to change calculation to match python
+glm_result_nhanes_complete <- update_binary_result(
+  ewas_result = glm_result_nhanes_complete,
+  new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
+  )
+write_result(glm_result_nhanes_complete, 'nhanes_complete_result_subset.csv')
+
+
 
 # Weights Only
 print("Weights Only")
@@ -315,7 +353,7 @@ glm_result_nhanes_weightsonly <- update_binary_result(
   ewas_result = glm_result_nhanes_weightsonly,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_weightsonly, alt_name="RIAGENDR2")
   )
-write.csv(glm_result_nhanes_weightsonly, 'nhanes_weightsonly_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_weightsonly, 'nhanes_weightsonly_result.csv')
 
 #################
 # NHANES Lonely #
@@ -363,21 +401,21 @@ get_lonely_glm_results <- function(setting, binary_as_continuous=FALSE){
 
 # Certainty
 glm_result_nhanes_certainty <- get_lonely_glm_results("certainty", binary_as_continuous=FALSE)
-write.csv(glm_result_nhanes_certainty, 'nhanes_certainty_result_r.csv', row.names=FALSE)
+write_result(glm_result_nhanes_certainty, 'nhanes_certainty_result_r.csv')
 glm_result_nhanes_certainty <- get_lonely_glm_results("certainty", binary_as_continuous=TRUE)
-write.csv(glm_result_nhanes_certainty, 'nhanes_certainty_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_certainty, 'nhanes_certainty_result.csv')
 
 # Adjust
 glm_result_nhanes_adjust <- get_lonely_glm_results("adjust", binary_as_continuous=FALSE)
-write.csv(glm_result_nhanes_adjust, 'nhanes_adjust_result_r.csv', row.names=FALSE)
+write_result(glm_result_nhanes_adjust, 'nhanes_adjust_result_r.csv')
 glm_result_nhanes_adjust <- get_lonely_glm_results("adjust", binary_as_continuous=TRUE)
-write.csv(glm_result_nhanes_adjust, 'nhanes_adjust_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_adjust, 'nhanes_adjust_result.csv')
 
 # Average
 glm_result_nhanes_adjust <- get_lonely_glm_results("average", binary_as_continuous=FALSE)
-write.csv(glm_result_nhanes_adjust, 'nhanes_average_result_r.csv', row.names=FALSE)
+write_result(glm_result_nhanes_adjust, 'nhanes_average_result_r.csv')
 glm_result_nhanes_adjust <- get_lonely_glm_results("average", binary_as_continuous=TRUE)
-write.csv(glm_result_nhanes_adjust, 'nhanes_average_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_adjust, 'nhanes_average_result.csv')
 
 #########################
 # Realistic NHANES Test #
@@ -461,7 +499,7 @@ result <- rbind(
     result_LBXV3A,
     result_LBXBEC
 )
-write.csv(result, 'nhanes_real_r.csv', row.names=FALSE)
+write_result(result, 'nhanes_real_r.csv')
 
 # Update python results (use regression directly for binary, not an LRT)
 result_RHQ570_py <- update_binary_result(ewas_result = result_RHQ570,
@@ -482,4 +520,4 @@ result <- rbind(
     result_LBXV3A,
     result_LBXBEC
 )
-write.csv(result, 'nhanes_real_python.csv', row.names=FALSE)
+write_result(result, 'nhanes_real_python.csv')
