@@ -8,11 +8,14 @@ if (!require('survey')) install.packages('survey', repos = "http://cran.us.r-pro
 ####################
 
 write_result <- function(data, filename) {
-  # Round columns to limit precision
-  data$Beta <- round(data$Beta, digits = 10)
-  data$SE <- round(data$SE, digits = 10)
-  data$Diff_AIC <- round(data$Diff_AIC, digits = 10)
-  data$pvalue <- round(data$pvalue, digits = 10)
+  # Round numeric columns to limit precision
+  if(is.numeric(data$Beta)){data$Beta <- formatC(data$Beta, format = "e", digits = 4)}
+  if(is.numeric(data$SE)){data$SE <- formatC(as.numeric(data$SE), format = "e", digits = 4)}
+  if(is.numeric(data$Diff_AIC)){data$Diff_AIC <- formatC(as.numeric(data$Diff_AIC), format = "e", digits = 4)}
+  if(is.numeric(data$pvalue)){data$pvalue  <- formatC(as.numeric(data$pvalue), format = "e", digits = 4)}
+
+  # Fix where "NA" was modified
+  data <- replace(data, data=="   NA", "NA")
 
   write.csv(data, filename, row.names=FALSE)
 }
