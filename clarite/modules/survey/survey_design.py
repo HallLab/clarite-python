@@ -1,10 +1,16 @@
-from typing import Optional, Union, Dict
+from collections import namedtuple
+from typing import Optional, Union, Dict, List
 
 import click
 import numpy as np
 import pandas as pd
 
 from clarite.internal.formulas import SubsetFormula
+
+# Subset is a named tuple
+#     formula = SubsetFormula
+#     bool_filter = a boolean array where True = keep and False = exclude
+Subset = namedtuple('Subset', ['formula', 'bool_filter'])
 
 
 class SurveyDesignSpec:
@@ -160,7 +166,7 @@ class SurveyDesignSpec:
             self.single_cluster = single_cluster
 
         # Start without subsets
-        self.subsets = []
+        self.subset_list: List[Subset] = []
 
     def __str__(self):
         """String version of the survey design specification, used in logging"""
@@ -195,18 +201,22 @@ class SurveyDesignSpec:
         # single cluster
         result += f"\tSingle Cluster ('Lonely PSU') Option: {self.single_cluster}"
 
-        if len(self.subsets) > 0:
-            print(f"\t{len(self.subsets):,} Subsets:")
-            for s in self.subsets:
-                print(f"{s.variable}{s.operator}{repr(s.value)}")
+        if len(self.subset_list) > 0:
+            print(f"\t{len(self.subset_list):,} Subsets:")
+            for s in self.subset_list:
+                print(f"\t\t{s.formula}")
 
         return result
 
-    def subset(self, formula_str: str) -> None:
+    def subset(self, formula_str: str, data: pd.DataFrame) -> None:
         # TODO: Write doctring explaining formula string
+        # Initialize Subset for tracking purposes
         subset = SubsetFormula(formula_str)
-        self.subsets.append(subset)
+        bool_filter = subset.get_bool_filter(data)
+        self.subset_list.append(Subset(subset, bool_filter))
         print(f"Added subset: {str(subset)}")
+        print(f"\tKeeping {bool_filter.sum()} of {len(bool_filter)} rows in the data.")
+        return data[bool_filter]
 
     def get_survey_design(self, regression_variable: Optional[str] = None, index: Optional[pd.Index] = None):
         """
@@ -261,6 +271,19 @@ class SurveyDesignSpec:
             fpc = self.fpc
         else:
             fpc = None
+
+        # Apply subsets
+        for subset in self.subset_list:
+            bool_filter = subset.get_bool_filter
+            if self.has_strata:
+                existing_strata = self.strata.unique()
+                self.strata = self.strata[bool_filter]
+            if self.has_cluster:
+                self.cluster = self.cluster[bool_filter]
+            if self.weights is not None:
+                self.weights = self.weights[bool_filter]
+            if self.has_fpc:
+                self.fpc = self.fpc[bool_filter]
 
         sd = SurveyDesign(index=index, strata=strata, cluster=cluster, weights=weights, fpc=fpc,
                           nest=self.nest, single_cluster=self.single_cluster)

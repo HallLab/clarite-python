@@ -70,7 +70,6 @@ class GLMRegression(Regression):
 
         # Ensure the data output type is compatible
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
-        # outcome_dtype_str is used during self.__str__
         if self.outcome_dtype == 'categorical':
             raise NotImplementedError("Categorical Phenotypes are not yet supported for this type of regression.")
         elif self.outcome_dtype == 'continuous':
@@ -153,10 +152,26 @@ class GLMRegression(Regression):
         if not self.run_complete:
             raise ValueError(f"No results: either the 'run' method was not called, or there was a problem running")
 
+        # Log errors
+        if len(self.errors) == 0:
+            click.echo(click.style(f"0 regression variables had an error", fg='green'))
+        elif len(self.errors) > 0:
+            click.echo(click.style(f"{len(self.errors):,} regression variables had an error", fg='red'))
+            for rv, error in self.errors.items():
+                click.echo(click.style(f"\t{rv} = NULL due to: {error}", fg='red'))
+
+        # Log warnings
+        for rv, warning_list in self.warnings.items():
+            if len(warning_list) > 0:
+                click.echo(click.style(f"{rv} had warnings:", fg='yellow'))
+                for warning in warning_list:
+                    click.echo(click.style(f"\t{warning}", fg='yellow'))
+
         result = pd.DataFrame.from_dict(self.results, orient='index')\
                              .reset_index(drop=False)\
                              .rename(columns={'index': 'Variable'})
-        return result, self.warnings, self.errors
+
+        return result
 
     def run_continuous(self, data, regression_variable, complete_case_idx, formula) -> Dict:
         result = dict()

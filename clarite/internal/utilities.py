@@ -24,6 +24,7 @@ def requires(package_name):
     def decorator(func):
         # Check if package is importable
         spec = find_spec(package_name)
+        print(package_name, spec)
         if spec is None:
 
             @wraps(func)

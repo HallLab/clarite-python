@@ -1,10 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from inspect import signature
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
-import click
 import pandas as pd
-import numpy as np
 
 from clarite.internal.utilities import _get_dtypes
 
@@ -94,7 +91,7 @@ class Regression(metaclass=ABCMeta):
         """Run the regression"""
 
     @abstractmethod
-    def get_results(self) -> Tuple[pd.DataFrame, Dict[str, List[str]], Dict[str, str]]:
-        """Return results of the regression: a DataFrame of results, dict of lists of warnings, and a dict of errors"""
+    def get_results(self) -> pd.DataFrame:
+        """Return results of the regression as a DataFrame"""
 
 
