@@ -68,17 +68,13 @@ class GLMRegression(Regression):
         # Custom init involving kwargs passed to this regression
         self.min_n = min_n
 
-        # Placeholders for some strings used to store information that is relayed when printing the object
-        self.outcome_dtype_str = ""
-        self.outcome_missing_str = ""
-
         # Ensure the data output type is compatible
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
         # outcome_dtype_str is used during self.__str__
         if self.outcome_dtype == 'categorical':
             raise NotImplementedError("Categorical Phenotypes are not yet supported for this type of regression.")
         elif self.outcome_dtype == 'continuous':
-            self.outcome_dtype_str = f"Continuous Outcome (family = Gaussian): '{self.outcome_variable}'"
+            self.description += f"Continuous Outcome (family = Gaussian): '{self.outcome_variable}'"
             self.family = sm.families.Gaussian(link=sm.families.links.identity())
             self.use_t = True
         elif self.outcome_dtype == 'binary':
@@ -87,9 +83,9 @@ class GLMRegression(Regression):
             categories = self.data[self.outcome_variable].cat.categories
             codes, categories = zip(*enumerate(categories))
             self.data[self.outcome_variable].replace(categories, codes, inplace=True)
-            self.outcome_dtype_str = f"Binary Outcome (family = Binomial): '{self.outcome_variable}'\n" \
-                                     f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as 0\n" \
-                                     f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as 1"
+            self.description += f"Binary Outcome (family = Binomial): '{self.outcome_variable}'\n" \
+                                f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as 0\n" \
+                                f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as 1"
             self.family = sm.families.Binomial(link=sm.families.links.logit())
             self.use_t = False
         else:
@@ -97,18 +93,15 @@ class GLMRegression(Regression):
 
         # Log missing outcome values
         na_outcome_count = self.data[self.outcome_variable].isna().sum()
-        self.outcome_missing_str = f"Using {len(self.data) - na_outcome_count:,} of {len(self.data):,} observations"
+        self.description += f"\nUsing {len(self.data) - na_outcome_count:,} of {len(self.data):,} observations"
         if na_outcome_count > 0:
-            self.outcome_missing_str += f"\n\t{na_outcome_count:,} are missing a value for the outcome variable"
+            self.description += f"\n\t{na_outcome_count:,} are missing a value for the outcome variable"
 
-    def __str__(self):
-        string = f"{self.__class__.__name__}\n" \
-                 f"{self.outcome_dtype_str}\n" \
-                 f"{self.outcome_missing_str}\n" \
-                 f"Regressing {len(self.results):,} variables\n"
+        # Finish updating description
+        self.description += f"\nRegressing {len(self.results):,} variables"
         for k, v in self.regression_variables.items():
-            string += f"\t{len(v):,} {k} variables\n"
-        return string
+            self.description += f"\n\t{len(v):,} {k} variables"
+
 
     @staticmethod
     def get_default_result_dict():
@@ -271,5 +264,5 @@ class GLMRegression(Regression):
                 except Exception as e:
                     self.errors[rv] = str(e)
 
-            click.echo(click.style(f"Finished Running {len(rv_list):,} {rv_type} variables", fg='green'))
+            click.echo(click.style(f"\tFinished Running {len(rv_list):,} {rv_type} variables", fg='green'))
         self.run_complete = True

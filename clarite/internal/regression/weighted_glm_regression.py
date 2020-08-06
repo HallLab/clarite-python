@@ -63,9 +63,13 @@ class WeightedGLMRegression(GLMRegression):
         self.survey_design_spec = survey_design_spec
         self.cov_method = cov_method
 
+        # Add survey design info to the description
+        self.description += "\n" + str(self.survey_design_spec)
+
     @staticmethod
     def get_default_result_dict():
-        return {'Converged': False,
+        return {'Weight': "",
+                'Converged': False,
                 'N': np.nan,
                 'Beta': np.nan,
                 'SE': np.nan,
@@ -230,6 +234,7 @@ class WeightedGLMRegression(GLMRegression):
 
                     # Check for missing weights
                     weight_name, warning, error = self.check_weights(data, survey_design, rv)
+                    self.results[rv]['Weight'] = weight_name
                     if warning is not None:
                         # Exclude rows due to missing weights (by treating them as missing outcome values)
                         # This required updating data, complete_case_idx, and survey_design
@@ -269,5 +274,5 @@ class WeightedGLMRegression(GLMRegression):
                 except Exception as e:
                     self.errors[rv] = str(e)
 
-            click.echo(click.style(f"Finished Running {len(rv_list):,} {rv_type} variables", fg='green'))
+            click.echo(click.style(f"\tFinished Running {len(rv_list):,} {rv_type} variables", fg='green'))
         self.run_complete = True

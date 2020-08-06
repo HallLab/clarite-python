@@ -38,6 +38,12 @@ class Regression(metaclass=ABCMeta):
         # Flag marking whether self.run() was called, determining if it is valid to use self.get_results()
         self.run_complete = False
 
+        # Description is the string representation of self that is updated as the object is initialized
+        self.description = ""
+
+    def __str__(self):
+        return f"{self.__class__.__name__}\n" + ("-"*25) + f"\n{self.description}\n" + ("-"*25)
+
     def validate_regression_params(self):
         """
         Validate standard regression parameters- data, outcome_variable, and covariates.  Store relevant information.
