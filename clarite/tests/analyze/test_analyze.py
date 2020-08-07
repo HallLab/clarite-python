@@ -309,8 +309,8 @@ def test_nhanes_fulldesign_subset():
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
-                                             fpc=None, nest=True)
-    df = design.subset('agecat!=(19,39]', df)
+                                             fpc=None, nest=True, drop_unweighted=True)
+    design.subset(df['agecat'] != "(19,39]")
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
