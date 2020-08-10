@@ -67,7 +67,6 @@ class SurveyDesignSpec:
 
         # Store parameters
         self.survey_df = survey_df
-        self.nest = nest
 
         # Defaults
         # Strata
@@ -113,6 +112,13 @@ class SurveyDesignSpec:
                 raise KeyError(f"cluster key ('{self.cluster_name}') was not found in the survey_df")
             else:
                 self.cluster = self.survey_df[self.cluster_name]
+
+        # If requested, recode the PSUs to be sure that the same PSU # in
+        # different strata are treated as distinct PSUs. This is the same
+        # as the nest option in R.
+        if nest and self.has_strata and self.has_cluster:
+            self.cluster = self.strata.astype(str) + "-" + self.cluster.astype(str)
+            self.cluster_name += " (nested)"
 
         # Load FPC
         if fpc is not None:
@@ -172,8 +178,6 @@ class SurveyDesignSpec:
         # Clusters
         if self.has_cluster:
             result += f"\tCluster: {len(self.cluster.unique())} unique values of {self.cluster_name}\n"
-            # Nest
-            result += f"\t\tClusters nested in Strata: {self.nest}\n"
         else:
             result += "\tCluster: None\n"
         # FPC
@@ -262,7 +266,7 @@ class SurveyDesignSpec:
             fpc = None
 
         sd = SurveyDesign(index=index, strata=strata, cluster=cluster, weights=weights, fpc=fpc,
-                          nest=self.nest, single_cluster=self.single_cluster)
+                          single_cluster=self.single_cluster)
         return sd
 
 
@@ -286,9 +290,6 @@ class SurveyDesign(object):
         If none, an array of zeros is constructed.
         If < 1, treated as sampling weights and use directly
         Otherwise, treat as cluster population size and convert to sampling weights as (number of obs in cluster) / fpc
-    nest : boolean
-        allows user to specify if PSU's with the same
-        PSU number in different strata are treated as distinct PSUs.
     single_cluster: str
         Setting controlling variance calculation in single-cluster ('lonely psu') strata
         'fail': default, throw an error
@@ -326,7 +327,6 @@ class SurveyDesign(object):
                  cluster: Optional[pd.Series] = None,
                  weights: Optional[pd.Series] = None,
                  fpc: Optional[pd.Series] = None,
-                 nest: bool = True,
                  single_cluster: str = 'fail'):
 
         # Record inputs
@@ -334,15 +334,6 @@ class SurveyDesign(object):
         self.has_clusters = (cluster is not None)
         self.has_weights = (weights is not None)
         self.has_fpc = (fpc is not None)
-
-        # If requested, recode the PSUs to be sure that the same PSU # in
-        # different strata are treated as distinct PSUs. This is the same
-        # as the nest option in R.
-        if nest and self.has_strata and self.has_clusters:
-            cluster = strata.astype(str) + "-" + cluster.astype(str)
-        else:
-            # Ignore the nest parameter
-            pass
 
         # Check arguments, replacing None as needed
         strata, cluster, weights, fpc = self._check_args(strata, cluster, weights, fpc)
