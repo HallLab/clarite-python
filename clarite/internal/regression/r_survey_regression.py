@@ -155,11 +155,6 @@ class RSurveyRegression(Regression):
             if self.survey_design_spec.has_strata:
                 kwargs['strata'] = f"{self.survey_design_spec.strata_name}"
                 data[self.survey_design_spec.strata_name] = self.survey_design_spec.strata
-            # Nest
-            if self.survey_design_spec.nest:
-                kwargs['nest'] = True
-            else:
-                kwargs['nest'] = False
             # fpc
             if self.survey_design_spec.has_fpc:
                 kwargs['fpc'] = f"{self.survey_design_spec.fpc_name}"

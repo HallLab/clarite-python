@@ -123,8 +123,6 @@ class SurveyModel(object):
         # Scale after centering, if required
         if single_cluster == 'average':
             single_cluster_scale = np.sqrt(self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1)))
-            print(single_cluster_scale)
-            print(sum(self.design.clust_per_strat == 1))
             jdata *= single_cluster_scale
 
         nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64)
@@ -183,7 +181,7 @@ class SurveyModel(object):
             self.init_args["weights"] = weights
         self.params = self._get_params(y, X)
 
-        if self.design.has_strata or self.design.has_clusters or self.design.has_weights:
+        if self.design.has_strata or self.design.has_cluster or self.design.has_weights:
             # Calculate stderr based on covariance
             if self.cov_method == 'jackknife':
                 self.vcov = self._jackknife_vcov(X, y)

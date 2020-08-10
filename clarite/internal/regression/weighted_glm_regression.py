@@ -78,67 +78,6 @@ class WeightedGLMRegression(GLMRegression):
                 'Diff_AIC': np.nan,
                 'pvalue': np.nan}
 
-    def check_weights(self, data, survey_design, regression_variable) -> \
-            Tuple[Optional[str], Optional[str], Optional[str]]:
-        """
-        Checks for missing weights, returning a name of the weight to be reported and any warning or error
-        """
-        # Placeholder values
-        weight_name = None
-        warning = None
-        error = None
-
-        # Get weight name
-        if survey_design.weights is None:
-            return weight_name, warning, error
-        else:
-            weight_name = survey_design.weights.name
-
-        # Check if the survey design is missing weights when the variable value is not
-        variable_na = data[regression_variable].isna()
-        weight_na = survey_design.weights.isna()
-        values_with_missing = data.loc[~variable_na & weight_na, regression_variable]
-        # Get unique values
-        unique_missing = values_with_missing.unique()
-        unique_not_missing = data.loc[~variable_na & ~weight_na, regression_variable].unique()
-        sometimes_missing = sorted([str(v) for v in (set(unique_missing) & set(unique_not_missing))])
-        always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
-
-        # Log missing as warnings or errors depending on the 'drop_unweighted' setting
-        if len(values_with_missing) > 0:
-            weight_name += f" ({len(values_with_missing):,} missing)"
-            # Depending on the setting in survey design spec, handle missing weights
-            if self.survey_design_spec.drop_unweighted:
-                # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
-                warning = f"Dropping {len(values_with_missing):,} non-missing observation(s) due to missing weights"
-            else:
-                error = f"{len(values_with_missing):,} observations are missing weights when the variable is not missing."
-                # Add more information to the error and raise it, skipping analysis of this variable
-                if len(sometimes_missing) == 0:
-                    pass
-                elif len(sometimes_missing) == 1:
-                    error += f"\n\tOne value sometimes occurs in observations with missing weight: {sometimes_missing[0]}"
-                elif len(sometimes_missing) <= 5:
-                    error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
-                             f" {', '.join(sometimes_missing)}"
-                elif len(sometimes_missing) > 5:
-                    error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
-                             f" {', '.join(sometimes_missing[:5])}, ..."
-                # Log always missing values
-                if len(always_missing) == 0:
-                    pass
-                elif len(always_missing) == 1:
-                    error += f"\n\tOne value is only found in observations with missing weights: {always_missing[0]}." \
-                             " Should it be encoded as NaN?"
-                elif len(always_missing) <= 5:
-                    error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
-                             f"{', '.join(always_missing)}. Should they be encoded as NaN?"
-                elif len(always_missing) > 5:
-                    error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
-                             f"{', '.join(always_missing[:5])}, ... Should they be encoded as NaN?"
-
-        return weight_name, warning, error
-
     def run_continuous_weighted(self, data, survey_design, regression_variable, complete_case_idx, formula) -> Dict:
         result = dict()
         # Get data based on the formula
@@ -215,8 +154,28 @@ class WeightedGLMRegression(GLMRegression):
                 self.results[rv]['Variable_type'] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
-                    # Get complete case index and filter by min_n
-                    complete_case_idx = self.get_complete_case_idx(self.data, rv)
+                    # Take a copy of the required variables rather than operating directly on the stored data
+                    columns = [rv, self.outcome_variable] + self.covariates
+                    data = self.data.loc[self.survey_design_spec.subset_array, columns]
+
+                    # Check for missing weights, potentially dropping them
+                    _, weight_name, _ = self.survey_design_spec.get_weights(rv)
+                    missing_weight_idx, warning = self.survey_design_spec.check_missing_weights(data, rv)
+                    if missing_weight_idx is not None:
+                        # Drop those rows
+                        data = data.drop(missing_weight_idx, axis=0)
+                        # Update weight name
+                        weight_name += f" ({len(missing_weight_idx)} observations are missing weights)"
+                        # Save warning
+                        self.warnings[rv].append(warning)
+
+                    # Get survey design for the given variable
+                    # This also subsets the data if the survey design has a subset
+                    complete_case_idx = self.get_complete_case_idx(data, rv)
+                    survey_design, data = self.survey_design_spec.get_survey_design(data, rv, complete_case_idx)
+
+                    # Get updated complete case index and filter by min_n
+                    complete_case_idx = self.get_complete_case_idx(data, rv)
                     N = len(complete_case_idx)
                     self.results[rv]['N'] = N
                     if N < self.min_n:
@@ -225,28 +184,7 @@ class WeightedGLMRegression(GLMRegression):
                     # Check for covariates that do not vary (they get ignored)
                     varying_covars, warnings = self.check_covariate_values(complete_case_idx)
                     self.warnings[rv].extend(warnings)
-
-                    # Take a copy of the required variables rather than operating directly on the stored data
-                    data = self.data[[rv, self.outcome_variable] + varying_covars]
-
-                    # Get survey design for the given variable
-                    survey_design = self.survey_design_spec.get_survey_design(rv, complete_case_idx)
-
-                    # Check for missing weights
-                    weight_name, warning, error = self.check_weights(data, survey_design, rv)
-                    self.results[rv]['Weight'] = weight_name
-                    if warning is not None:
-                        # Exclude rows due to missing weights (by treating them as missing outcome values)
-                        # This required updating data, complete_case_idx, and survey_design
-                        variable_na = data[rv].isna()
-                        weight_na = survey_design.weights.isna()
-                        data.loc[~variable_na & weight_na, rv] = np.nan  # Set values to nan when the weight is missing
-                        complete_case_idx = self.get_complete_case_idx(data, rv)  # Update complete case idx
-                        survey_design = self.survey_design_spec.get_survey_design(self.outcome_variable,
-                                                                                  complete_case_idx)
-                    if error is not None:
-                        # The option in SurveyDesignSpec is set such that missing weights should throw an error
-                        raise ValueError(error)
+                    data = data[[rv, self.outcome_variable] + varying_covars]  # Drop any nonvarying covars
 
                     # Remove unused categories (warning when this occurs)
                     removed_cats = _remove_empty_categories(data)
@@ -272,6 +210,7 @@ class WeightedGLMRegression(GLMRegression):
                     self.results[rv].update(result)
 
                 except Exception as e:
+                    raise e
                     self.errors[rv] = str(e)
 
             click.echo(click.style(f"\tFinished Running {len(rv_list):,} {rv_type} variables", fg='green'))
