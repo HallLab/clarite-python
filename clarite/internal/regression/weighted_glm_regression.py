@@ -124,7 +124,7 @@ class WeightedGLMRegression(GLMRegression):
 
         # Regress restricted model
         # Use same X and y (but fewer columns in X) to ensure correct comparison
-        _, X_restricted = patsy.dmatrices(formula_restricted, self.data, return_type='dataframe', NA_action='drop')
+        _, X_restricted = patsy.dmatrices(formula_restricted, data, return_type='dataframe', NA_action='drop')
         X_restricted = X_restricted.loc[X.index]
         model_restricted = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                                        init_args=dict(family=self.family),
@@ -157,6 +157,7 @@ class WeightedGLMRegression(GLMRegression):
                     # Take a copy of the required variables rather than operating directly on the stored data
                     columns = [rv, self.outcome_variable] + self.covariates
                     data = self.data.loc[self.survey_design_spec.subset_array, columns]
+                    _remove_empty_categories(data)  # Make sure later warning is just about after filtering
 
                     # Check for missing weights, potentially dropping them
                     _, weight_name, _ = self.survey_design_spec.get_weights(rv)
@@ -170,7 +171,6 @@ class WeightedGLMRegression(GLMRegression):
                         self.warnings[rv].append(warning)
 
                     # Get survey design for the given variable
-                    # This also subsets the data if the survey design has a subset
                     complete_case_idx = self.get_complete_case_idx(data, rv)
                     survey_design, data = self.survey_design_spec.get_survey_design(data, rv, complete_case_idx)
 
@@ -210,7 +210,6 @@ class WeightedGLMRegression(GLMRegression):
                     self.results[rv].update(result)
 
                 except Exception as e:
-                    raise e
                     self.errors[rv] = str(e)
 
             click.echo(click.style(f"\tFinished Running {len(rv_list):,} {rv_type} variables", fg='green'))

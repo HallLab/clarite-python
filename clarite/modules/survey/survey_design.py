@@ -88,11 +88,13 @@ class SurveyDesignSpec:
         self.strata_name = None
         self.has_strata = False
         self.n_strat = None
+        self.strat_names = None
         # Cluster
         self.cluster_values = None
         self.cluster_name = None
         self.has_cluster = False
         self.n_clust = None
+        self.clust_names = None
         # Weight
         self.weight_values = None
         self.weight_names = None
@@ -100,7 +102,7 @@ class SurveyDesignSpec:
         self.single_weight = False  # If True, weights is a Series
         self.multi_weight = False  # If True, weights is a dict of weight name : Series
         # FPC
-        self.fpc = None
+        self.fpc_values = None
         self.fpc_name = None
         self.has_fpc = False
 
@@ -116,8 +118,6 @@ class SurveyDesignSpec:
         self.clust_per_strat = combined.groupby('strat')['clust'].nunique()
         # The stratum for each cluster
         self.strat_for_clust = combined.groupby('clust')['strat'].unique().apply(lambda l: l[0])
-        # The fpc for each cluster
-        self.fpc_values = combined.groupby('clust')['fpc'].unique().apply(lambda l: l[0])
         # Clusters within each stratum
         self.ii = combined.groupby('strat')['clust'].unique()
 
@@ -140,6 +140,7 @@ class SurveyDesignSpec:
                 self.strata_values = self.survey_df[strata].rename('strat')
         if self.has_strata:
             self.n_strat = len(self.strata_values.unique())
+        self.strat_names = self.strata_values.astype('category').cat.categories
 
     def process_clusters(self, cluster, nest):
         """
@@ -163,6 +164,7 @@ class SurveyDesignSpec:
 
         if self.has_cluster:
             self.n_clust = len(self.cluster_values.unique())
+        self.clust_names = self.cluster_values.astype('category').cat.categories
 
     def process_weights(self, weights):
         if weights is None:
@@ -223,6 +225,9 @@ class SurveyDesignSpec:
                         assert all((self.fpc_values >= 0) & (self.fpc_values <= 1))
                     except AssertionError:
                         raise ValueError("Error processing FPC- invalid values")
+        # Reindex to list fpc for each observation
+        combined = pd.concat([self.cluster_values, self.fpc_values], axis=1)
+        self.fpc_values = combined.groupby('clust')['fpc'].unique().apply(lambda l: l[0])
 
     def __str__(self):
         """String version of the survey design specification, used in logging"""
@@ -262,14 +267,14 @@ class SurveyDesignSpec:
 
     def get_strata(self, complete_case_idx: Optional[pd.Index] = None) -> Tuple[bool, Optional[pd.Series]]:
         """Return strata information"""
-        strata_values = self.strata_values
+        strata_values = self.strata_values.astype('category')
         if complete_case_idx is not None:
             strata_values = strata_values.loc[complete_case_idx]
         return self.has_strata, strata_values
 
     def get_clusters(self, complete_case_idx: Optional[pd.Index] = None) -> Tuple[bool, Optional[pd.Series]]:
         """Return strata information"""
-        cluster_values = self.cluster_values
+        cluster_values = self.cluster_values.astype('category')
         if complete_case_idx is not None:
             cluster_values = cluster_values.loc[complete_case_idx]
         return self.has_cluster, cluster_values
@@ -320,20 +325,19 @@ class SurveyDesignSpec:
         variable_na = data[regression_variable].isna()
         weight_na = weight_values.isna()
         values_with_missing_weight = data.loc[~variable_na & weight_na, regression_variable]
-        # Get unique values
-        unique_missing = values_with_missing_weight.unique()
-        unique_not_missing = data.loc[~variable_na & ~weight_na, regression_variable].unique()
-        sometimes_missing = sorted([str(v) for v in (set(unique_missing) & set(unique_not_missing))])
-        always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
 
         # Log missing as warnings or errors depending on the 'drop_unweighted' setting
-        error = None
-        warning = None
         if len(values_with_missing_weight) > 0:
+            # Get unique values
+            unique_missing = values_with_missing_weight.unique()
+            unique_not_missing = data.loc[~variable_na & ~weight_na, regression_variable].unique()
+            sometimes_missing = sorted([str(v) for v in (set(unique_missing) & set(unique_not_missing))])
+            always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
             # Depending on the setting in survey design spec, handle missing weights
             if self.drop_unweighted:
                 # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
                 warning = f"Dropping {len(values_with_missing_weight):,} non-missing observation(s) due to missing weights"
+                return values_with_missing_weight, warning
             else:
                 error = f"{len(values_with_missing_weight):,} observations are missing weights when the variable is not missing."
                 # Add more information to the error and raise it, skipping analysis of this variable
@@ -359,11 +363,9 @@ class SurveyDesignSpec:
                 elif len(always_missing) > 5:
                     error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
                              f"{', '.join(always_missing[:5])}, ... Should they be encoded as NaN?"
-
-        if error is not None:
-            raise ValueError(error)
+                raise ValueError(error)
         else:
-            return values_with_missing_weight, warning
+            return None, None
 
     def subset(self, bool_array: pd.Series) -> None:
         """
@@ -380,7 +382,7 @@ class SurveyDesignSpec:
             self.weight_values = {k: v.loc[bool_array] for k, v in self.weight_values.items()}
         self.strata_values = self.strata_values.loc[bool_array]
         self.cluster_values = self.cluster_values.loc[bool_array]
-        self.fpc_values = self.fpc_values.loc[bool_array]
+        #self.fpc_values = self.fpc_values.loc[bool_array]
 
     def get_survey_design(self,
                           data: pd.DataFrame,
@@ -393,17 +395,19 @@ class SurveyDesignSpec:
         has_strata, strata_values = self.get_strata(complete_case_idx)
         has_cluster, cluster_values = self.get_clusters(complete_case_idx)
         has_weights, weight_name, weight_values = self.get_weights(regression_variable, complete_case_idx)
+        # has_fpc, fpc_values = self.get_fpc(complete_case_idx)
 
         # Initialize Survey Design
         sd = SurveyDesign(
-            has_strata=has_strata, strat=strata_values.astype('category'), n_strat=self.n_strat,
-            has_cluster=has_cluster, clust=cluster_values.astype('category'), n_clust=self.n_clust,
+            has_strata=has_strata, strat=strata_values, n_strat=self.n_strat,
+            has_cluster=has_cluster, clust=cluster_values, n_clust=self.n_clust,
             has_weights=has_weights, weights=weight_values,
             has_fpc=self.has_fpc, fpc=self.fpc_values,
             single_cluster=self.single_cluster,
             clust_per_strat=self.clust_per_strat,
             strat_for_clust=self.strat_for_clust,
-            ii=self.ii)
+            ii=self.ii,
+            strat_names=self.strat_names, clust_names=self.clust_names)
 
         return sd, data
 
@@ -418,7 +422,8 @@ class SurveyDesign(object):
                  single_cluster,
                  clust_per_strat,
                  strat_for_clust,
-                 ii):
+                 ii,
+                 strat_names, clust_names):
 
         # Store values
         self.has_strata = has_strata
@@ -435,10 +440,25 @@ class SurveyDesign(object):
         self.clust_per_strat = clust_per_strat
         self.strat_for_clust = strat_for_clust
         self.ii = ii
+        self.strat_names = strat_names
+        self.clust_names = clust_names
 
-        # Record names
-        self.strat_names = self.strat.cat.categories
-        self.clust_names = self.clust.cat.categories
+        # Map relationships between inputs
+        # combined = pd.concat([self.strat, self.clust, self.fpc], axis=1)
+        # The number of clusters per stratum
+        # self.clust_per_strat = combined.groupby('strat')['clust'].nunique()
+        # The stratum for each cluster
+        # self.strat_for_clust = combined.groupby('clust')['strat'].unique().apply(lambda l: l[0])
+        # The fpc for each cluster
+        # self.fpc = combined.groupby('clust')['fpc'].unique().apply(lambda l: l[0])
+        # Clusters within each stratum
+        # self.ii = combined.groupby('strat')['clust'].unique()
+
+        if self.has_strata:
+            self.n_strat = len(self.strat.unique())
+        if self.has_cluster:
+            self.n_clust = len(self.clust.unique())
+
 
     def __str__(self):
         """
