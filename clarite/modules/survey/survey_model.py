@@ -107,33 +107,35 @@ class SurveyModel(object):
         d_hat = pd.merge(d_hat, self.design.clust, left_index=True, right_index=True).set_index('clust', append=True)
 
         # Get sum of d_hat within each cluster (rows = clusters, columns = variables)
+        # Note: This adds additional rows for clusters (in the full design) that do not have observations
         jdata = d_hat.groupby(axis=0, level='clust').apply(sum)
 
-        # Add strata label to jdata (just updates the index labels)
-        jdata = pd.merge(jdata, self.design.strat_for_clust.loc[jdata.index].rename('strat'), left_index=True, right_index=True)\
-                  .set_index('strat', append=True)
+        if self.design.has_strata:
+            # Add strata label to jdata (just updates the index labels)
+            jdata = pd.merge(jdata, self.design.strat_for_clust.loc[jdata.index].rename('strat'), left_index=True, right_index=True)\
+                      .set_index('strat', append=True)
 
-        def center_strata(data, single_cluster, pop_mean):
-            if len(data) > 1 or single_cluster == 'average' or single_cluster == 'certainty':
-                # Substract the mean across clusters
-                # This results in a value of 0 for the strata when there is only 1 cluster
-                return data - data.mean()
-            elif len(data) == 1 and single_cluster == 'adjust':
-                # Subtract the population mean from the single-cluster strata
-                return data - pop_mean
-            elif len(data) == 1:
-                raise ValueError(f"Strat '{data.name}' has a single cluster. "
-                                 f"Adjust the 'single_cluster' SurveyDesign parameter or reassign the cluster to avoid this error.")
+            def center_strata(data, single_cluster, pop_mean):
+                if len(data) > 1 or single_cluster == 'average' or single_cluster == 'certainty':
+                    # Substract the mean across clusters
+                    # This results in a value of 0 for the strata when there is only 1 cluster
+                    return data - data.mean()
+                elif len(data) == 1 and single_cluster == 'adjust':
+                    # Subtract the population mean from the single-cluster strata
+                    return data - pop_mean
+                elif len(data) == 1:
+                    raise ValueError(f"Strat '{data.name}' has a single cluster. "
+                                     f"Adjust the 'single_cluster' SurveyDesign parameter or reassign the cluster to avoid this error.")
 
-        # Center each stratum
-        # For each stratum in jdata (which is one or more rows corresponding to individual clusters)
-        single_cluster = self.design.single_cluster  # 'average', 'certainty', or 'adjust'.  Anything else will throw an error for single-cluster-strata
-        jdata = jdata.groupby(axis=0, level='strat').apply(lambda g: center_strata(g, single_cluster, d_hat.mean()))
+            # Center each stratum
+            # For each stratum in jdata (which is one or more rows corresponding to individual clusters)
+            single_cluster = self.design.single_cluster  # 'average', 'certainty', or 'adjust'.  Anything else will throw an error for single-cluster-strata
+            jdata = jdata.groupby(axis=0, level='strat').apply(lambda g: center_strata(g, single_cluster, d_hat.mean()))
 
-        # Scale after centering, if required
-        if single_cluster == 'average':
-            single_cluster_scale = np.sqrt(self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1)))
-            jdata *= single_cluster_scale
+            # Scale after centering, if required
+            if single_cluster == 'average':
+                single_cluster_scale = np.sqrt(self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1)))
+                jdata *= single_cluster_scale
 
         # nh is one row per cluster, listing the number of clusters in the strata that the cluster belongs to
         # Note that this includes strata in the original design, before any subsetting of any kind
