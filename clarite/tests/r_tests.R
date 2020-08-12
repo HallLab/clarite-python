@@ -349,7 +349,7 @@ glm_result_nhanes_complete <- update_binary_result(
   )
 write_result(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cat.csv')
 
-# Full design: cluster, strata, weights with subset agecat != (19,39]
+# Full design: cluster, strata, weights with about half of observations randomly selected
 print("Full Design with continous subset")
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_subset)
 dnhanes_subset <- subset(dnhanes_complete, subset > 0)

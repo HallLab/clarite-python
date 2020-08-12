@@ -4,6 +4,8 @@ import click
 import numpy as np
 import pandas as pd
 
+from clarite.internal.utilities import _remove_empty_categories
+
 
 class SurveyDesignSpec:
     """
@@ -121,6 +123,7 @@ class SurveyDesignSpec:
         # Initialize the subset information (a boolean array of True, indicating every row is kept)
         self.subset_array = pd.Series(True, index=survey_df.index, name='subset')
         self.subset_count = 0
+        self.subset_empty_cat_vars = list()
 
     def process_strata(self, strata, survey_df):
         """
@@ -387,6 +390,23 @@ class SurveyDesignSpec:
             self.weight_values = {k: v.loc[bool_array] for k, v in self.weight_values.items()}
         self.strata_values = self.strata_values.loc[bool_array]
         self.cluster_values = self.cluster_values.loc[bool_array]
+
+    def subset_data(self,
+                     data: pd.DataFrame,
+                     rv: str, outcome_variable: str, covariates: List[str]) -> pd.DataFrame:
+        """
+        Return a copy of the data with only the required variables.
+        Subset observations according to the design subset, and record categorical types that become empty
+        """
+        # Filter data (taking a copy)
+        columns = [rv, outcome_variable] + covariates
+        data = data.loc[self.subset_array, columns]
+        # Track categories that went missing (no observations) because of the subset and remove them
+        subset_empty_categories = _remove_empty_categories(data)
+        # Track which variables are affected
+        for empty_cat_var in subset_empty_categories.keys():
+            self.subset_empty_cat_vars.append(empty_cat_var)
+        return data
 
     def get_survey_design(self,
                           data: pd.DataFrame,

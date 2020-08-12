@@ -155,9 +155,7 @@ class WeightedGLMRegression(GLMRegression):
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
                     # Take a copy of the data (ignoring other RVs) and apply any subset from the survey design
-                    columns = [rv, self.outcome_variable] + self.covariates
-                    data = self.data.loc[self.survey_design_spec.subset_array, columns]
-                    _remove_empty_categories(data)  # Make sure later warning is just about after filtering
+                    data = self.survey_design_spec.subset_data(self.data, rv, self.outcome_variable, self.covariates)
 
                     # Get the name of the weights and check for missing weights, potentially dropping them
                     weight_name, missing_weight_idx, warning = self.survey_design_spec.check_missing_weights(data, rv)

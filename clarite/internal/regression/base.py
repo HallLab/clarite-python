@@ -1,9 +1,10 @@
 from abc import ABCMeta, abstractmethod
 from typing import Dict, List, Tuple
 
+import click
 import pandas as pd
 
-from clarite.internal.utilities import _get_dtypes
+from clarite.internal.utilities import _get_dtypes, _remove_empty_categories
 
 
 class Regression(metaclass=ABCMeta):
@@ -16,6 +17,16 @@ class Regression(metaclass=ABCMeta):
       covariates - name of other variables in the data included in the regression formula
     """
     def __init__(self, data: pd.DataFrame, outcome_variable: str, covariates: List[str]):
+        # Print a warning if there are any empty categories and remove them
+        # This is done to distinguish from those that become missing during analysis (and could be an issue)
+        empty_categories = _remove_empty_categories(data)
+        if len(empty_categories) > 0:
+            warning = f"Warning: {len(empty_categories)} variables had empty categories (the category exists in the" \
+                      f" data type, but doesn't occur in any observations):"
+            for extra_cat_var, extra_cats in empty_categories.items():
+                missing_cat = ", ".join([f"'{c}'" for c in extra_cats])
+                warning += f"\n\t{extra_cat_var} missing {missing_cat}"
+            click.echo(click.style(warning, fg='yellow'))
         # Store minimal regression parameters
         self.data = data
         self.outcome_variable = outcome_variable
