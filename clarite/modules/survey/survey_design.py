@@ -3,6 +3,7 @@ from typing import Optional, Union, Dict, List, Tuple
 import click
 import numpy as np
 import pandas as pd
+from pandas.core.indexing import IndexingError
 
 from clarite.internal.utilities import _remove_empty_categories
 
@@ -377,19 +378,33 @@ class SurveyDesignSpec:
 
     def subset(self, bool_array: pd.Series) -> None:
         """
-        Accept a subset as a boolean array where True is kept
-        """
-        # TODO: Add validation to ensure a matching index and dtype=bool
-        self.subset_array = self.subset_array & bool_array
-        self.subset_count += 1
+        Subset the SurveyDesignSpec (in-place) to look only at a subpopulation.
 
-        # Update data
-        if self.single_weight:
-            self.weight_values = self.weight_values.loc[bool_array]
-        elif self.multi_weight:
-            self.weight_values = {k: v.loc[bool_array] for k, v in self.weight_values.items()}
-        self.strata_values = self.strata_values.loc[bool_array]
-        self.cluster_values = self.cluster_values.loc[bool_array]
+        Example:
+            design.subset(data['age'] > 18)
+        """
+        # Confirm it is a boolean Series
+        if type(bool_array) != pd.Series:
+            raise ValueError("SurveyDesignSpec.subset takes a boolean pandas Series object")
+        elif bool_array.dtype != bool:
+            raise ValueError("SurveyDesignSpec.subset takes a boolean pandas Series object")
+
+        # Try to subset, raising any indexing error
+        try:
+            # Update subset_array for tracking
+            self.subset_array = self.subset_array & bool_array
+            self.subset_count += 1
+
+            # Update data
+            if self.single_weight:
+                self.weight_values = self.weight_values.loc[bool_array]
+            elif self.multi_weight:
+                self.weight_values = {k: v.loc[bool_array] for k, v in self.weight_values.items()}
+            self.strata_values = self.strata_values.loc[bool_array]
+            self.cluster_values = self.cluster_values.loc[bool_array]
+        except IndexingError:
+            raise ValueError(f"The boolean array passed to `subset` could not be used:"
+                             f" the index is incompatible with the survey design")
 
     def subset_data(self,
                      data: pd.DataFrame,
