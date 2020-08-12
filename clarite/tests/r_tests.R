@@ -1,5 +1,7 @@
 # This script loads several datasets from the survey library abnd runs GLMs to compare results in CLARITE
 
+set.seed(1855)
+
 library(devtools)
 if (!require('survey')) install.packages('survey', repos = "http://cran.us.r-project.org"); library('survey')
 
@@ -201,11 +203,21 @@ nhanes$race <- as.factor(nhanes$race)
 nhanes$agecat <- as.factor(nhanes$agecat)
 nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)
 write.csv(nhanes, 'nhanes_data.csv', row.names=FALSE)
+# Save a copy with a random normal variable for testing subsets
+nhanes$subset <- rnorm(nrow(nhanes))
+write.csv(nhanes, 'nhanes_data_subset.csv', row.names=FALSE)
+
+# Reload data
 nhanes <- read.csv('nhanes_data.csv')
 nhanes$HI_CHOL <- as.factor(nhanes$HI_CHOL)
 nhanes$race <- as.factor(nhanes$race)
 nhanes$agecat <- as.factor(nhanes$agecat)
 nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)
+nhanes_subset <- read.csv('nhanes_data_subset.csv')
+nhanes_subset$HI_CHOL <- as.factor(nhanes_subset$HI_CHOL)
+nhanes_subset$race <- as.factor(nhanes_subset$race)
+nhanes_subset$agecat <- as.factor(nhanes_subset$agecat)
+nhanes_subset$RIAGENDR <- as.factor(nhanes_subset$RIAGENDR)
 
 # Full population no weights
 print("Full population no weights")
@@ -329,15 +341,39 @@ glm_result_nhanes_complete <- rbind(
                  glm_restricted = svyglm(HI_CHOL~race+agecat,
                                          design=glm_nhanes_complete$survey.design,
                                          family=binomial(link="logit"))))
-write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_subset_r.csv', row.names=FALSE)
+write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cat_r.csv', row.names=FALSE)
 # RIAGENDR is binary, need to change calculation to match python
 glm_result_nhanes_complete <- update_binary_result(
   ewas_result = glm_result_nhanes_complete,
   new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
   )
-write_result(glm_result_nhanes_complete, 'nhanes_complete_result_subset.csv')
+write_result(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cat.csv')
 
-
+# Full design: cluster, strata, weights with subset agecat != (19,39]
+print("Full Design with continous subset")
+dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_subset)
+dnhanes_subset <- subset(dnhanes_complete, subset > 0)
+glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_subset, family=binomial(link="logit"), na.action=na.omit)
+glm_result_nhanes_complete <- rbind(
+  get_glm_result("race", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~agecat+RIAGENDR,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))),
+  get_glm_result("agecat", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~race+RIAGENDR,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))),
+  get_glm_result("RIAGENDR", glm_nhanes_complete,
+                 glm_restricted = svyglm(HI_CHOL~race+agecat,
+                                         design=glm_nhanes_complete$survey.design,
+                                         family=binomial(link="logit"))))
+write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cont_r.csv', row.names=FALSE)
+# RIAGENDR is binary, need to change calculation to match python
+glm_result_nhanes_complete <- update_binary_result(
+  ewas_result = glm_result_nhanes_complete,
+  new_bin_result = get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
+  )
+write_result(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cont.csv')
 
 # Weights Only
 print("Weights Only")
