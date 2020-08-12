@@ -78,7 +78,7 @@ class WeightedGLMRegression(GLMRegression):
                 'Diff_AIC': np.nan,
                 'pvalue': np.nan}
 
-    def run_continuous_weighted(self, data, survey_design, regression_variable, complete_case_idx, formula) -> Dict:
+    def run_continuous_weighted(self, data, survey_design, regression_variable, formula) -> Dict:
         result = dict()
         # Get data based on the formula
         y, X = patsy.dmatrices(formula, data, return_type='dataframe', NA_action='drop')
@@ -107,7 +107,7 @@ class WeightedGLMRegression(GLMRegression):
 
         return result
 
-    def run_categorical_weighted(self, data, survey_design, regression_variable, complete_case_idx,
+    def run_categorical_weighted(self, data, survey_design, regression_variable,
                                  formula, formula_restricted) -> Dict:
         """
         The change in deviance between a model and a nested version (with n fewer predictors) follows a chi-square distribution with n DoF
@@ -196,12 +196,11 @@ class WeightedGLMRegression(GLMRegression):
 
                     # Run Regression
                     if rv_type == 'continuous':
-                        result = self.run_continuous_weighted(data, survey_design, rv, complete_case_idx, formula)
+                        result = self.run_continuous_weighted(data, survey_design, rv, formula)
                     elif rv_type == 'binary':  # The same calculation as for continuous variables
-                        result = self.run_continuous_weighted(data, survey_design, rv, complete_case_idx, formula)
+                        result = self.run_continuous_weighted(data, survey_design, rv, formula)
                     elif rv_type == 'categorical':
-                        result = self.run_categorical_weighted(data, survey_design, rv, complete_case_idx,
-                                                               formula, formula_restricted)
+                        result = self.run_categorical_weighted(data, survey_design, rv, formula, formula_restricted)
                     else:
                         result = dict()
                     self.results[rv].update(result)
