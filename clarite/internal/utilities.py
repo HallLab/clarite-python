@@ -158,23 +158,35 @@ def _process_colfilter(data: pd.DataFrame,
     return kept
 
 
-def _remove_empty_categories(data: pd.DataFrame,
+def _remove_empty_categories(data: Union[pd.DataFrame, pd.Series],
                              skip: Optional[Union[str, List[str]]] = None,
                              only: Optional[Union[str, List[str]]] = None):
     """
     Remove categories from categorical types if there are no occurrences of that type.
     Updates the data in-place and returns a dict of variables:removed categories
     """
-    columns = _validate_skip_only(data, skip, only)
-    dtypes = data.loc[:, columns].dtypes
-    catvars = [v for v in dtypes[dtypes == 'category'].index]
     removed_cats = dict()
-    for var in catvars:
-        counts = data[var].value_counts()
+    if type(data) == pd.DataFrame:
+        columns = _validate_skip_only(data, skip, only)
+        dtypes = data.loc[:, columns].dtypes
+        catvars = [v for v in dtypes[dtypes == 'category'].index]
+        for var in catvars:
+            counts = data[var].value_counts()
+            keep_cats = list(counts[counts > 0].index)
+            if len(keep_cats) < len(counts):
+                removed_cats[var] = set(counts.index) - set(keep_cats)
+                data[var].cat.set_categories(new_categories=keep_cats,
+                                             ordered=data[var].cat.ordered,
+                                             inplace=True)
+        return removed_cats
+    elif type(data) == pd.Series:
+        assert skip is None
+        assert only is None
+        counts = data.value_counts()
         keep_cats = list(counts[counts > 0].index)
         if len(keep_cats) < len(counts):
-            removed_cats[var] = set(counts.index) - set(keep_cats)
-            data[var].cat.set_categories(new_categories=keep_cats,
-                                         ordered=data[var].cat.ordered,
-                                         inplace=True)
-    return removed_cats
+            removed_cats[data.name] = set(counts.index) - set(keep_cats)
+            data.cat.set_categories(new_categories=keep_cats,
+                                    ordered=data.cat.ordered,
+                                    inplace=True)
+        return removed_cats
