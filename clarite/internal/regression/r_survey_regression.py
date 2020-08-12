@@ -163,6 +163,9 @@ class RSurveyRegression(Regression):
             # Single cluster setting
             ro.r(f'options("survey.lonely.psu"="{self.survey_design_spec.single_cluster}")')
 
+            # Apply subset
+            data = data.loc[self.survey_design_spec.subset_array]
+
             # Reset the index on data so that the first column is "ID"
             data = data.reset_index(drop=False)
             data = data[["ID", ] + [c for c in data.columns if c != "ID"]]
