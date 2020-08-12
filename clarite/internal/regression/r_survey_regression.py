@@ -136,10 +136,10 @@ class RSurveyRegression(Regression):
             # Merge weights into data and get weight name(s) (Note 'data' becomes a local variable)
             if self.survey_design_spec.single_weight:
                 weights = self.survey_design_spec.weight_name
-                data = pd.merge(self.data, self.survey_design_spec.weights, left_index=True, right_index=True, how='left')
+                data = pd.merge(self.data, self.survey_design_spec.weight_values, left_index=True, right_index=True, how='left')
             elif self.survey_design_spec.multi_weight:
                 weights = self.survey_design_spec.weight_names
-                data = pd.merge(self.data, pd.DataFrame(self.survey_design_spec.weights),
+                data = pd.merge(self.data, pd.DataFrame(self.survey_design_spec.weight_values),
                                 left_index=True, right_index=True, how='left')
             else:
                 raise ValueError("Weights must be provided")
@@ -148,17 +148,17 @@ class RSurveyRegression(Regression):
             # Cluster IDs
             if self.survey_design_spec.has_cluster:
                 kwargs['ids'] = f"{self.survey_design_spec.cluster_name}"
-                data[self.survey_design_spec.cluster_name] = self.survey_design_spec.cluster
+                data[self.survey_design_spec.cluster_name] = self.survey_design_spec.cluster_values
             else:
                 kwargs['ids'] = ro.NULL
             # Strata
             if self.survey_design_spec.has_strata:
                 kwargs['strata'] = f"{self.survey_design_spec.strata_name}"
-                data[self.survey_design_spec.strata_name] = self.survey_design_spec.strata
+                data[self.survey_design_spec.strata_name] = self.survey_design_spec.strata_values
             # fpc
             if self.survey_design_spec.has_fpc:
                 kwargs['fpc'] = f"{self.survey_design_spec.fpc_name}"
-                data[self.survey_design_spec.fpc_name] = self.survey_design_spec.fpc
+                data[self.survey_design_spec.fpc_name] = self.survey_design_spec.fpc_values_original
 
             # Single cluster setting
             ro.r(f'options("survey.lonely.psu"="{self.survey_design_spec.single_cluster}")')

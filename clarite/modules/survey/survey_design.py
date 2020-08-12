@@ -102,6 +102,7 @@ class SurveyDesignSpec:
         # FPC
         self.has_fpc: bool = False
         self.fpc_name: Optional[str] = None
+        self.fpc_original: Optional[pd.Series] = None
         self.fpc_values: Optional[pd.Series] = None
 
         # Process inputs
@@ -197,6 +198,9 @@ class SurveyDesignSpec:
                              f" mapping variable name strings to weight name strings")
 
     def process_fpc(self, fpc, survey_df):
+        """
+        FPC is passed in as
+        """
         if fpc is None:
             self.fpc_values = pd.Series(np.zeros(len(self.index)), index=self.index, name='fpc')
         else:
@@ -205,6 +209,7 @@ class SurveyDesignSpec:
             if fpc not in survey_df:
                 raise KeyError(f"fpc key ('{fpc}') was not found in the survey_df")
             else:
+                self.fpc_values_original = survey_df[fpc].rename('fpc')  # Need unmodified version for R code
                 self.fpc_values = survey_df[fpc].rename('fpc')
                 # Validate
                 if not all(self.fpc_values <= 1):
