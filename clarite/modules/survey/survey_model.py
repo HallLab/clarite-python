@@ -80,7 +80,14 @@ class SurveyModel(object):
         assert X.index.equals(design_index)
         assert y.index.equals(design_index)
 
-        # Get hessian
+        # The term "variables" used below means the variables in the specific regression, such as:
+        #  Intercept
+        #  One value for each continuous and binary variable
+        #  C-1 values for each categorical where C is the number of categories
+
+        # Get hessian and inverse hessian
+        # Rows and Columns are the variables
+        # Both are symmetric across the diagonal
         hessian = pd.DataFrame(self.initialized_model.hessian(self.params, observed=True),
                                index=self.params.index,
                                columns=self.params.index)
@@ -88,19 +95,21 @@ class SurveyModel(object):
                                 index=self.params.index,
                                 columns=self.params.index)
 
-        # Get the first derivative of the loglikelihood function evaluated at params for each observation
+        # Get the Jacobian/Gradient of log-likelihood evaluated at params for each observation
+        # Statsmodels stores this in the model
+        # This matrix has one row for each observation (index = 'ID') and a column for each variable
         d_hat = pd.DataFrame(self.initialized_model.score_obs(self.params),
                              index=self.design.strat.index,
                              columns=self.params.index)
 
-        # Add strat and clust information to the d_hat index
+        # Add strat and clust information to the d_hat index (this just modifies the index labels)
         d_hat = pd.merge(d_hat, self.design.strat, left_index=True, right_index=True).set_index('strat', append=True)
         d_hat = pd.merge(d_hat, self.design.clust, left_index=True, right_index=True).set_index('clust', append=True)
 
-        # Get sum of d_hat within each cluster
+        # Get sum of d_hat within each cluster (rows = clusters, columns = variables)
         jdata = d_hat.groupby(axis=0, level='clust').apply(sum)
 
-        # Add strata label to jdata
+        # Add strata label to jdata (just updates the index labels)
         jdata = pd.merge(jdata, self.design.strat_for_clust.loc[jdata.index].rename('strat'), left_index=True, right_index=True)\
                   .set_index('strat', append=True)
 
@@ -117,6 +126,7 @@ class SurveyModel(object):
                                  f"Adjust the 'single_cluster' SurveyDesign parameter or reassign the cluster to avoid this error.")
 
         # Center each stratum
+        # For each stratum in jdata (which is one or more rows corresponding to individual clusters)
         single_cluster = self.design.single_cluster  # 'average', 'certainty', or 'adjust'.  Anything else will throw an error for single-cluster-strata
         jdata = jdata.groupby(axis=0, level='strat').apply(lambda g: center_strata(g, single_cluster, d_hat.mean()))
 
@@ -125,13 +135,16 @@ class SurveyModel(object):
             single_cluster_scale = np.sqrt(self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1)))
             jdata *= single_cluster_scale
 
+        # nh is one row per cluster, listing the number of clusters in the strata that the cluster belongs to
+        # Note that this includes strata in the original design, before any subsetting of any kind
         nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64)
         mh = np.sqrt(nh / (nh-1))
         mh[mh == np.inf] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
-        fh = np.sqrt(1 - self.design.fpc)
-        jdata *= (fh[:, None] * mh[:, None])
-        v_hat = np.dot(jdata.T, jdata)
-        vcov = np.dot(hess_inv, v_hat).dot(hess_inv.T)
+        fh = np.sqrt(1 - self.design.fpc)  # self.design.fpc has the fpc value for each cluster (one row per cluster)
+        jdata *= (fh[:, None] * mh[:, None])  # This is each column in jdata being multiplied by an array
+
+        v_hat = np.dot(jdata.T, jdata)  # variables X variables
+        vcov = np.dot(hess_inv, v_hat).dot(hess_inv.T)   # variables X variables
         # Return as a data.frame
         vcov = pd.DataFrame(vcov, index=self.params.index, columns=self.params.index)
         return vcov

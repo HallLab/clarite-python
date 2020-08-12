@@ -154,19 +154,16 @@ class WeightedGLMRegression(GLMRegression):
                 self.results[rv]['Variable_type'] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
-                    # Take a copy of the required variables rather than operating directly on the stored data
+                    # Take a copy of the data (ignoring other RVs) and apply any subset from the survey design
                     columns = [rv, self.outcome_variable] + self.covariates
                     data = self.data.loc[self.survey_design_spec.subset_array, columns]
                     _remove_empty_categories(data)  # Make sure later warning is just about after filtering
 
-                    # Check for missing weights, potentially dropping them
-                    _, weight_name, _ = self.survey_design_spec.get_weights(rv)
-                    missing_weight_idx, warning = self.survey_design_spec.check_missing_weights(data, rv)
+                    # Get the name of the weights and check for missing weights, potentially dropping them
+                    weight_name, missing_weight_idx, warning = self.survey_design_spec.check_missing_weights(data, rv)
                     if missing_weight_idx is not None:
                         # Drop those rows
                         data = data.drop(missing_weight_idx, axis=0)
-                        # Update weight name
-                        weight_name += f" ({len(missing_weight_idx)} observations are missing weights)"
                         # Save warning
                         self.warnings[rv].append(warning)
 
@@ -174,8 +171,7 @@ class WeightedGLMRegression(GLMRegression):
                     complete_case_idx = self.get_complete_case_idx(data, rv)
                     survey_design, data = self.survey_design_spec.get_survey_design(data, rv, complete_case_idx)
 
-                    # Get updated complete case index and filter by min_n
-                    complete_case_idx = self.get_complete_case_idx(data, rv)
+                    # Filter by min_n
                     N = len(complete_case_idx)
                     self.results[rv]['N'] = N
                     if N < self.min_n:
@@ -186,7 +182,8 @@ class WeightedGLMRegression(GLMRegression):
                     self.warnings[rv].extend(warnings)
                     data = data[[rv, self.outcome_variable] + varying_covars]  # Drop any nonvarying covars
 
-                    # Remove unused categories (warning when this occurs)
+                    # Remove unused categories caused by dropping all occurrences of that value
+                    # during the above filtering (warning when this occurs)
                     removed_cats = _remove_empty_categories(data)
                     if len(removed_cats) >= 1:
                         for extra_cat_var, extra_cats in removed_cats.items():

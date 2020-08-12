@@ -84,25 +84,25 @@ class SurveyDesignSpec:
 
         # Defaults
         # Strata
-        self.strata_values = None
-        self.strata_name = None
-        self.has_strata = False
-        self.n_strat = None
+        self.has_strata: bool = False
+        self.strata_name: Optional[str] = None
+        self.strata_values: Optional[pd.Series] = None
+        self.n_strat: Optional[int] = None
         # Cluster
-        self.cluster_values = None
-        self.cluster_name = None
-        self.has_cluster = False
-        self.n_clust = None
+        self.has_cluster: bool = False
+        self.cluster_name: Optional[str] = None
+        self.cluster_values: Optional[pd.Series] = None
+        self.n_clust: Optional[int] = None
         # Weight
-        self.weight_values = None
-        self.weight_names = None
-        self.weight_name = None
-        self.single_weight = False  # If True, weights is a Series
-        self.multi_weight = False  # If True, weights is a dict of weight name : Series
+        self.single_weight: bool = False  # If True, weight_values is a Series
+        self.weight_name: Optional[str] = None
+        self.multi_weight: bool = False  # If True, weight_values is a dict of weight name : Series
+        self.weight_names: Optional[Dict[str, str]] = None  # Dict of regression variable name : weight name
+        self.weight_values: Optional[Union[pd.Series, Dict[str, pd.Series]]] = None
         # FPC
-        self.fpc_values = None
-        self.fpc_name = None
-        self.has_fpc = False
+        self.has_fpc: bool = False
+        self.fpc_name: Optional[str] = None
+        self.fpc_values: Optional[pd.Series] = None
 
         # Process inputs
         self.process_strata(strata, survey_df)
@@ -167,7 +167,7 @@ class SurveyDesignSpec:
         if weights is None:
             self.weight_values = pd.Series(np.ones(len(self.index)), index=self.index, name='weights')
         elif type(weights) == dict:
-            # self.weights will be a dictionary of weight_name: Series of weight values
+            # self.weight_values will be a dictionary of weight_name: Series of weight values
             self.multi_weight = True
             self.weight_names = weights
             self.weight_values = dict()  # dict of weight name : weight values
@@ -306,63 +306,66 @@ class SurveyDesignSpec:
         return has_weights, weight_name, weight_values
 
     def check_missing_weights(self, data: pd.DataFrame, regression_variable: str) \
-            -> Tuple[Optional[pd.Index], Optional[str]]:
+            -> Tuple[Optional[str], Optional[pd.Index], Optional[str]]:
         """
         Return:
-            None if there are no missing weights or weights aren't used
-            An index and a warning if there are missing weights and 'drop_unweighted' is True
+            None, None, None if no weights are used
+            weight_name, None, None if there are no missing weights
+            weight_name, missing_index, warning if there are missing weights and 'drop_unweighted' is True
             Raise an error if there are missing weights and 'drop_unweighted' is False
         """
         # Get weight values
         has_weight, weight_name, weight_values = self.get_weights(regression_variable)
         if not has_weight:
-            return None, None  # No idx and no warning needed
+            return None, None, None  # No idx and no warning needed
 
         # Check if the survey design is missing weights when the variable value is not
         variable_na = data[regression_variable].isna()
         weight_na = weight_values.isna()
         values_with_missing_weight = data.loc[~variable_na & weight_na, regression_variable]
 
-        # Log missing as warnings or errors depending on the 'drop_unweighted' setting
-        if len(values_with_missing_weight) > 0:
+        if len(values_with_missing_weight) == 0:
+            return weight_name, None, None
+        elif len(values_with_missing_weight) > 0 and self.drop_unweighted:
+            # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
+            warning = f"Dropping {len(values_with_missing_weight):,} non-missing observation(s) due to missing weights"
+            weight_name += f" ({len(values_with_missing_weight)} observations are missing weights)"
+            return weight_name, values_with_missing_weight, warning
+        elif len(values_with_missing_weight) > 0 and not self.drop_unweighted:
             # Get unique values
             unique_missing = values_with_missing_weight.unique()
             unique_not_missing = data.loc[~variable_na & ~weight_na, regression_variable].unique()
             sometimes_missing = sorted([str(v) for v in (set(unique_missing) & set(unique_not_missing))])
             always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
-            # Depending on the setting in survey design spec, handle missing weights
-            if self.drop_unweighted:
-                # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
-                warning = f"Dropping {len(values_with_missing_weight):,} non-missing observation(s) due to missing weights"
-                return values_with_missing_weight, warning
-            else:
-                error = f"{len(values_with_missing_weight):,} observations are missing weights when the variable is not missing."
-                # Add more information to the error and raise it, skipping analysis of this variable
-                if len(sometimes_missing) == 0:
-                    pass
-                elif len(sometimes_missing) == 1:
-                    error += f"\n\tOne value sometimes occurs in observations with missing weight: {sometimes_missing[0]}"
-                elif len(sometimes_missing) <= 5:
-                    error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
-                             f" {', '.join(sometimes_missing)}"
-                elif len(sometimes_missing) > 5:
-                    error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
-                             f" {', '.join(sometimes_missing[:5])}, ..."
-                # Log always missing values
-                if len(always_missing) == 0:
-                    pass
-                elif len(always_missing) == 1:
-                    error += f"\n\tOne value is only found in observations with missing weights: {always_missing[0]}." \
-                             " Should it be encoded as NaN?"
-                elif len(always_missing) <= 5:
-                    error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
-                             f"{', '.join(always_missing)}. Should they be encoded as NaN?"
-                elif len(always_missing) > 5:
-                    error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
-                             f"{', '.join(always_missing[:5])}, ... Should they be encoded as NaN?"
-                raise ValueError(error)
-        else:
-            return None, None
+
+            # Build a detailed error string
+            error = f"{len(values_with_missing_weight):,} observations are missing weights" \
+                    f" when the variable is not missing."
+
+            # Add more information to the error and raise it, skipping analysis of this variable
+            if len(sometimes_missing) == 0:
+                pass
+            elif len(sometimes_missing) == 1:
+                error += f"\n\tOne value sometimes occurs in observations with missing weight: {sometimes_missing[0]}"
+            elif len(sometimes_missing) <= 5:
+                error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
+                         f" {', '.join(sometimes_missing)}"
+            elif len(sometimes_missing) > 5:
+                error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
+                         f" {', '.join(sometimes_missing[:5])}, ..."
+            # Log always missing values
+            if len(always_missing) == 0:
+                pass
+            elif len(always_missing) == 1:
+                error += f"\n\tOne value is only found in observations with missing weights: {always_missing[0]}." \
+                         " Should it be encoded as NaN?"
+            elif len(always_missing) <= 5:
+                error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
+                         f"{', '.join(always_missing)}. Should they be encoded as NaN?"
+            elif len(always_missing) > 5:
+                error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
+                         f"{', '.join(always_missing[:5])}, ... Should they be encoded as NaN?"
+            raise ValueError(error)
 
     def subset(self, bool_array: pd.Series) -> None:
         """
@@ -379,7 +382,6 @@ class SurveyDesignSpec:
             self.weight_values = {k: v.loc[bool_array] for k, v in self.weight_values.items()}
         self.strata_values = self.strata_values.loc[bool_array]
         self.cluster_values = self.cluster_values.loc[bool_array]
-        #self.fpc_values = self.fpc_values.loc[bool_array]
 
     def get_survey_design(self,
                           data: pd.DataFrame,
@@ -392,7 +394,6 @@ class SurveyDesignSpec:
         has_strata, strata_values = self.get_strata(complete_case_idx)
         has_cluster, cluster_values = self.get_clusters(complete_case_idx)
         has_weights, weight_name, weight_values = self.get_weights(regression_variable, complete_case_idx)
-        # has_fpc, fpc_values = self.get_fpc(complete_case_idx)
 
         # Initialize Survey Design
         sd = SurveyDesign(
@@ -408,6 +409,11 @@ class SurveyDesignSpec:
 
 
 class SurveyDesign(object):
+    """
+    Holds the same kind of data as SurveyDesignSpec, but specific to a single regression variable:
+        - Only one weight value
+        - Values subset to match complete cases in the data
+    """
 
     def __init__(self,
                  has_strata, strat, n_strat,
