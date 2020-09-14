@@ -2,6 +2,13 @@
 Release History
 ===============
 
+v1.1.1 (2020-06-12)
+-------------------
+
+Fixes
+^^^^^
+* Fixed a failing test caused by newer dependency versions
+
 v1.1.0 (2020-08-14)
 -------------------
 
