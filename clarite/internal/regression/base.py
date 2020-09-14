@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Dict, List, Tuple
+from typing import List
 
 import click
 import pandas as pd
@@ -104,5 +104,3 @@ class Regression(metaclass=ABCMeta):
     @abstractmethod
     def get_results(self) -> pd.DataFrame:
         """Return results of the regression as a DataFrame"""
-
-

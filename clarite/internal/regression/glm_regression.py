@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Tuple
 
 import click
 import numpy as np
@@ -7,7 +7,7 @@ import scipy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
-from clarite.internal.utilities import _remove_empty_categories, _get_dtype
+from clarite.internal.utilities import _remove_empty_categories
 
 from .base import Regression
 
@@ -101,7 +101,6 @@ class GLMRegression(Regression):
         for k, v in self.regression_variables.items():
             self.description += f"\n\t{len(v):,} {k} variables"
 
-
     @staticmethod
     def get_default_result_dict():
         return {'Converged': False,
@@ -150,11 +149,11 @@ class GLMRegression(Regression):
         Merge results into a dataFrame
         """
         if not self.run_complete:
-            raise ValueError(f"No results: either the 'run' method was not called, or there was a problem running")
+            raise ValueError("No results: either the 'run' method was not called, or there was a problem running")
 
         # Log errors
         if len(self.errors) == 0:
-            click.echo(click.style(f"0 regression variables had an error", fg='green'))
+            click.echo(click.style("0 regression variables had an error", fg='green'))
         elif len(self.errors) > 0:
             click.echo(click.style(f"{len(self.errors):,} regression variables had an error", fg='red'))
             for rv, error in self.errors.items():

@@ -12,11 +12,9 @@ EWAS and associated calculations
 
 
 """
-from pathlib import Path
 from typing import List, Optional, Type, Union, Any
 
 import click
-import pandas as pd
 from numpy import nan
 from statsmodels.stats.multitest import multipletests
 

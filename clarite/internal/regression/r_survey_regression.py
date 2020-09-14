@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import click
 import pandas as pd
 
-from clarite.internal.utilities import _remove_empty_categories, _get_dtype, requires, _get_dtypes
+from clarite.internal.utilities import requires, _get_dtypes
 
 from .base import Regression
 
@@ -80,9 +80,9 @@ class RSurveyRegression(Regression):
         Merge results into a dataFrame
         """
         if not self.run_complete:
-            raise ValueError(f"No results: either the 'run' method was not called, or there was a problem running")
+            raise ValueError("No results: either the 'run' method was not called, or there was a problem running")
 
-        click.echo(f"Note: Errors and Warnings are not explicitly collected when running regression using R")
+        click.echo("Note: Errors and Warnings are not explicitly collected when running regression using R")
         return self.result
 
     @requires('rpy2')

@@ -11,7 +11,7 @@ def load_r_results(filename):
     """Load R results and convert column names to match python results"""
     r_result = pd.read_csv(filename)
     r_result = r_result.set_index('Variable')
-    r_result[["Beta","SE","Diff_AIC","pvalue"]] = r_result[["Beta","SE","Diff_AIC","pvalue"]].astype('float64')
+    r_result[["Beta", "SE", "Diff_AIC", "pvalue"]] = r_result[["Beta", "SE", "Diff_AIC", "pvalue"]].astype('float64')
     return r_result
 
 

@@ -198,8 +198,8 @@ class SurveyDesignSpec:
                 survey_df.loc[zero_weights, self.weight_name] = 1e-99
                 self.weight_values = survey_df[self.weight_name]
         else:
-            raise ValueError(f"'weight' must be None, a weight name string, or a dictionary"
-                             f" mapping variable name strings to weight name strings")
+            raise ValueError("'weight' must be None, a weight name string, or a dictionary"
+                             " mapping variable name strings to weight name strings")
 
     def process_fpc(self, fpc, survey_df):
         """
@@ -403,12 +403,12 @@ class SurveyDesignSpec:
             self.strata_values = self.strata_values.loc[bool_array]
             self.cluster_values = self.cluster_values.loc[bool_array]
         except IndexingError:
-            raise ValueError(f"The boolean array passed to `subset` could not be used:"
-                             f" the index is incompatible with the survey design")
+            raise ValueError("The boolean array passed to `subset` could not be used:"
+                             " the index is incompatible with the survey design")
 
     def subset_data(self,
-                     data: pd.DataFrame,
-                     rv: str, outcome_variable: str, covariates: List[str]) -> pd.DataFrame:
+                    data: pd.DataFrame,
+                    rv: str, outcome_variable: str, covariates: List[str]) -> pd.DataFrame:
         """
         Return a copy of the data with only the required variables.
         Subset observations according to the design subset, and record categorical types that become empty
