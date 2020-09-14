@@ -46,6 +46,8 @@ def test_skewness(plantTraits, dropna):
                 ['height', "continuous", 0.583514, 2.735605, 6.226567e-03],
                 ['begflow', "continuous", -0.316648, -1.549449, 1.212738e-01],
             ], columns=["Variable", "type", "skew", "zscore", "pvalue"])
+        correct_result[["skew", "zscore", "pvalue"]] = \
+            correct_result[["skew", "zscore", "pvalue"]].astype(float)
     else:
         correct_result = pd.DataFrame([
                 ['pdias', "continuous", None, None, None],
@@ -54,4 +56,6 @@ def test_skewness(plantTraits, dropna):
                 ['height', "continuous", 0.583514, 2.735605, 6.226567e-03],
                 ['begflow', "continuous", -0.316648, -1.549449, 1.212738e-01],
             ], columns=["Variable", "type", "skew", "zscore", "pvalue"])
+        correct_result[["skew", "zscore", "pvalue"]] = \
+            correct_result[["skew", "zscore", "pvalue"]].astype(float)
     pd.testing.assert_frame_equal(result.head(), correct_result)
