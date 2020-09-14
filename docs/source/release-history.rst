@@ -2,6 +2,18 @@
 Release History
 ===============
 
+v1.1.0 (2020-08-14)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Add a `subset` method on the SurveyDesignSpec class
+* Refactored regression so that the `ewas` function now takes a `regression_kind` parameter
+
+Tests
+^^^^^
+* Added tests for the `subset` method
+
 v1.0.1 (2020-06-12)
 -------------------
 
