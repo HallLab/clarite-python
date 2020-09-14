@@ -321,7 +321,7 @@ def test_nhanes_fulldesign_subset_category():
                              survey_design_spec=design),
         ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(r_result, python_result, rtol=1e-03)
 
 
 def test_nhanes_fulldesign_subset_continuous():

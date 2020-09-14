@@ -187,8 +187,7 @@ class SurveyModel(object):
 
         # Get weights (will be an array of ones if not provided)
         weights = self.design.weights
-        # Normalize weights
-        weights = weights/weights.mean()
+
         # Use weights in the regression
         if self.glm_flag:
             self.init_args["freq_weights"] = weights
