@@ -237,10 +237,9 @@ def skewness(data: pd.DataFrame, dropna: bool = False):
         nan_policy = 'omit'
     else:
         nan_policy = 'propagate'
-    result['skew'] = data[continuous_idx].apply(stats.skew, nan_policy=nan_policy)
-    skewtest_result = stats.skewtest(data[continuous_idx], nan_policy=nan_policy)
-    result.loc[continuous_idx, 'zscore'] = skewtest_result.statistic
-    result.loc[continuous_idx, 'pvalue'] = skewtest_result.pvalue
+    result['skew'] = stats.skew(data[continuous_idx], nan_policy=nan_policy)
+    result.loc[continuous_idx, 'zscore'], result.loc[continuous_idx, 'pvalue'] =\
+        stats.skewtest(data[continuous_idx], nan_policy=nan_policy)
 
     # Format
     result.index.name = "Variable"
