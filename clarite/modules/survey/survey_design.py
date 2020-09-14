@@ -1,8 +1,11 @@
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, List, Tuple
 
 import click
 import numpy as np
 import pandas as pd
+from pandas.core.indexing import IndexingError
+
+from clarite.internal.utilities import _remove_empty_categories
 
 
 class SurveyDesignSpec:
@@ -49,6 +52,7 @@ class SurveyDesignSpec:
                                          fpc=None,
                                          single_cluster='fail')
     """
+
     def __init__(self,
                  survey_df: pd.DataFrame,
                  strata: Optional[str] = None,
@@ -63,112 +67,185 @@ class SurveyDesignSpec:
         if isinstance(survey_df.index, pd.MultiIndex):
             raise ValueError("survey_df: DataFrame must not have a multiindex")
         survey_df.index.name = "ID"
+        self.index = survey_df.index
+
+        # At least one must be defined
+        if all([x is None for x in (strata, cluster, weights)]):
+            raise ValueError("""At least one of strata, cluster, or weights must be provided""")
 
         # Store parameters
-        self.survey_df = survey_df
-        self.nest = nest
-
-        # Defaults
-        # Strata
-        self.strata = None
-        self.strata_name = None
-        self.has_strata = False
-        # Cluster
-        self.cluster = None
-        self.cluster_name = None
-        self.has_cluster = False
-        # Weight
-        self.weights = None
-        self.weight_names = None
-        self.weight_name = None
-        self.single_weight = False  # If True, weights is a Series
-        self.multi_weight = False  # If True, weights is a dict of weight name : Series
-        # FPC
-        self.fpc = None
-        self.fpc_name = None
-        self.has_fpc = False
-
-        # Unweighted, warn if set to True
         self.drop_unweighted = drop_unweighted
+        self.single_cluster = single_cluster
+        # Warn if drop_unweighted is set to True
         if self.drop_unweighted:
             click.echo(click.style("WARNING: Dropping observations with missing weights. "
                                    "This may not be statistically sound, and the cause of missing weights "
                                    "should be determined.", fg='red'))
+        # Validate single_cluster parameter
+        if single_cluster not in {'fail', 'adjust', 'average', 'certainty'}:
+            raise ValueError("'single_cluster' must be one of 'fail', 'adjust', 'average', or 'certainty'.")
 
-        # Load Strata
-        if strata is not None:
+        # Defaults
+        # Strata
+        self.has_strata: bool = False
+        self.strata_name: Optional[str] = None
+        self.strata_values: Optional[pd.Series] = None
+        self.n_strat: Optional[int] = None
+        # Cluster
+        self.has_cluster: bool = False
+        self.cluster_name: Optional[str] = None
+        self.cluster_values: Optional[pd.Series] = None
+        self.n_clust: Optional[int] = None
+        # Weight
+        self.single_weight: bool = False  # If True, weight_values is a Series
+        self.weight_name: Optional[str] = None
+        self.multi_weight: bool = False  # If True, weight_values is a dict of weight name : Series
+        self.weight_names: Optional[Dict[str, str]] = None  # Dict of regression variable name : weight name
+        self.weight_values: Optional[Union[pd.Series, Dict[str, pd.Series]]] = None
+        # FPC
+        self.has_fpc: bool = False
+        self.fpc_name: Optional[str] = None
+        self.fpc_original: Optional[pd.Series] = None
+        self.fpc_values: Optional[pd.Series] = None
+
+        # Process inputs
+        self.process_strata(strata, survey_df)
+        self.process_clusters(cluster, survey_df, nest)
+        self.process_weights(weights, survey_df)
+        self.process_fpc(fpc, survey_df)
+
+        # Map relationships between inputs
+        combined = pd.concat([self.strata_values, self.cluster_values, self.fpc_values], axis=1)
+        # The number of clusters per stratum
+        self.clust_per_strat = combined.groupby('strat')['clust'].nunique()
+        # The stratum for each cluster
+        self.strat_for_clust = combined.groupby('clust')['strat'].unique().apply(lambda l: l[0])
+
+        # Initialize the subset information (a boolean array of True, indicating every row is kept)
+        self.subset_array = pd.Series(True, index=survey_df.index, name='subset')
+        self.subset_count = 0
+        self.subset_empty_cat_vars = list()
+
+    def process_strata(self, strata, survey_df):
+        """
+        Load Strata or generate default values
+        """
+        if strata is None:
+            self.strata_values = pd.Series(np.ones(len(self.index)), index=self.index, name='strat')
+        else:
             self.strata_name = strata
             self.has_strata = True
-            if self.strata_name not in self.survey_df:
-                raise KeyError(f"strata key ('{self.strata_name}') was not found in the survey_df")
+            if strata not in survey_df:
+                raise KeyError(f"strata key ('{strata}') was not found in the survey_df")
             else:
-                self.strata = self.survey_df[self.strata_name]
+                self.strata_values = survey_df[strata].rename('strat')
+            self.n_strat = len(self.strata_values.unique())
 
-        # Load Clusters (PSUs)
-        if cluster is not None:
+        # Make categorical
+        self.strata_values = self.strata_values.astype('category')
+
+    def process_clusters(self, cluster, survey_df, nest):
+        """
+        Load clusters or generate default values
+        """
+        if cluster is None:
+            self.cluster_values = pd.Series(np.arange(len(self.index)), index=self.index, name='clust')
+        else:
             self.cluster_name = cluster
             self.has_cluster = True
-            if self.cluster_name not in self.survey_df:
-                raise KeyError(f"cluster key ('{self.cluster_name}') was not found in the survey_df")
+            if cluster not in survey_df:
+                raise KeyError(f"cluster key ('{cluster}') was not found in the survey_df")
             else:
-                self.cluster = self.survey_df[self.cluster_name]
+                self.cluster_values = survey_df[cluster].rename('clust')
+                self.n_clust = len(self.cluster_values.unique())
 
-        # Load FPC
-        if fpc is not None:
+        # If 'nest', recode the PSUs to be sure that the same PSU ID in different strata are treated as distinct PSUs.
+        if nest and self.has_strata and self.has_cluster:
+            self.cluster_values = (self.strata_values.astype(str) + "-" + self.cluster_values.astype(str))
+            self.cluster_values = self.cluster_values.rename('clust')
+            self.cluster_name += " (nested)"
+
+        # Make categorical
+        self.cluster_values = self.cluster_values.astype('category')
+
+    def process_weights(self, weights, survey_df):
+        if weights is None:
+            self.weight_values = pd.Series(np.ones(len(self.index)), index=self.index, name='weights')
+        elif type(weights) == dict:
+            # self.weight_values will be a dictionary of weight_name: Series of weight values
+            self.multi_weight = True
+            self.weight_names = weights
+            self.weight_values = dict()  # dict of weight name : weight values
+            for var_name, weight_name in weights.items():
+                if weight_name not in survey_df:
+                    # Raise an error if the weight wasn't found in the survey dataframe
+                    raise KeyError(f"weights key for '{var_name}' ('{weight_name}') was not found in the survey_df")
+                elif weight_name not in self.weight_values:
+                    # If it hasn't already been processed (for another variable)
+                    # Replace zero/negative weights with a small number to avoid divide by zero
+                    zero_weights = survey_df[weight_name] <= 0
+                    survey_df.loc[zero_weights, weight_name] = 1e-99
+                    self.weight_values[weight_name] = survey_df[weight_name]
+        elif type(weights) == str:
+            # self.weight_values will be a Series of weight values
+            self.single_weight = True
+            self.weight_name = weights
+            if self.weight_name not in survey_df:
+                raise KeyError(f"the weight ('{self.weight_name}') was not found in the survey_df")
+            else:
+                # Replace zero weights with a small number to avoid divide by zero
+                zero_weights = survey_df[self.weight_name] <= 0
+                survey_df.loc[zero_weights, self.weight_name] = 1e-99
+                self.weight_values = survey_df[self.weight_name]
+        else:
+            raise ValueError(f"'weight' must be None, a weight name string, or a dictionary"
+                             f" mapping variable name strings to weight name strings")
+
+    def process_fpc(self, fpc, survey_df):
+        """
+        FPC is passed in as
+        """
+        if fpc is None:
+            self.fpc_values = pd.Series(np.zeros(len(self.index)), index=self.index, name='fpc')
+        else:
             self.fpc_name = fpc
             self.has_fpc = True
-            if self.fpc_name not in self.survey_df:
-                raise KeyError(f"fpc key ('{self.fpc_name}') was not found in the survey_df")
+            if fpc not in survey_df:
+                raise KeyError(f"fpc key ('{fpc}') was not found in the survey_df")
             else:
-                self.fpc = self.survey_df[self.fpc_name]
-
-        # Load Weights
-        if weights is not None:
-            if type(weights) == dict:
-                # self.weights will be a dictionary of weight_name: Series of weight values
-                self.multi_weight = True
-                self.weight_names = weights
-                self.weights = dict()  # dict of weight name : weight values
-                for var_name, weight_name in weights.items():
-                    if weight_name not in self.survey_df:
-                        raise KeyError(f"weights key for '{var_name}' ('{weight_name}') was not found in the survey_df")
-                    elif weight_name not in self.weights:
-                        # Replace zero weights with a small number to avoid divide by zero
-                        zero_weights = self.survey_df[weight_name] <= 0
-                        self.survey_df.loc[zero_weights, weight_name] = 1e-99
-                        self.weights[weight_name] = self.survey_df[weight_name]
-            elif type(weights) == str:
-                # self.weights will be a Series of weight values
-                self.single_weight = True
-                self.weight_name = weights
-                if self.weight_name not in self.survey_df:
-                    raise KeyError(f"the weight ('{self.weight_name}') was not found in the survey_df")
-                else:
-                    # Replace zero weights with a small number to avoid divide by zero
-                    zero_weights = self.survey_df[self.weight_name] <= 0
-                    self.survey_df.loc[zero_weights, self.weight_name] = 1e-99
-                    self.weights = self.survey_df[self.weight_name]
-
-        # Load single_cluster
-        if single_cluster not in {'fail', 'adjust', 'average', 'certainty'}:
-            raise ValueError("if provided, 'single_cluster' must be one of "
-                             "'fail', 'adjust', 'average', or 'certainty'.")
-        else:
-            self.single_cluster = single_cluster
+                self.fpc_values_original = survey_df[fpc].rename('fpc')  # Need unmodified version for R code
+                self.fpc_values = survey_df[fpc].rename('fpc')
+                # Validate
+                if not all(self.fpc_values <= 1):
+                    # Assume these are actual population size, and convert to a fraction
+                    if self.has_strata:
+                        # Divide the sampled strata size by the fpc
+                        combined = pd.merge(self.strata_values, self.fpc_values, left_index=True, right_index=True)
+                        sampled_strata_size = combined.groupby('strat')['fpc'].transform('size')
+                        self.fpc_values = sampled_strata_size / self.fpc_values
+                    elif self.has_cluster and not self.has_strata:
+                        # Clustered sampling: Divide sampled clusters by the fpc
+                        sampled_cluster_size = len(self.cluster_values.unique())
+                        self.fpc_values = sampled_cluster_size / self.fpc_values
+                    try:
+                        assert all((self.fpc_values >= 0) & (self.fpc_values <= 1))
+                    except AssertionError:
+                        raise ValueError("Error processing FPC- invalid values")
+        # Reindex to list fpc for each observation
+        combined = pd.concat([self.cluster_values, self.fpc_values], axis=1)
+        self.fpc_values = combined.groupby('clust')['fpc'].unique().apply(lambda l: l[0])
 
     def __str__(self):
         """String version of the survey design specification, used in logging"""
-        result = f"Survey Design\n\t{len(self.survey_df):,} rows in the survey design data\n"
+        result = f"Survey Design\n\t{len(self.index):,} rows in the survey design data\n"
         # Strata
         if self.has_strata:
-            result += f"\tStrata: {len(self.strata.unique())} unique values of {self.strata_name}\n"
+            result += f"\tStrata: {len(self.strata_values.unique())} unique values of {self.strata_name}\n"
         else:
             result += "\tStrata: None\n"
         # Clusters
         if self.has_cluster:
-            result += f"\tCluster: {len(self.cluster.unique())} unique values of {self.cluster_name}\n"
-            # Nest
-            result += f"\t\tClusters nested in Strata: {self.nest}\n"
+            result += f"\tCluster: {len(self.cluster_values.unique())} unique values of {self.cluster_name}\n"
         else:
             result += "\tCluster: None\n"
         # FPC
@@ -189,187 +266,223 @@ class SurveyDesignSpec:
         # single cluster
         result += f"\tSingle Cluster ('Lonely PSU') Option: {self.single_cluster}"
 
+        result += f"\n\tSubsets: {self.subset_count:,} applied" \
+                  f"\n\t\tKeeping {self.subset_array.sum():,} of {len(self.subset_array):,} observations"
+
         return result
 
-    def get_survey_design(self, regression_variable: Optional[str] = None, index: Optional[pd.Index] = None):
+    def get_strata(self, complete_case_idx: Optional[pd.Index] = None) -> Tuple[bool, Optional[pd.Series]]:
+        """Return strata information subset to match the data"""
+        if complete_case_idx is not None:
+            return self.has_strata, self.strata_values.loc[complete_case_idx]
+        else:
+            return self.has_strata, self.strata_values
+
+    def get_clusters(self, complete_case_idx: Optional[pd.Index] = None) -> Tuple[bool, Optional[pd.Series]]:
+        """Return cluster information subset to match the data"""
+        if complete_case_idx is not None:
+            return self.has_cluster, self.cluster_values.loc[complete_case_idx]
+        else:
+            return self.has_cluster, self.cluster_values
+
+    def get_fpc(self, complete_case_idx: Optional[pd.Index] = None) -> Tuple[bool, Optional[pd.Series]]:
+        """Return fpc information subset to match the data"""
+        if complete_case_idx is not None:
+            return self.has_fpc, self.fpc_values.loc[complete_case_idx]
+        else:
+            return self.has_fpc, self.fpc_values
+
+    def get_weights(self,
+                    regression_variable: str,
+                    complete_case_idx: Optional[pd.Index] = None) \
+            -> Tuple[bool, Optional[str], Optional[pd.Series]]:
         """
-        Build a survey design based on the regression variable
-
-        Parameters
-        ----------
-        regression_variable : str or None
-            Name of the variable being regressed.  Required if weights are variable-specific.
-        index : pd.Index or None
-            Data being used in the analysis whose index is a subset of the survey design indicies.
-            If the variable or any covariates are missing, those observations should not be included in this index.
-
-        Returns
-        -------
-        survey_design: SurveyDesign
-            SurveyDesign object used for further analysis
+        Return weight information for a specific regression variable, subset to match the data
         """
-        # Return all observations if a subset index is not specified
-        if index is None:
-            index = self.survey_df.index
-
-        # Get weights array
         if self.single_weight:
-            weights = self.weights
+            has_weights, weight_name, weight_values = True, self.weight_name, self.weight_values
         elif self.multi_weight:
-            if regression_variable is None:
-                raise ValueError("This SurveyDesignSpec uses variable-specific weights- "
-                                 "a variable name is required to create a SurveyDesign object.")
             weight_name = self.weight_names.get(regression_variable, None)
             if weight_name is None:
-                raise KeyError(f"The regression variable ({regression_variable}) "
-                               f"was not found in the SurveyDesignSpec")
-            weights = self.weights[weight_name]
+                raise ValueError(f"No weight found in the survey design for the '{regression_variable}' variable")
+            else:
+                has_weights, weight_name, weight_values = True, weight_name, self.weight_values[weight_name]
         else:
-            weights = None
+            return False, None, None
 
-        # Get strata array
-        if self.has_strata:
-            strata = self.strata
-        else:
-            strata = None
+        if complete_case_idx is not None:
+            weight_values = weight_values.loc[complete_case_idx]
+        return has_weights, weight_name, weight_values
 
-        # Get cluster array
-        if self.has_cluster:
-            cluster = self.cluster
-        else:
-            cluster = None
+    def check_missing_weights(self, data: pd.DataFrame, regression_variable: str) \
+            -> Tuple[Optional[str], Optional[pd.Index], Optional[str]]:
+        """
+        Return:
+            None, None, None if no weights are used
+            weight_name, None, None if there are no missing weights
+            weight_name, missing_index, warning if there are missing weights and 'drop_unweighted' is True
+            Raise an error if there are missing weights and 'drop_unweighted' is False
+        """
+        # Get weight values
+        has_weight, weight_name, weight_values = self.get_weights(regression_variable)
+        if not has_weight:
+            return None, None, None  # No idx and no warning needed
 
-        # Get fpc array
-        if self.has_fpc:
-            fpc = self.fpc
-        else:
-            fpc = None
+        # Check if the survey design is missing weights when the variable value is not
+        variable_na = data[regression_variable].isna()
+        weight_na = weight_values.isna()
+        values_with_missing_weight = data.loc[~variable_na & weight_na, regression_variable]
 
-        sd = SurveyDesign(index=index, strata=strata, cluster=cluster, weights=weights, fpc=fpc,
-                          nest=self.nest, single_cluster=self.single_cluster)
-        return sd
+        if len(values_with_missing_weight) == 0:
+            return weight_name, None, None
+        elif len(values_with_missing_weight) > 0 and self.drop_unweighted:
+            # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
+            warning = f"Dropping {len(values_with_missing_weight):,} non-missing observation(s) due to missing weights"
+            weight_name += f" ({len(values_with_missing_weight)} observations are missing weights)"
+            return weight_name, values_with_missing_weight, warning
+        elif len(values_with_missing_weight) > 0 and not self.drop_unweighted:
+            # Get unique values
+            unique_missing = values_with_missing_weight.unique()
+            unique_not_missing = data.loc[~variable_na & ~weight_na, regression_variable].unique()
+            sometimes_missing = sorted([str(v) for v in (set(unique_missing) & set(unique_not_missing))])
+            always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
+
+            # Build a detailed error string
+            error = f"{len(values_with_missing_weight):,} observations are missing weights" \
+                    f" when the variable is not missing."
+
+            # Add more information to the error and raise it, skipping analysis of this variable
+            if len(sometimes_missing) == 0:
+                pass
+            elif len(sometimes_missing) == 1:
+                error += f"\n\tOne value sometimes occurs in observations with missing weight: {sometimes_missing[0]}"
+            elif len(sometimes_missing) <= 5:
+                error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
+                         f" {', '.join(sometimes_missing)}"
+            elif len(sometimes_missing) > 5:
+                error += f"\n\t{len(sometimes_missing)} values sometimes occur in observations with missing weight:" \
+                         f" {', '.join(sometimes_missing[:5])}, ..."
+            # Log always missing values
+            if len(always_missing) == 0:
+                pass
+            elif len(always_missing) == 1:
+                error += f"\n\tOne value is only found in observations with missing weights: {always_missing[0]}." \
+                         " Should it be encoded as NaN?"
+            elif len(always_missing) <= 5:
+                error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
+                         f"{', '.join(always_missing)}. Should they be encoded as NaN?"
+            elif len(always_missing) > 5:
+                error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
+                         f"{', '.join(always_missing[:5])}, ... Should they be encoded as NaN?"
+            raise ValueError(error)
+
+    def subset(self, bool_array: pd.Series) -> None:
+        """
+        Subset the SurveyDesignSpec (in-place) to look only at a subpopulation.
+
+        Example:
+            design.subset(data['age'] > 18)
+        """
+        # Confirm it is a boolean Series
+        if type(bool_array) != pd.Series:
+            raise ValueError("SurveyDesignSpec.subset takes a boolean pandas Series object")
+        elif bool_array.dtype != bool:
+            raise ValueError("SurveyDesignSpec.subset takes a boolean pandas Series object")
+
+        # Try to subset, raising any indexing error
+        try:
+            # Update subset_array for tracking
+            self.subset_array = self.subset_array & bool_array
+            self.subset_count += 1
+
+            # Update data
+            if self.single_weight:
+                self.weight_values = self.weight_values.loc[bool_array]
+            elif self.multi_weight:
+                self.weight_values = {k: v.loc[bool_array] for k, v in self.weight_values.items()}
+            self.strata_values = self.strata_values.loc[bool_array]
+            self.cluster_values = self.cluster_values.loc[bool_array]
+        except IndexingError:
+            raise ValueError(f"The boolean array passed to `subset` could not be used:"
+                             f" the index is incompatible with the survey design")
+
+    def subset_data(self,
+                     data: pd.DataFrame,
+                     rv: str, outcome_variable: str, covariates: List[str]) -> pd.DataFrame:
+        """
+        Return a copy of the data with only the required variables.
+        Subset observations according to the design subset, and record categorical types that become empty
+        """
+        # Filter data (taking a copy)
+        columns = [rv, outcome_variable] + covariates
+        data = data.loc[self.subset_array, columns]
+        # Track categories that went missing (no observations) because of the subset and remove them
+        subset_empty_categories = _remove_empty_categories(data)
+        # Track which variables are affected
+        for empty_cat_var in subset_empty_categories.keys():
+            self.subset_empty_cat_vars.append(empty_cat_var)
+        return data
+
+    def get_survey_design(self,
+                          data: pd.DataFrame,
+                          regression_variable: str,
+                          complete_case_idx):
+        """
+
+        """
+        # Get parameters
+        has_strata, strata_values = self.get_strata(complete_case_idx)
+        has_cluster, cluster_values = self.get_clusters(complete_case_idx)
+        has_weights, weight_name, weight_values = self.get_weights(regression_variable, complete_case_idx)
+
+        # Initialize Survey Design
+        sd = SurveyDesign(
+            has_strata=has_strata, strat=strata_values, n_strat=self.n_strat,
+            has_cluster=has_cluster, clust=cluster_values, n_clust=self.n_clust,
+            has_weights=has_weights, weights=weight_values,
+            has_fpc=self.has_fpc, fpc=self.fpc_values,
+            single_cluster=self.single_cluster,
+            clust_per_strat=self.clust_per_strat,
+            strat_for_clust=self.strat_for_clust)
+
+        return sd, data
 
 
 class SurveyDesign(object):
     """
-    Description of a survey design
-
-    Parameters
-    -------
-    index: pd.Index
-        Index of the associated data where values are not missing
-    strata : array-like or None
-        Strata for each observation. If none, an array of ones is constructed
-    cluster : array-like or None
-        Cluster for each observation. If none, an incrementing array is constructed
-    weights : array-like or None
-        The weight for each observation. If none, an array
-        of ones is constructed
-    fpc : ps.Series or None
-        The finite population correction for each observation.
-        If none, an array of zeros is constructed.
-        If < 1, treated as sampling weights and use directly
-        Otherwise, treat as cluster population size and convert to sampling weights as (number of obs in cluster) / fpc
-    nest : boolean
-        allows user to specify if PSU's with the same
-        PSU number in different strata are treated as distinct PSUs.
-    single_cluster: str
-        Setting controlling variance calculation in single-cluster ('lonely psu') strata
-        'fail': default, throw an error
-        'adjust': use the average of all observations (more conservative)
-        'average': use the average value of other strata
-        'certainty': that strata doesn't contribute to the variance (0 variance)
-
-    Attributes
-    ----------
-    weights : (n, ) pd.Series
-        The weight for each observation
-    n_strat : integer
-        The number of district strata
-    clust : (n, ) pd.Series
-        The relabeled cluster array from 0, 1, ..
-    strat : (n, ) pd.Series
-        The related strata array from 0, 1, ...
-    clust_per_strat : (self.n_strat, ) array
-        Holds the number of clusters in each stratum
-    strat_for_clust : ndarray
-        The stratum for each cluster
-    n_strat: integer
-        The total number of strata
-    n_clust : integer
-        The total number of clusters across strata
-    strat_names : list[str]
-        The names of strata
-    clust_names : list[str]
-        The names of clusters
+    Holds the same kind of data as SurveyDesignSpec, but specific to a single regression variable:
+        - Only one weight value
+        - Values subset to match complete cases in the data
     """
 
     def __init__(self,
-                 index: pd.Index,
-                 strata: Optional[pd.Series] = None,
-                 cluster: Optional[pd.Series] = None,
-                 weights: Optional[pd.Series] = None,
-                 fpc: Optional[pd.Series] = None,
-                 nest: bool = True,
-                 single_cluster: str = 'fail'):
+                 has_strata, strat, n_strat,
+                 has_cluster, clust, n_clust,
+                 has_weights, weights,
+                 has_fpc, fpc,
+                 single_cluster,
+                 clust_per_strat,
+                 strat_for_clust):
 
-        # Record inputs
-        self.has_strata = (strata is not None)
-        self.has_clusters = (cluster is not None)
-        self.has_weights = (weights is not None)
-        self.has_fpc = (fpc is not None)
-
-        # If requested, recode the PSUs to be sure that the same PSU # in
-        # different strata are treated as distinct PSUs. This is the same
-        # as the nest option in R.
-        if nest and self.has_strata and self.has_clusters:
-            cluster = strata.astype(str) + "-" + cluster.astype(str)
-        else:
-            # Ignore the nest parameter
-            pass
-
-        # Check arguments, replacing None as needed
-        strata, cluster, weights, fpc = self._check_args(strata, cluster, weights, fpc)
-
-        # Make strata and cluster into categoricals
-        strata = strata.astype('category').rename('strat')
-        cluster = cluster.astype('category').rename('clust')
-
-        # Get a combined dataframe to map the relationships
-        combined = pd.concat([strata, cluster, fpc], axis=1)
-
-        # The number of clusters per stratum
-        self.clust_per_strat = combined.groupby('strat')['clust'].nunique()
-
-        # The stratum for each cluster
-        self.strat_for_clust = combined.groupby('clust')['strat'].unique().apply(lambda l: l[0])
-
-        # The fpc for each cluster
-        fpc = combined.groupby('clust')['fpc'].unique().apply(lambda l: l[0])
-
-        # Clusters within each stratum
-        self.ii = combined.groupby('strat')['clust'].unique()
-
-        # Record names
-        self.strat_names = strata.cat.categories
-        self.clust_names = cluster.cat.categories
-
-        # Store values indexed by the (potential) subset of the data with complete cases
-        self.weights = weights.loc[index]
-        self.strat = strata.loc[index]
-        self.clust = cluster.loc[index]
+        # Store values
+        self.has_strata = has_strata
+        self.strat = strat
+        self.n_strat = n_strat
+        self.has_cluster = has_cluster
+        self.clust = clust
+        self.n_clust = n_clust
+        self.has_weights = has_weights
+        self.weights = weights
+        self.has_fpc = has_fpc
         self.fpc = fpc
+        self.single_cluster = single_cluster
+        self.clust_per_strat = clust_per_strat
+        self.strat_for_clust = strat_for_clust
 
-        # Record number of strat/clust
-        self.n_strat = None
-        self.n_clust = None
         if self.has_strata:
             self.n_strat = len(self.strat.unique())
-        if self.has_clusters:
+        if self.has_cluster:
             self.n_clust = len(self.clust.unique())
-
-        # Record single cluster setting
-        self.single_cluster = single_cluster
 
     def __str__(self):
         """
@@ -381,89 +494,6 @@ class SurveyDesign(object):
                         "Clusters per stratum: ", str(self.clust_per_strat)]
 
         return "\n".join(summary_list)
-
-    def _check_args(self,
-                    strata: Optional[pd.Series] = None,
-                    cluster: Optional[pd.Series] = None,
-                    weights: Optional[pd.Series] = None,
-                    fpc: Optional[pd.Series] = None):
-        """
-        Minor error checking to make sure user supplied any of
-        strata, cluster, or weights.
-
-        Parameters
-        ----------
-        strata : pd.Series or None
-            Strata for each observation. If none, an array
-            of ones is constructed
-        cluster : pd.Series or None
-            Cluster for each observation. If none, an array
-            of sequential values is constructed
-        weights : pd.Series or None
-            The weight for each observation. If none, an array
-            of ones is constructed
-        fpc: pd.Series or None
-            The finite population correction for each observation.
-            If none, an array of zeros is constructed.
-            If < 1, treated as sampling weights and use directly
-            Otherwise, treat as strata population size and convert to sampling weights as (number of obs in strata)/fpc
-
-        Returns
-        -------
-        strata : ndarray
-            Series of the strata labels
-        cluster : ndarray
-            Series of the cluster labels
-        weights : ndarray
-            Series of the observation weights
-        fpc: pd.Series
-            Series of fpc values
-        """
-        # At least one must be defined
-        if all([x is None for x in (strata, cluster, weights)]):
-            raise ValueError("""At least one of strata, cluster, rep_weights, and weights
-                             must not be None""")
-
-        # Get corrected index information for creating replacements for None
-        index = [x.index for x in (strata, cluster, weights) if x is not None][0]
-        n = len(index)
-
-        # Make sure index is equal for all given parameters
-        if not all([index.equals(x.index) for x in (strata, cluster, weights) if x is not None]):
-            raise ValueError("""index of strata, cluster, and weights are not all compatible""")
-
-        # Create default values or update name of given value
-        if strata is None:
-            strata = pd.Series(np.ones(n), index=index, name='strata')
-        else:
-            strata = strata.rename('strata')
-        if cluster is None:
-            cluster = pd.Series(np.arange(n), index=index, name='cluster')
-        else:
-            cluster = cluster.rename('cluster')
-        if weights is None:
-            weights = pd.Series(np.ones(n), index=index, name='None')
-        if fpc is None:
-            fpc = pd.Series(np.zeros(n), index=index, name='fpc')
-        else:
-            fpc = fpc.rename('fpc')
-            if not all(fpc <= 1):
-                # Assume these are actual population size, and convert to a fraction
-                if self.has_strata:
-                    # Divide the sampled strata size by the fpc
-                    combined = pd.merge(strata, fpc, left_index=True, right_index=True)
-                    sampled_strata_size = combined.groupby('strata')['fpc'].transform('size')
-                    fpc = sampled_strata_size/fpc
-                elif self.has_clusters and not self.has_strata:
-                    # Clustered sampling: Divide sampled clusters by the fpc
-                    sampled_cluster_size = len(cluster.unique())
-                    fpc = sampled_cluster_size/fpc
-                try:
-                    assert all((fpc >= 0) & (fpc <= 1))
-                except AssertionError:
-                    raise ValueError("Error processing FPC- invalid values")
-
-        return strata, cluster, weights, fpc
 
     def get_jackknife_rep_weights(self, dropped_clust):
         """
@@ -504,11 +534,11 @@ class SurveyDesign(object):
             Degrees of freedom
         """
         # num of clusters minus num of strata minus (num of predictors - 1)
-        if self.has_clusters and self.has_strata:
+        if self.has_cluster and self.has_strata:
             return self.n_clust - self.n_strat - (X.shape[1] - 1)
-        elif self.has_clusters and not self.has_strata:
+        elif self.has_cluster and not self.has_strata:
             return self.n_clust - 1 - (X.shape[1] - 1)
-        elif not self.has_clusters and self.has_strata:
+        elif not self.has_cluster and self.has_strata:
             return X.shape[0] - self.n_strat - (X.shape[1] - 1)
         else:
             return X.shape[0] - (X.shape[1]) - 1

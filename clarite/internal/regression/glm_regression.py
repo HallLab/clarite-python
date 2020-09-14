@@ -1,6 +1,8 @@
 from typing import Dict, Optional, List, Tuple
 
+import click
 import numpy as np
+import pandas as pd
 import scipy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -13,183 +15,269 @@ from .base import Regression
 class GLMRegression(Regression):
     """
     Statsmodels GLM Regression.
+
+    Note:
+      * Binary variables are treated as continuous features, with values of 0 and 1.
+      * The results of a likelihood ratio test are used for categorical variables, so no Beta values or SE are reported.
+      * The regression family is automatically selected based on the type of the phenotype.
+        * Continuous phenotypes use gaussian regression
+        * Binary phenotypes use binomial regression (the larger of the two values is counted as "success")
+      * Categorical variables run with a survey design will not report Diff_AIC
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+    outcome_variable: string
+        The variable to be used as the output (y) of the regression
+    covariates: list (strings),
+        The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
+    min_n: int or None
+        Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
+        Defaults to 200
+
+    Returns
+    -------
+    df: pd.DataFrame
+        EWAS results DataFrame with these columns: ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+
+    Examples
+    --------
+    >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
+    Running EWAS on a continuous variable
     """
-    def __init__(self, data, outcome_variable, outcome_dtype, test_variable, covariates, min_n):
+    def __init__(self, data, outcome_variable, covariates, min_n=200):
         """
         Parameters
         ----------
         data - pd.DataFrame
         outcome_variable - name of the outcome variable
-        outcome_kind - type of the outcome variable
-        test_variable - name of the variable being tested
         covariates - other variables to include in the regression formula
+
+        Kwargs
+        ______
         min_n - minimum number of observations (after discarding any with NA)
         """
-        # base class init (sets pvalue, test_dtype, error, and warnings
-        super().__init__()
+        # base class init
+        # This takes in minimal regression params (data, outcome_variable, covariates) and
+        # initializes additional parameters (outcome dtype, regression variables, error, and warnings)
+        super().__init__(data=data,
+                         outcome_variable=outcome_variable,
+                         covariates=covariates)
 
-        # Store passed parameters
-        self.data = data
-        self.outcome_variable = outcome_variable
-        self.outcome_dtype = outcome_dtype
-        self.test_variable = test_variable
-        self.test_dtype = _get_dtype(data[test_variable])
-        self.covariates = covariates
+        # Custom init involving kwargs passed to this regression
         self.min_n = min_n
 
-        # Placeholders
-        self.varying_covars = []
-        self.non_varying_covars = []
-        self.formula_restricted = ""
-        self.formula = ""
-        self.family = None
-        self.use_t = True
-        self.weight_name = None
-
-        # Set default result values
-        self.converged = False
-        self.N = np.nan
-        self.N_original = len(self.data)
-        self.beta = np.nan
-        self.SE = np.nan
-        self.var_pvalue = np.nan
-        self.LRT_pvalue = np.nan
-        self.diff_AIC = np.nan
-
-        # Remove incomplete cases
-        self.complete_case_idx = self.get_complete_case_idx()
-
-    def get_complete_case_idx(self):
-        """Get index of observations that are not missing in the test variable, the outcome variable, and covariates"""
-        return self.data\
-                   .dropna(axis='index', how='any',
-                           subset=[self.test_variable, self.outcome_variable] + self.covariates)\
-                   .index
-
-    def check_covariate_values(self):
-        """Remove covariates that do not vary"""
-        unique_values = self.data.loc[self.complete_case_idx, self.covariates].nunique()
-        self.varying_covars = list(unique_values[unique_values > 1].index.values)
-        self.non_varying_covars = list(unique_values[unique_values <= 1].index.values)
-        if len(self.non_varying_covars) > 0:
-            self.warnings.append(f"non-varying covariates(s): {', '.join(self.non_varying_covars)}")
-
-    def remove_extra_categories(self):
-        """Check for extra categories after filtering and warn"""
-        removed_cats = _remove_empty_categories(self.data, only=[self.test_variable, ] + self.varying_covars)
-        if len(removed_cats) >= 1:
-            for extra_cat_var, extra_cats in removed_cats.items():
-                self.warnings.append(f"'{str(extra_cat_var)}' had categories with no occurrences: "
-                                     f"{', '.join([str(c) for c in extra_cats])} "
-                                     f"after removing observations with missing values")
-
-    def get_formulas(self):
-        # Restricted Formula
-        self.formula_restricted = f"{self.outcome_variable} ~ "
-        self.formula_restricted += " + ".join(
-            [f"C({var_name})"
-             if str(self.data.dtypes[var_name]) == 'category'
-             else var_name for var_name in self.varying_covars])
-
-        # Full Formula
-        if str(self.data.dtypes[self.test_variable]) == 'category':
-            self.formula = self.formula_restricted + f" + C({self.test_variable})"
-        else:
-            self.formula = self.formula_restricted + f" + {self.test_variable}"
-
-    def pre_run_setup(self):
-        # Minimum complete cases filter
-        self.N = len(self.complete_case_idx)
-        if self.N < self.min_n:
-            raise ValueError(f"too few complete observations (min_n filter: "
-                             f"{self.N} < {self.min_n})")
-
-        # Check variable values, creating warnings if needed
-        self.check_covariate_values()
-        self.remove_extra_categories()
-
-        # Get the formulas that will be used
-        self.get_formulas()
-
-        # Select regression family
-        if self.outcome_dtype == "continuous":
+        # Ensure the data output type is compatible
+        # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
+        if self.outcome_dtype == 'categorical':
+            raise NotImplementedError("Categorical Phenotypes are not yet supported for this type of regression.")
+        elif self.outcome_dtype == 'continuous':
+            self.description += f"Continuous Outcome (family = Gaussian): '{self.outcome_variable}'"
             self.family = sm.families.Gaussian(link=sm.families.links.identity())
             self.use_t = True
         elif self.outcome_dtype == 'binary':
+            # Use the order according to the categorical
+            counts = self.data[self.outcome_variable].value_counts().to_dict()
+            categories = self.data[self.outcome_variable].cat.categories
+            codes, categories = zip(*enumerate(categories))
+            self.data[self.outcome_variable].replace(categories, codes, inplace=True)
+            self.description += f"Binary Outcome (family = Binomial): '{self.outcome_variable}'\n" \
+                                f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as 0\n" \
+                                f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as 1"
             self.family = sm.families.Binomial(link=sm.families.links.logit())
             self.use_t = False
         else:
-            raise NotImplementedError("Only continuous and binary phenotypes are currently supported for GLMRegression")
+            raise ValueError("The outcome variable's type could not be determined.  Please report this error.")
 
-    def get_result(self) -> Tuple[Dict, List[str], Optional[str]]:
-        """
-        Return results as a dict along with any warnings and error
-        """
-        result = {
-            'Variable': self.test_variable,
-            'Variable_type': self.test_dtype,
-            'Weight': self.weight_name,
-            'Converged': self.converged,
-            'N': self.N,
-            'Beta': self.beta,
-            'SE': self.SE,
-            'Variable_pvalue': self.var_pvalue,
-            'LRT_pvalue': self.LRT_pvalue,
-            'Diff_AIC': self.diff_AIC,
-            'pvalue': self.pvalue
-        }
-        return result, self.warnings, self.error
+        # Log missing outcome values
+        na_outcome_count = self.data[self.outcome_variable].isna().sum()
+        self.description += f"\nUsing {len(self.data) - na_outcome_count:,} of {len(self.data):,} observations"
+        if na_outcome_count > 0:
+            self.description += f"\n\t{na_outcome_count:,} are missing a value for the outcome variable"
 
-    def run_continuous(self):
-        # Regress
-        est = smf.glm(self.formula, data=self.data.loc[self.complete_case_idx], family=self.family).fit(use_t=self.use_t)
-        # Check convergence
-        if not est.converged:
-            return
+        # Finish updating description
+        self.description += f"\nRegressing {len(self.results):,} variables"
+        for k, v in self.regression_variables.items():
+            self.description += f"\n\t{len(v):,} {k} variables"
+
+
+    @staticmethod
+    def get_default_result_dict():
+        return {'Converged': False,
+                'N': np.nan,
+                'Beta': np.nan,
+                'SE': np.nan,
+                'Variable_pvalue': np.nan,
+                'LRT_pvalue': np.nan,
+                'Diff_AIC': np.nan,
+                'pvalue': np.nan}
+
+    def get_complete_case_idx(self, data, regression_variable):
+        """Get index of observations that are not missing in the test variable, the outcome variable, and covariates"""
+        return data.dropna(axis='index', how='any',
+                           subset=[regression_variable, self.outcome_variable] + self.covariates)\
+                   .index
+
+    def check_covariate_values(self, complete_case_idx) -> Tuple[List[str], List[str]]:
+        """Remove covariates that do not vary, warning when this occurs"""
+        warnings = []
+        unique_values = self.data.loc[complete_case_idx, self.covariates].nunique()
+        varying_covars = list(unique_values[unique_values > 1].index.values)
+        non_varying_covars = list(unique_values[unique_values <= 1].index.values)
+        if len(non_varying_covars) > 0:
+            warnings.append(f"non-varying covariates(s): {', '.join(non_varying_covars)}")
+        return varying_covars, warnings
+
+    def get_formulas(self, regression_variable, varying_covars) -> Tuple[str, str]:
+        # Restricted Formula, just outcome and covariates
+        formula_restricted = f"{self.outcome_variable} ~ "
+        formula_restricted += " + ".join(
+            [f"C({var_name})"
+             if str(self.data.dtypes[var_name]) == 'category'
+             else var_name for var_name in varying_covars])
+
+        # Full Formula, adding the regression variable to the restricted formula
+        if str(self.data.dtypes[regression_variable]) == 'category':
+            formula = formula_restricted + f" + C({regression_variable})"
         else:
-            self.converged = True
-        # Get results
-        self.beta = est.params[self.test_variable]
-        self.SE = est.bse[self.test_variable]
-        self.var_pvalue = est.pvalues[self.test_variable]
-        self.pvalue = self.var_pvalue
+            formula = formula_restricted + f" + {regression_variable}"
 
-    def run_binary(self):
+        return formula_restricted, formula
+
+    def get_results(self) -> Tuple[pd.DataFrame, Dict[str, List[str]], Dict[str, str]]:
+        """
+        Merge results into a dataFrame
+        """
+        if not self.run_complete:
+            raise ValueError(f"No results: either the 'run' method was not called, or there was a problem running")
+
+        # Log errors
+        if len(self.errors) == 0:
+            click.echo(click.style(f"0 regression variables had an error", fg='green'))
+        elif len(self.errors) > 0:
+            click.echo(click.style(f"{len(self.errors):,} regression variables had an error", fg='red'))
+            for rv, error in self.errors.items():
+                click.echo(click.style(f"\t{rv} = NULL due to: {error}", fg='red'))
+
+        # Log warnings
+        for rv, warning_list in self.warnings.items():
+            if len(warning_list) > 0:
+                click.echo(click.style(f"{rv} had warnings:", fg='yellow'))
+                for warning in warning_list:
+                    click.echo(click.style(f"\t{warning}", fg='yellow'))
+
+        result = pd.DataFrame.from_dict(self.results, orient='index')\
+                             .reset_index(drop=False)\
+                             .rename(columns={'index': 'Variable'})
+
+        return result
+
+    def run_continuous(self, data, regression_variable, complete_case_idx, formula) -> Dict:
+        result = dict()
         # Regress
-        est = smf.glm(self.formula, data=self.data.loc[self.complete_case_idx], family=self.family).fit(use_t=self.use_t)
-        # Check convergence
-        if not est.converged:
-            return
-        else:
-            self.converged = True
-        # Get results
-        # Categorical-type RVs get a different name in the results, and aren't always at the end
-        # (since categorical come before non-categorical)
-        rv_keys = [k for k in est.params.keys() if self.test_variable in k]
-        try:
-            assert len(rv_keys) == 1
-            rv_key = rv_keys[0]
-        except AssertionError:
-            raise ValueError(f"Error extracting results for '{self.test_variable}', try renaming the variable")
-        self.beta = est.params[rv_key]
-        self.SE = est.bse[rv_key]
-        self.var_pvalue = est.pvalues[rv_key]
-        self.pvalue = self.var_pvalue
+        est = smf.glm(formula, data=data.loc[complete_case_idx], family=self.family).fit(use_t=self.use_t)
+        # Save results if the regression converged
+        if est.converged:
+            result['Converged'] = True
+            result['Beta'] = est.params[regression_variable]
+            result['SE'] = est.bse[regression_variable]
+            result['Variable_pvalue'] = est.pvalues[regression_variable]
+            result['pvalue'] = result['Variable_pvalue']
 
-    def run_categorical(self):
+        return result
+
+    def run_binary(self, data, regression_variable, complete_case_idx, formula) -> Dict:
+        result = dict()
+        # Regress
+        est = smf.glm(formula, data=data.loc[complete_case_idx], family=self.family).fit(use_t=self.use_t)
+        # Check convergence
+        # Save results if the regression converged
+        if est.converged:
+            result['Converged'] = True
+            # Categorical-type RVs get a different name in the results, and aren't always at the end
+            # (since categorical come before non-categorical)
+            rv_keys = [k for k in est.params.keys() if regression_variable in k]
+            try:
+                assert len(rv_keys) == 1
+                rv_key = rv_keys[0]
+            except AssertionError:
+                raise ValueError(f"Error extracting results for '{regression_variable}', try renaming the variable")
+            result['Beta'] = est.params[rv_key]
+            result['SE'] = est.bse[rv_key]
+            result['Variable_pvalue'] = est.pvalues[rv_key]
+            result['pvalue'] = result['Variable_pvalue']
+
+        return result
+
+    def run_categorical(self, data, regression_variable, complete_case_idx, formula, formula_restricted) -> Dict:
+        result = dict()
         # Regress both models
-        est = smf.glm(self.formula, data=self.data.loc[self.complete_case_idx], family=self.family).fit(use_t=self.use_t)
-        est_restricted = smf.glm(self.formula_restricted, data=self.data.loc[self.complete_case_idx],
+        est = smf.glm(formula, data=data.loc[complete_case_idx], family=self.family).fit(use_t=self.use_t)
+        est_restricted = smf.glm(formula_restricted, data=self.data.loc[complete_case_idx],
                                  family=self.family).fit(use_t=True)
         # Check convergence
-        if not est.converged & est_restricted.converged:
-            return
-        else:
-            self.converged = True
-        # Calculate Results
-        lrdf = (est_restricted.df_resid - est.df_resid)
-        lrstat = -2*(est_restricted.llf - est.llf)
-        lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
-        self.LRT_pvalue = lr_pvalue
-        self.pvalue = self.LRT_pvalue
-        self.diff_AIC = est.aic - est_restricted.aic
+        if est.converged & est_restricted.converged:
+            result['Converged'] = True
+            # Calculate Results
+            lrdf = (est_restricted.df_resid - est.df_resid)
+            lrstat = -2*(est_restricted.llf - est.llf)
+            lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
+            result['LRT_pvalue'] = lr_pvalue
+            result['pvalue'] = result['LRT_pvalue']
+            result['Diff_AIC'] = est.aic - est_restricted.aic
+
+        return result
+
+    def run(self):
+        """Run a regression object, returning the results and logging any warnings/errors"""
+        for rv_type, rv_list in self.regression_variables.items():
+            click.echo(click.style(f"Running {len(rv_list):,} {rv_type} variables...", fg='green'))
+            # TODO: Parallelize this loop
+            for rv in rv_list:
+                # Initialize result with placeholders
+                self.results[rv] = self.get_default_result_dict()
+                self.results[rv]['Variable_type'] = rv_type
+                # Run in a try/except block to catch any errors specific to a regression variable
+                try:
+                    # Get complete case index and filter by min_n
+                    complete_case_idx = self.get_complete_case_idx(self.data, rv)
+                    N = len(complete_case_idx)
+                    self.results[rv]['N'] = N
+                    if N < self.min_n:
+                        raise ValueError(f"too few complete observations (min_n filter: {N} < {self.min_n})")
+
+                    # Check for covariates that do not vary (they get ignored)
+                    varying_covars, warnings = self.check_covariate_values(complete_case_idx)
+                    self.warnings[rv].extend(warnings)
+
+                    # Take a copy of the required variables rather than operating directly on the stored data
+                    data = self.data[[rv, self.outcome_variable] + varying_covars]
+
+                    # Remove unused categories (warning when this occurs)
+                    removed_cats = _remove_empty_categories(data)
+                    if len(removed_cats) >= 1:
+                        for extra_cat_var, extra_cats in removed_cats.items():
+                            self.warnings[rv].append(f"'{str(extra_cat_var)}' had categories with no occurrences: "
+                                                     f"{', '.join([str(c) for c in extra_cats])} "
+                                                     f"after removing observations with missing values")
+
+                    # Get the formulas
+                    formula_restricted, formula = self.get_formulas(rv, varying_covars)
+
+                    # Run Regression
+                    if rv_type == 'continuous':
+                        result = self.run_continuous(data, rv, complete_case_idx, formula)
+                    elif rv_type == 'binary':  # Essentially same as continuous, except string used to key the results
+                        result = self.run_binary(data, rv, complete_case_idx, formula)
+                    elif rv_type == 'categorical':
+                        result = self.run_categorical(data, rv, complete_case_idx, formula, formula_restricted)
+                    else:
+                        result = dict()
+                    self.results[rv].update(result)
+
+                except Exception as e:
+                    self.errors[rv] = str(e)
+
+            click.echo(click.style(f"\tFinished Running {len(rv_list):,} {rv_type} variables", fg='green'))
+        self.run_complete = True

@@ -69,8 +69,8 @@ def test_fpc_withoutfpc():
     df = clarite.modify.make_continuous(df, only=["x", "y"])
     design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata="stratid", nest=True)
     df = clarite.modify.colfilter(df, only=["x", "y"])
-    calculated_result = clarite.analyze.ewas_r(phenotype="y", covariates=[], data=df, survey_design_spec=design,
-                                               min_n=1)
+    calculated_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, regression_kind='r_survey',
+                                             survey_design_spec=design, min_n=1)
     # Compare
     compare_result(r_result, calculated_result)
 
@@ -86,8 +86,8 @@ def test_fpc_withfpc():
     design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata="stratid",
                                              fpc="Nh", nest=True)
     df = clarite.modify.colfilter(df, only=["x", "y"])
-    calculated_result = clarite.analyze.ewas_r(phenotype="y", covariates=[], data=df, survey_design_spec=design,
-                                               min_n=1)
+    calculated_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, regression_kind='r_survey',
+                                             survey_design_spec=design, min_n=1)
     # Compare
     compare_result(r_result, calculated_result)
 
@@ -103,8 +103,8 @@ def test_fpc_withfpc_nostrata():
     design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata=None,
                                              fpc="Nh", nest=True)
     df = clarite.modify.colfilter(df, only=["x", "y"])
-    calculated_result = clarite.analyze.ewas_r(phenotype="y", covariates=[], data=df, survey_design_spec=design,
-                                               min_n=1)
+    calculated_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, regression_kind='r_survey',
+                                             survey_design_spec=design, min_n=1)
     # Compare
     compare_result(r_result, calculated_result)
 
@@ -131,9 +131,12 @@ def test_api_noweights():
     df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["meals", "mobility"], data=df, min_n=1),
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["ell", "mobility"], data=df, min_n=1),
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["ell", "meals"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"], data=df,
+                             regression_kind='r_survey', min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"], data=df,
+                             regression_kind='r_survey', min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"], data=df,
+                             regression_kind='r_survey', min_n=1),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -149,9 +152,12 @@ def test_api_noweights_withNA():
     df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
     python_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["meals", "mobility"], data=df, min_n=1),
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["ell", "mobility"], data=df, min_n=1),
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["ell", "meals"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"], data=df,
+                             regression_kind='r_survey', min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"], data=df,
+                             regression_kind='r_survey', min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"], data=df,
+                             regression_kind='r_survey', min_n=1),
         ], axis=0)
     # Compare
     compare_result(r_result, python_result)
@@ -168,12 +174,12 @@ def test_api_stratified():
     design = clarite.survey.SurveyDesignSpec(df, weights="pw", cluster=None, strata="stype", fpc="fpc")
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["meals", "mobility"],
-                               data=df, survey_design_spec=design, min_n=1),
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["ell", "mobility"],
-                               data=df, survey_design_spec=design, min_n=1),
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["ell", "meals"],
-                               data=df, survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
+                             data=df, regression_kind='r_survey', survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"],
+                             data=df, regression_kind='r_survey', survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
+                             data=df, regression_kind='r_survey', survey_design_spec=design, min_n=1),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -190,12 +196,12 @@ def test_api_cluster():
     design = clarite.survey.SurveyDesignSpec(df, weights="pw", cluster="dnum", strata=None, fpc="fpc")
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["meals", "mobility"],
-                               data=df, survey_design_spec=design, min_n=1),
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["ell", "mobility"],
-                               data=df, survey_design_spec=design, min_n=1),
-        clarite.analyze.ewas_r(phenotype="api00", covariates=["ell", "meals"],
-                               data=df, survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
+                             data=df, regression_kind='r_survey', survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"],
+                             data=df, regression_kind='r_survey', survey_design_spec=design, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
+                             data=df, regression_kind='r_survey', survey_design_spec=design, min_n=1),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -226,9 +232,12 @@ def test_nhanes_noweights():
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     df = clarite.modify.rowfilter_incomplete_obs(df)
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey'),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -246,9 +255,12 @@ def test_nhanes_noweights_withna():
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     df = clarite.modify.rowfilter_incomplete_obs(df)
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey'),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -267,12 +279,12 @@ def test_nhanes_fulldesign():
                                              fpc=None, nest=True)
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
-                               survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -291,15 +303,66 @@ def test_nhanes_fulldesign_withna():
                                              fpc=None, nest=True)
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
-                               survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
+
+
+def test_nhanes_fulldesign_subset():
+    """Test the nhanes dataset with the full survey design"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_complete_result_subset_cat_r.csv")
+    # Process data
+    df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
+    df = clarite.modify.make_categorical(df, only=["race", "agecat"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
+                                             fpc=None, nest=True)
+    design.subset(df['agecat'] != "(19,39]")
+    df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        ], axis=0)
+    # Compare
+    compare_result(r_result, python_result)
+
+
+def test_nhanes_fulldesign_subset_continuous():
+    """Test the nhanes dataset with the full survey design and a random subset"""
+    # Load the data
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_data_subset.csv", index_col=None)
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_complete_result_subset_cont_r.csv")
+    # Process data
+    df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
+    df = clarite.modify.make_categorical(df, only=["race", "agecat"])
+    design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
+                                             fpc=None, nest=True, drop_unweighted=True)
+    design.subset(df['subset'] > 0)
+    df = df.drop(columns=['subset'])
+    df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    python_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        ], axis=0)
+    # Compare
+    compare_result(r_result, python_result)
 
 
 def test_nhanes_weightsonly():
@@ -314,12 +377,12 @@ def test_nhanes_weightsonly():
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR")
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
-                               survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -338,12 +401,12 @@ def test_nhanes_lonely_certainty():
                                              fpc=None, nest=True, single_cluster='certainty')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
-                               survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -362,12 +425,12 @@ def test_nhanes_lonely_adjust():
                                              fpc=None, nest=True, single_cluster='adjust')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
-                               survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -386,12 +449,12 @@ def test_nhanes_lonely_average():
                                              fpc=None, nest=True, single_cluster='average')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     calculated_result = pd.concat([
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
-                               survey_design_spec=design),
-        clarite.analyze.ewas_r(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
-                               survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             regression_kind='r_survey', survey_design_spec=design),
     ], axis=0)
     # Compare
     compare_result(r_result, calculated_result)
@@ -425,10 +488,11 @@ def test_nhanes_realistic():
                                              strata="SDMVSTRA",
                                              fpc=None,
                                              nest=True)
-    calculated_result = clarite.analyze.ewas_r(
+    calculated_result = clarite.analyze.ewas(
         phenotype="BMXBMI",
         covariates=["SES_LEVEL", "SDDSRVYR", "female", "black", "mexican", "other_hispanic", "other_eth", "RIDAGEYR"],
         data=df,
+        regression_kind='r_survey',
         survey_design_spec=design)
     # Compare
     compare_result(r_result, calculated_result)
