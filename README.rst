@@ -42,7 +42,7 @@ Using Conda
 2. Install rpy2 (optional). CLARITE has a version of the EWAS function that calls R code using the *survey* library::
 
     $ conda install -c conda-forge rpy2
-    $ conda install -c bioconda r-survey
+    $ conda install -c conda-forge r-survey
 
 3. Install CLARITE::
 
