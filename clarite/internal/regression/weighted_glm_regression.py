@@ -66,6 +66,11 @@ class WeightedGLMRegression(GLMRegression):
         # Add survey design info to the description
         self.description += "\n" + str(self.survey_design_spec)
 
+        # Validate that survey design matches the data
+        error = self.survey_design_spec.validate(data)
+        if error is not None:
+            raise ValueError(error)
+
     @staticmethod
     def get_default_result_dict():
         return {'Weight': "",

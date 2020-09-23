@@ -15,7 +15,8 @@ class SurveyDesignSpec:
     Parameters
     ----------
     survey_df: pd.DataFrame
-        A DataFrame containing Cluster, Strata, and/or weights data
+        A DataFrame containing Cluster, Strata, and/or weights data.
+        This should include all observations in the data analyzed using it (matching via index value)
     strata: string or None
         The name of the strata variable in the survey_df
     cluster: string or None
@@ -96,6 +97,7 @@ class SurveyDesignSpec:
         self.cluster_name: Optional[str] = None
         self.cluster_values: Optional[pd.Series] = None
         self.n_clust: Optional[int] = None
+        self.nested_clusters: bool = False
         # Weight
         self.single_weight: bool = False  # If True, weight_values is a Series
         self.weight_name: Optional[str] = None
@@ -163,7 +165,7 @@ class SurveyDesignSpec:
         if nest and self.has_strata and self.has_cluster:
             self.cluster_values = (self.strata_values.astype(str) + "-" + self.cluster_values.astype(str))
             self.cluster_values = self.cluster_values.rename('clust')
-            self.cluster_name += " (nested)"
+            self.nested_clusters = True
 
         # Make categorical
         self.cluster_values = self.cluster_values.astype('category')
@@ -245,7 +247,11 @@ class SurveyDesignSpec:
             result += "\tStrata: None\n"
         # Clusters
         if self.has_cluster:
-            result += f"\tCluster: {len(self.cluster_values.unique())} unique values of {self.cluster_name}\n"
+            result += f"\tCluster: {len(self.cluster_values.unique())} unique values of {self.cluster_name}"
+            if self.nested_clusters:
+                result += " (nested)\n"
+            else:
+                result += "\n"
         else:
             result += "\tCluster: None\n"
         # FPC
@@ -337,7 +343,8 @@ class SurveyDesignSpec:
             return weight_name, None, None
         elif len(values_with_missing_weight) > 0 and self.drop_unweighted:
             # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
-            warning = f"Dropping {len(values_with_missing_weight):,} non-missing observation(s) due to missing weights"
+            warning = f"Dropping {len(values_with_missing_weight):,} non-missing observation(s) due to missing weights" \
+                      f" (f{weight_name})"
             weight_name += f" ({len(values_with_missing_weight)} observations are missing weights)"
             return weight_name, values_with_missing_weight, warning
         elif len(values_with_missing_weight) > 0 and not self.drop_unweighted:
@@ -348,7 +355,7 @@ class SurveyDesignSpec:
             always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
 
             # Build a detailed error string
-            error = f"{len(values_with_missing_weight):,} observations are missing weights" \
+            error = f"{len(values_with_missing_weight):,} observations are missing weights ({weight_name})" \
                     f" when the variable is not missing."
 
             # Add more information to the error and raise it, skipping analysis of this variable
@@ -375,6 +382,56 @@ class SurveyDesignSpec:
                 error += f"\n\t{len(always_missing)} values are only found in observations with missing weights: " \
                          f"{', '.join(always_missing[:5])}, ... Should they be encoded as NaN?"
             raise ValueError(error)
+
+    def validate(self, data: pd.DataFrame) -> Optional[str]:
+        """
+        Validate that the survey design matches the data
+
+        Parameters
+        ----------
+        data: pd.DataFrame
+            Data being used with the survey design
+
+        Returns
+        -------
+        error: str or None
+            Any error message
+        """
+        # Check to see if survey information or weights are included in the data
+        msg = " Survey design variables should not be included in the data."
+        if self.has_strata:
+            if self.strata_name in data.columns:
+                return f"Strata variable ({self.strata_name}) found in the passed data." + msg
+        if self.has_cluster:
+            if self.cluster_name in data.columns:
+                return f"Cluster variable ({self.cluster_name}) found in the passed data." + msg
+        if self.has_fpc:
+            if self.fpc_name in data.columns:
+                return f"FPC variable ({self.fpc_name}) found in the passed data." + msg
+        if self.single_weight:
+            if self.weight_name in data.columns:
+                return f"Weight variable ({self.weight_name}) found in the passed data." + msg
+        if self.multi_weight:
+            matched = set(self.weight_names.values()) & set(data.columns)
+            if len(matched) == 1:
+                return f"Weight variable ({list(matched)[0]}) found in the passed data." + msg
+            if len(matched) > 1:
+                return f"{len(matched):,} Weight variables found in the passed data." + msg
+        # Check that the data has an "ID" index (which CLARITE enforces when loading)
+        if data.index.name != "ID":
+            return "The index name in the data is not 'ID'. Was it loaded using clarite.load?"
+        # Validate that subsets apply to the data
+        if self.subset_count > 0:
+            try:
+                data = data.loc[self.subset_array]
+            except Exception as e:
+                return f"Error applying the subset to the provided data: {e}"
+        # Compare index values to the survey index (as included in self.cluster_values) after applying subsets to data
+        missing_survey = ~data.index.isin(self.cluster_values.index)
+        if any(missing_survey):
+            return f"The survey design is missing information for {missing_survey.sum():,} rows in the data," \
+                   f" as matched by the index values.  Here are the first few:\n" + str(data.loc[missing_survey].head())
+        return None
 
     def subset(self, bool_array: pd.Series) -> None:
         """
