@@ -139,10 +139,11 @@ class SurveyModel(object):
 
         # nh is one row per cluster, listing the number of clusters in the strata that the cluster belongs to
         # Note that this includes strata in the original design, before any subsetting of any kind
-        nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64)
+        # Use .values in some places to get an array rather than a series
+        nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64).values
         mh = np.sqrt(nh / (nh-1))
         mh[mh == np.inf] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
-        fh = np.sqrt(1 - self.design.fpc)  # self.design.fpc has the fpc value for each cluster (one row per cluster)
+        fh = np.sqrt(1 - self.design.fpc).values  # self.design.fpc has fpc value for each cluster (one row per cluster)
         jdata *= (fh[:, None] * mh[:, None])  # This is each column in jdata being multiplied by an array
 
         v_hat = np.dot(jdata.T, jdata)  # variables X variables
