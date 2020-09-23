@@ -80,6 +80,9 @@ class SurveyModel(object):
         assert X.index.equals(design_index)
         assert y.index.equals(design_index)
 
+        # Check for number of samples per strat/clust
+
+
         # The term "variables" used below means the variables in the specific regression, such as:
         #  Intercept
         #  One value for each continuous and binary variable
@@ -139,12 +142,11 @@ class SurveyModel(object):
 
         # nh is one row per cluster, listing the number of clusters in the strata that the cluster belongs to
         # Note that this includes strata in the original design, before any subsetting of any kind
-        # Use .values in some places to get an array rather than a series
-        nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64).values
+        nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64)
         mh = np.sqrt(nh / (nh-1))
         mh[mh == np.inf] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
-        fh = np.sqrt(1 - self.design.fpc).values  # self.design.fpc has fpc value for each cluster (one row per cluster)
-        jdata *= (fh[:, None] * mh[:, None])  # This is each column in jdata being multiplied by an array
+        fh = np.sqrt(1 - self.design.fpc)  # self.design.fpc has fpc value for each cluster (one row per cluster)
+        jdata *= (fh.values[:, None] * mh.values[:, None])  # This is each column in jdata being multiplied by an array
 
         v_hat = np.dot(jdata.T, jdata)  # variables X variables
         vcov = np.dot(hess_inv, v_hat).dot(hess_inv.T)   # variables X variables
