@@ -63,7 +63,10 @@ class Regression(metaclass=ABCMeta):
         # Make sure the index of each dataset is not a multiindex and give it a consistent name
         if isinstance(self.data.index, pd.MultiIndex):
             raise ValueError("Data must not have a multiindex")
-        self.data.index.name = "ID"
+        if self.data.index.name != "ID":
+            click.echo(click.style("The index name in the provided data is not 'ID'. Was it loaded using clarite.load?",
+                                   fg='yellow'))
+            self.data.index.name = "ID"
 
         # Collect lists of regression variables
         types = _get_dtypes(self.data)

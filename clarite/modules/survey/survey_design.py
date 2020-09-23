@@ -417,9 +417,6 @@ class SurveyDesignSpec:
                 return f"Weight variable ({list(matched)[0]}) found in the passed data." + msg
             if len(matched) > 1:
                 return f"{len(matched):,} Weight variables found in the passed data." + msg
-        # Check that the data has an "ID" index (which CLARITE enforces when loading)
-        if data.index.name != "ID":
-            return "The index name in the data is not 'ID'. Was it loaded using clarite.load?"
         # Validate that subsets apply to the data
         if self.subset_count > 0:
             try:
