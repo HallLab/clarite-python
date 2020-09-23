@@ -139,6 +139,8 @@ class SurveyDesignSpec:
             self.has_strata = True
             if strata not in survey_df:
                 raise KeyError(f"strata key ('{strata}') was not found in the survey_df")
+            elif survey_df[strata].isna().any():
+                raise ValueError(f"{survey_df[strata].isna().sum():,} of {len(survey_df):,} strata values were missing")
             else:
                 self.strata_values = survey_df[strata].rename('strat')
             self.n_strat = len(self.strata_values.unique())
@@ -157,6 +159,9 @@ class SurveyDesignSpec:
             self.has_cluster = True
             if cluster not in survey_df:
                 raise KeyError(f"cluster key ('{cluster}') was not found in the survey_df")
+            elif survey_df[cluster].isna().any():
+                raise ValueError(f"{survey_df[cluster].isna().sum():,} of {len(survey_df):,} "
+                                 f"cluster values were missing")
             else:
                 self.cluster_values = survey_df[cluster].rename('clust')
                 self.n_clust = len(self.cluster_values.unique())
@@ -214,6 +219,8 @@ class SurveyDesignSpec:
             self.has_fpc = True
             if fpc not in survey_df:
                 raise KeyError(f"fpc key ('{fpc}') was not found in the survey_df")
+            elif survey_df[fpc].isna().any():
+                raise ValueError(f"{survey_df[fpc].isna().sum():,} of {len(survey_df):,} fpc values were missing")
             else:
                 self.fpc_values_original = survey_df[fpc].rename('fpc')  # Need unmodified version for R code
                 self.fpc_values = survey_df[fpc].rename('fpc')
