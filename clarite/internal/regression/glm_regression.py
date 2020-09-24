@@ -168,7 +168,8 @@ class GLMRegression(Regression):
 
         result = pd.DataFrame.from_dict(self.results, orient='index')\
                              .reset_index(drop=False)\
-                             .rename(columns={'index': 'Variable'})
+                             .rename(columns={'index': 'Variable'})\
+                             .astype({"N": pd.Int64Dtype()})  # b/c N isn't checked when weights are missing
 
         return result
 
