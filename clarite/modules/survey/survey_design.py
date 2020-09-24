@@ -603,3 +603,23 @@ class SurveyDesign(object):
             return X.shape[0] - self.n_strat - (X.shape[1] - 1)
         else:
             return X.shape[0] - (X.shape[1]) - 1
+
+    def check_single_clusters(self, index) -> List[str]:
+        """
+        Parameters
+        ----------
+        index: pd.Index
+            Index of rows from the survey design that will be used with the data
+
+        Returns
+        -------
+        single_cluster_names: List[str] or None
+            Return a list of names of the single clusters, or None if this isn't applicable
+        """
+        if self.has_strata and self.has_cluster and self.single_cluster not in {'average', 'certainty', 'adjust'}:
+            info = pd.merge(self.strat, self.clust, how="outer", left_index=True, right_index=True)
+            clust_per_strat = info.loc[index].groupby('strat').nunique().squeeze()
+            single_cluster_names = [str(c) for c in clust_per_strat[clust_per_strat == 1].index.values]
+            return single_cluster_names
+        else:
+            return []

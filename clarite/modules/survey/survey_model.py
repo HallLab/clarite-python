@@ -45,17 +45,17 @@ class SurveyModel(object):
         else:
             self.glm_flag = False
 
-    def _stata_linearization_vcov(self, X, y):
+    def _stata_linearization_vcov(self, X: pd.DataFrame, y: pd.DataFrame):
         """
         Get the linearized covariance matrix using STATA's methodology
 
         Parameters
         ----------
-        X : array-like
-            A n x p array where 'n' is the number of observations and 'p'
+        X : pd.DataFrame
+            A n x p dataframe where 'n' is the number of observations and 'p'
             is the number of regressors.
-        y : array-like
-            1d array of the response variable
+        y : pd.DataFrame
+            1-column dataframe of the response variable
 
         Returns
         -------
@@ -79,9 +79,6 @@ class SurveyModel(object):
         design_index = self.design.strat.index  # May be all ones, but it always exists
         assert X.index.equals(design_index)
         assert y.index.equals(design_index)
-
-        # Check for number of samples per strat/clust
-
 
         # The term "variables" used below means the variables in the specific regression, such as:
         #  Intercept
@@ -110,7 +107,6 @@ class SurveyModel(object):
         d_hat = pd.merge(d_hat, self.design.clust, left_index=True, right_index=True).set_index('clust', append=True)
 
         # Get sum of d_hat within each cluster (rows = clusters, columns = variables)
-        # Note: This adds additional rows for clusters (in the full design) that do not have observations
         jdata = d_hat.groupby(axis=0, level='clust').apply(sum)
 
         if self.design.has_strata:
@@ -118,25 +114,26 @@ class SurveyModel(object):
             jdata = pd.merge(jdata, self.design.strat_for_clust.loc[jdata.index].rename('strat'), left_index=True, right_index=True)\
                       .set_index('strat', append=True)
 
-            def center_strata(data, single_cluster, pop_mean):
-                if len(data) > 1 or single_cluster == 'average' or single_cluster == 'certainty':
-                    # Substract the mean across clusters
-                    # This results in a value of 0 for the strata when there is only 1 cluster
-                    return data - data.mean()
-                elif len(data) == 1 and single_cluster == 'adjust':
+            # Center each stratum in jdata (which is one or more rows, each corresponding to individual clusters)
+
+            def center_strata(data, single_cluster_setting, pop_mean):
+                """
+                Center strata around zero, logging any single-cluster strata
+                """
+                if len(data) == 1 and single_cluster_setting == 'adjust':
                     # Subtract the population mean from the single-cluster strata
                     return data - pop_mean
-                elif len(data) == 1:
-                    raise ValueError(f"Strat '{data.name}' has a single cluster. "
-                                     f"Adjust the 'single_cluster' SurveyDesign parameter or reassign the cluster to avoid this error.")
+                else:
+                    # Substract the mean across clusters in this strata
+                    # This results in a value of 0 for the strata when there is only 1 cluster
+                    return data - data.mean()
 
-            # Center each stratum
-            # For each stratum in jdata (which is one or more rows corresponding to individual clusters)
-            single_cluster = self.design.single_cluster  # 'average', 'certainty', or 'adjust'.  Anything else will throw an error for single-cluster-strata
-            jdata = jdata.groupby(axis=0, level='strat').apply(lambda g: center_strata(g, single_cluster, d_hat.mean()))
+            jdata = jdata.groupby(axis=0, level='strat')\
+                         .apply(lambda g: center_strata(g, self.design.single_cluster, d_hat.mean()))
 
             # Scale after centering, if required
-            if single_cluster == 'average':
+            # TODO: Scale may be different if some strat/clusters drop?
+            if self.design.single_cluster == 'average':
                 single_cluster_scale = np.sqrt(self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1)))
                 jdata *= single_cluster_scale
 
@@ -197,6 +194,13 @@ class SurveyModel(object):
         else:
             self.init_args["weights"] = weights
         self.params = self._get_params(y, X)
+
+        # Throw an error (resulting in a null result) if single clusters aren't allowed but were found
+        single_cluster_names = self.design.check_single_clusters(X.index)
+        if (len(single_cluster_names) > 0) and (self.design.single_cluster not in {'average', 'certainty', 'adjust'}):
+            raise ValueError(f"One or more strata have single clusters: {', '.join(single_cluster_names)}. "
+                             f"Adjust the 'single_cluster' SurveyDesignSpec parameter "
+                             f"or reassign the singular cluster to avoid this error.")
 
         if self.design.has_strata or self.design.has_cluster or self.design.has_weights:
             # Calculate stderr based on covariance

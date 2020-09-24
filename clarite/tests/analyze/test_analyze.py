@@ -19,6 +19,8 @@ def compare_result(loaded_r_result, calculated_result, atol=0, rtol=1e-04):
     """Binary variables must be specified, since there are expected differences"""
     # Remove "Phenotype" from the index in calculated results
     calculated_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
+    # Convert 'N' from IntegerArray to float64 so that the comparison works
+    calculated_result = calculated_result.astype({"N": 'float64'})
     # Merge
     merged = pd.merge(left=loaded_r_result, right=calculated_result,
                       left_index=True, right_index=True,

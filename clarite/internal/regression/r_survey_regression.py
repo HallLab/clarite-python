@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import click
 import pandas as pd
 
 from clarite.internal.utilities import requires, _get_dtypes
