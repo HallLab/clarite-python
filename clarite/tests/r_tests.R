@@ -34,13 +34,20 @@ get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=
       var_idx_name <- alt_name
     }
     glm_table <- summary(glm_full)$coefficients
-    beta <- glm_table[var_idx_name, 'Estimate']
     se <- glm_table[var_idx_name, 'Std. Error']
-    # Pval is based on a t-value for gaussian and a z-value for binomial
-    if ('Pr(>|t|)' %in% colnames(glm_table)){
-      pval <- glm_table[var_idx_name, 'Pr(>|t|)']
+    if(se == Inf) {
+      # No pvalue or beta will show up
+      se <- NA
+      beta <- NA
+      pval <- 1.0
     } else {
-      pval <- glm_table[var_idx_name, 'Pr(>|z|)']
+      beta <- glm_table[var_idx_name, 'Estimate']
+      # Pval is based on a t-value for gaussian and a z-value for binomial
+      if ('Pr(>|t|)' %in% colnames(glm_table)){
+        pval <- glm_table[var_idx_name, 'Pr(>|t|)']
+      } else {
+        pval <- glm_table[var_idx_name, 'Pr(>|z|)']
+      }
     }
     return(data.frame("Variable"=variable,
                       "N"=nobs(glm_full),
@@ -560,3 +567,81 @@ result <- rbind(
     result_LBXBEC
 )
 write_result(result, 'nhanes_real_python.csv')
+
+#######################
+# NHANES Subset Test #
+######################
+print("NHANES Subset Test")
+
+# Load Data
+data <- read.table("../test_data_files/nhanes_subset/data.txt", sep="\t", header=TRUE)
+survey_data <- read.table("../test_data_files/nhanes_subset/design_data.txt", sep="\t", header=TRUE)
+data$LBXHBC <- as.factor(data$LBXHBC)
+data$black <- as.factor(data$black)
+data$female <- as.factor(data$female)
+data$SES_LEVEL <- as.factor(data$SES_LEVEL)
+data$SDDSRVYR <- as.factor(data$SDDSRVYR)
+data <- merge(data, survey_data)
+
+# Make and subset design
+design <- svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE)
+design <- subset(design, data$black==1)
+
+# LBXHBC
+glm_full_LBXHBC <- svyglm(as.formula(LBXLYPCT~LBXHBC+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
+                          design=design,
+                          na.action=na.omit)
+glm_restricted <- svyglm(as.formula(LBXLYPCT~female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
+                         design=glm_full_LBXHBC$survey.design,
+                         na.action=na.omit)
+result_LBXHBC <- get_glm_result("LBXHBC",
+                                glm_full=glm_full_LBXHBC,
+                                glm_restricted=glm_restricted,
+                                use_weights=TRUE)
+# LBXVCF
+glm_full <- svyglm(as.formula(LBXLYPCT~LBXVCF+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
+                          design=design,
+                          na.action=na.omit)
+result_LBXVCF <- get_glm_result("LBXVCF",
+                                glm_full=glm_full,
+                                glm_restricted=NULL,
+                                use_weights=TRUE)
+# SMD160
+glm_full <- svyglm(as.formula(LBXLYPCT~SMD160+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
+                          design=design,
+                          na.action=na.omit)
+result_SMD160 <- get_glm_result("SMD160",
+                                glm_full=glm_full,
+                                glm_restricted=NULL,
+                                use_weights=TRUE)
+# LBDEONO
+glm_full <- svyglm(as.formula(LBXLYPCT~LBDEONO+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
+                          design=design,
+                          na.action=na.omit)
+result_LBDEONO <- get_glm_result("LBDEONO",
+                                glm_full=glm_full,
+                                glm_restricted=NULL,
+                                use_weights=TRUE)
+# Merge and save R results
+result <- rbind(
+    result_LBXHBC,
+    result_LBXVCF,
+    result_SMD160,
+    result_LBDEONO
+)
+write_result(result, 'nhanes_subset_r.csv')
+
+# Update python results (use regression directly for binary, not an LRT)
+result_LBXHBC_py <- update_binary_result(ewas_result = result_LBXHBC,
+                               new_bin_result = get_glm_result("LBXHBC",
+                                                               glm_full_LBXHBC,
+                                                               glm_restricted=NULL,
+                                                               alt_name="LBXHBC1"))
+# Save python results
+result <- rbind(
+    result_LBXHBC_py,
+    result_LBXVCF,
+    result_SMD160,
+    result_LBDEONO
+)
+write_result(result, 'nhanes_subset_python.csv')
