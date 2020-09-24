@@ -134,11 +134,16 @@ regress_cat <- function(data, varying_covariates, phenotype, var_name, regressio
   # Run GLM Functions
   var_result <- tryCatch(glm(stats::as.formula(fmla), family=regression_family, data=data, na.action=na.omit),
                          error=function(e) warn_on_e(var_name, e))
-  restricted_result <- tryCatch(glm(stats::as.formula(fmla_restricted), family=regression_family,
+  # Only run if the full model did not have an error (isn't NULL)
+  if(!is.null(var_result)){
+      restricted_result <- tryCatch(glm(stats::as.formula(fmla_restricted), family=regression_family,
                                     data=var_result$model),  # Use the same data as the full model
-                                error=function(e) warn_on_e(var_name, e))
+                                    error=function(e) warn_on_e(var_name, e))
+  } else {
+    restricted_result <- NULL
+  }
 
-  if(!is.null(var_result) & !is.null(restricted_result)){
+  if(!is.null(restricted_result)){
     # Get the LRT using anova
     lrt <- list(p=NA)  # Start with NA for p in case anova fails
     tryCatch(lrt <- anova(var_result, restricted_result, test = "LRT"), error=function(e) warn_on_e(var_name, e))
@@ -199,12 +204,17 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
                          error=function(e) warn_on_e(var_name, e))
   # Restricted result uses the design from the full result to ensure the same observations are used.
   # Otherwise some dropped by 'na.omit' may be included in the restricted model.
-  restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), design=var_result$survey.design,
-                                               family=regression_family),
-                                error=function(e) warn_on_e(var_name, e))
+  # Only run if the full model did not have an error (isn't NULL)
+  if(!is.null(var_result)){
+    restricted_result <- tryCatch(survey::svyglm(stats::as.formula(fmla_restricted), design=var_result$survey.design,
+                                                     family=regression_family),
+                                                     error=function(e) warn_on_e(var_name, e))
+  } else {
+    restricted_result <- NULL
+  }
 
-  # Collect results
-  if(!is.null(var_result) & !is.null(restricted_result)){
+  # Collect results if restricted_result is not NULL
+  if(!is.null(restricted_result)){
     # Get the LRT using anova
     lrt <- list(p=NA)  # Start with NA for p in case anova fails
     tryCatch(lrt <- anova(var_result, restricted_result, method = "LRT"), error=function(e) warn_on_e(var_name, e))
@@ -232,7 +242,7 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
 
   # Skip regression if the min_n filter isn't met
   if (non_na_obs < min_n){
-    warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n))
+    warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n, ")"))
     return(data.frame(result, stringsAsFactors = FALSE))
   }
 

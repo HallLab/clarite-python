@@ -82,7 +82,6 @@ class RSurveyRegression(Regression):
         if not self.run_complete:
             raise ValueError("No results: either the 'run' method was not called, or there was a problem running")
 
-        click.echo("Note: Errors and Warnings are not explicitly collected when running regression using R")
         return self.result
 
     @requires('rpy2')
@@ -97,6 +96,9 @@ class RSurveyRegression(Regression):
         r_code_folder = (Path(__file__).parent.parent.parent / 'r_code')
         filename = str(r_code_folder / "ewas_r.R")
         ro.r.source(filename)
+
+        # Print warnings as they occur
+        ro.r("options(warn=1)")
 
         # Lists of regression variables (NULL if empty)
         cat_vars = ro.StrVector(self.regression_variables['binary'] + self.regression_variables['categorical'])
