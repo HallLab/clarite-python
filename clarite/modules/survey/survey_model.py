@@ -195,13 +195,6 @@ class SurveyModel(object):
             self.init_args["weights"] = weights
         self.params = self._get_params(y, X)
 
-        # Throw an error (resulting in a null result) if single clusters aren't allowed but were found
-        single_cluster_names = self.design.check_single_clusters(X.index)
-        if (len(single_cluster_names) > 0) and (self.design.single_cluster not in {'average', 'certainty', 'adjust'}):
-            raise ValueError(f"One or more strata have single clusters: {', '.join(single_cluster_names)}. "
-                             f"Adjust the 'single_cluster' SurveyDesignSpec parameter "
-                             f"or reassign the singular cluster to avoid this error.")
-
         if self.design.has_strata or self.design.has_cluster or self.design.has_weights:
             # Calculate stderr based on covariance
             if self.cov_method == 'jackknife':

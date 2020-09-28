@@ -164,9 +164,6 @@ class RSurveyRegression(Regression):
             # Single cluster setting
             ro.r(f'options("survey.lonely.psu"="{self.survey_design_spec.single_cluster}")')
 
-            # Apply subset
-            data = data.loc[self.survey_design_spec.subset_array]
-
             # Reset the index on data so that the first column is "ID"
             data = data.reset_index(drop=False)
             data = data[["ID", ] + [c for c in data.columns if c != "ID"]]
@@ -184,6 +181,7 @@ class RSurveyRegression(Regression):
                                    allowed_nonvarying=allowed_nonvarying,
                                    min_n=self.min_n,
                                    weights=weights,
+                                   subset=self.survey_design_spec.subset_array,
                                    **kwargs)
 
         result = ewasresult2py(result)

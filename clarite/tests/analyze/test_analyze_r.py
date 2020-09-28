@@ -496,3 +496,29 @@ def test_nhanes_realistic():
         survey_design_spec=design)
     # Compare
     compare_result(r_result, calculated_result)
+
+
+def test_nhanes_subset_singleclusters():
+    """Test a partial nhanes dataset with the full survey design with a subset causing single clusters"""
+    # Load the data
+    df = clarite.load.from_tsv(DATA_PATH.parent / "test_data_files" / "nhanes_subset" / "data.txt")
+    survey_df = clarite.load.from_tsv(DATA_PATH.parent / "test_data_files" / "nhanes_subset" / "design_data.txt")
+    survey_df = survey_df.loc[df.index]
+    # Load the expected results
+    r_result = load_r_results(DATA_PATH / "nhanes_subset_r.csv")
+    # Process data
+    df = clarite.modify.make_binary(df, only=["LBXHBC", "black", "female"])
+    df = clarite.modify.make_categorical(df, only=["SES_LEVEL", "SDDSRVYR"])
+    # Create design
+    design = clarite.survey.SurveyDesignSpec(survey_df, weights="WTMEC4YR",
+                                             cluster="SDMVPSU", strata="SDMVSTRA",
+                                             fpc=None, nest=True)
+    design.subset(df['black'] == 1)
+    df = df.drop(columns="black")
+    # Run
+    covariates = ["female", "SES_LEVEL", "RIDAGEYR", "SDDSRVYR", "BMXBMI"]
+    calculated_result = clarite.analyze.ewas(phenotype="LBXLYPCT", covariates=covariates,
+                                             data=df, survey_design_spec=design,
+                                             min_n=50, regression_kind='r_survey')
+    # Compare
+    compare_result(r_result, calculated_result)

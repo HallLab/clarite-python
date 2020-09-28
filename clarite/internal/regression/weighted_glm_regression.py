@@ -4,6 +4,7 @@ import click
 import numpy as np
 import scipy
 import patsy
+import pandas as pd
 import statsmodels.api as sm
 
 from .glm_regression import GLMRegression
@@ -159,40 +160,58 @@ class WeightedGLMRegression(GLMRegression):
                 self.results[rv]['Variable_type'] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
-                    # Take a copy of the data (ignoring other RVs) and apply any subset from the survey design
-                    data = self.survey_design_spec.subset_data(self.data, rv, self.outcome_variable, self.covariates)
+                    # Use masks to track:
+                    # 1) Survey subset
+                    # 2) Missing weights
+                    # 3) Complete cases
+                    # Don't drop rows from data until the end, and drop the same rows when getting the survey design
 
-                    # Get the name of the weights and check for missing weights, potentially dropping them
-                    weight_name, missing_weight_idx, warning = self.survey_design_spec.check_missing_weights(data, rv)
-                    if missing_weight_idx is not None:
-                        # Drop those rows
-                        data = data.drop(missing_weight_idx, axis=0)
-                        # Save warning
+                    # Take a copy of the data (ignoring other RVs) and create a keep_rows mask
+                    keep_columns = [rv, self.outcome_variable] + self.covariates
+                    data = self.data[keep_columns]
+                    keep_row_mask = pd.Series(True, index=self.data.index)
+
+                    # Apply any subset and track dropped categories caused by the subset
+                    keep_row_mask = keep_row_mask & self.survey_design_spec.subset_array
+
+                    # Get missing weight mask
+                    weight_name, missing_weight_mask, warning = self.survey_design_spec.check_missing_weights(data, rv)
+                    if warning is not None:
                         self.warnings[rv].append(warning)
+                    keep_row_mask = keep_row_mask & ~missing_weight_mask  # Negate missing_weight_mask so True=keep
 
-                    # Get survey design for the given variable
-                    complete_case_idx = self.get_complete_case_idx(data, rv)
-                    survey_design, data = self.survey_design_spec.get_survey_design(data, rv, complete_case_idx)
+                    # Get complete case mask
+                    complete_case_mask = self.get_complete_case_mask(data, rv)  # Complete cases
+                    keep_row_mask = keep_row_mask & complete_case_mask
+
+                    # Get survey design
+                    survey_design = self.survey_design_spec.get_survey_design(rv, keep_row_mask)
 
                     # Filter by min_n
-                    N = len(complete_case_idx)
+                    N = keep_row_mask.sum()
                     self.results[rv]['N'] = N
                     if N < self.min_n:
                         raise ValueError(f"too few complete observations (min_n filter: {N} < {self.min_n})")
 
                     # Check for covariates that do not vary (they get ignored)
-                    varying_covars, warnings = self.check_covariate_values(complete_case_idx)
+                    varying_covars, warnings = self.check_covariate_values(keep_row_mask)
                     self.warnings[rv].extend(warnings)
                     data = data[[rv, self.outcome_variable] + varying_covars]  # Drop any nonvarying covars
+
+                    # Apply the keep_row_mask to the data
+                    data = data.loc[keep_row_mask]
 
                     # Remove unused categories caused by dropping all occurrences of that value
                     # during the above filtering (warning when this occurs)
                     removed_cats = _remove_empty_categories(data)
                     if len(removed_cats) >= 1:
                         for extra_cat_var, extra_cats in removed_cats.items():
-                            self.warnings[rv].append(f"'{str(extra_cat_var)}' had categories with no occurrences: "
-                                                     f"{', '.join([str(c) for c in extra_cats])} "
-                                                     f"after removing observations with missing values")
+                            warning = f"'{str(extra_cat_var)}' had categories with no occurrences: " \
+                                      f"{', '.join([str(c) for c in extra_cats])} " \
+                                      f"after removing observations with missing values"
+                            if self.survey_design_spec.subset_count > 0:
+                                warning += f" and applying the {self.survey_design_spec.subset_count} subset(s)"
+                            self.warnings[rv].extend(warning)
 
                     # Get the formulas
                     formula_restricted, formula = self.get_formulas(rv, varying_covars)

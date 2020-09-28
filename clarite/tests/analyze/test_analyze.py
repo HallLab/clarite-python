@@ -507,4 +507,4 @@ def test_nhanes_subset_singleclusters():
                                          data=df, survey_design_spec=design,
                                          min_n=50)
     # Compare
-    compare_result(r_result, python_result, rtol=1e-03)
+    compare_result(r_result, python_result)

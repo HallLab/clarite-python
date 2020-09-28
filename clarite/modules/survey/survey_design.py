@@ -126,7 +126,14 @@ class SurveyDesignSpec:
         # Initialize the subset information (a boolean array of True, indicating every row is kept)
         self.subset_array = pd.Series(True, index=survey_df.index, name='subset')
         self.subset_count = 0
-        self.subset_empty_cat_vars = list()
+
+        # Raise an error if single clusters were found but shouldn't be allowed
+        if self.has_strata and self.has_cluster and self.single_cluster not in {'average', 'certainty', 'adjust'}:
+            if self.clust_per_strat.min() < 2:
+                single_clusters = [str(c) for c in self.clust_per_strat[self.clust_per_strat == 1].index.values]
+                raise ValueError(f"One or more strata have single clusters: {', '.join(single_clusters)}. "
+                                 f"Adjust the 'single_cluster' SurveyDesignSpec parameter "
+                                 f"or reassign the singular cluster to avoid this error.")
 
     def process_strata(self, strata, survey_df):
         """
@@ -215,6 +222,7 @@ class SurveyDesignSpec:
         if fpc is None:
             self.fpc_values = pd.Series(np.zeros(len(self.index)), index=self.index, name='fpc')
         else:
+            # TODO: Should fpc scaling occuring after subsetting?
             self.fpc_name = fpc
             self.has_fpc = True
             if fpc not in survey_df:
@@ -328,13 +336,15 @@ class SurveyDesignSpec:
         return has_weights, weight_name, weight_values
 
     def check_missing_weights(self, data: pd.DataFrame, regression_variable: str) \
-            -> Tuple[Optional[str], Optional[pd.Index], Optional[str]]:
+            -> Tuple[Optional[str], Optional[pd.Series], Optional[str]]:
         """
         Return:
             None, None, None if no weights are used
             weight_name, None, None if there are no missing weights
-            weight_name, missing_index, warning if there are missing weights and 'drop_unweighted' is True
+            weight_name, missing_weight_mask, warning if there are missing weights and 'drop_unweighted' is True
             Raise an error if there are missing weights and 'drop_unweighted' is False
+
+            missing_weight_mask is True if the weight is missing
         """
         # Get weight values
         has_weight, weight_name, weight_values = self.get_weights(regression_variable)
@@ -344,25 +354,26 @@ class SurveyDesignSpec:
         # Check if the survey design is missing weights when the variable value is not
         variable_na = data[regression_variable].isna()
         weight_na = weight_values.isna()
-        values_with_missing_weight = data.loc[~variable_na & weight_na, regression_variable]
+        missing_weight_mask = ~variable_na & weight_na
 
-        if len(values_with_missing_weight) == 0:
-            return weight_name, None, None
-        elif len(values_with_missing_weight) > 0 and self.drop_unweighted:
+        if missing_weight_mask.sum() == 0:
+            return weight_name, missing_weight_mask, None
+        elif missing_weight_mask.sum() > 0 and self.drop_unweighted:
             # Warn, Drop observations with missing weights, and re-validate (for nonvarying covariates, for example)
-            warning = f"Dropping {len(values_with_missing_weight):,} non-missing observation(s) due to missing weights" \
+            warning = f"Dropping {missing_weight_mask.sum():,} non-missing observation(s) due to missing weights" \
                       f" (f{weight_name})"
-            weight_name += f" ({len(values_with_missing_weight)} observations are missing weights)"
-            return weight_name, values_with_missing_weight, warning
-        elif len(values_with_missing_weight) > 0 and not self.drop_unweighted:
+            weight_name += f" ({missing_weight_mask.sum()} observations are missing weights)"
+            return weight_name, missing_weight_mask, warning
+        elif missing_weight_mask.sum() > 0 and not self.drop_unweighted:
             # Get unique values
+            values_with_missing_weight = data.loc[missing_weight_mask, regression_variable]
             unique_missing = values_with_missing_weight.unique()
             unique_not_missing = data.loc[~variable_na & ~weight_na, regression_variable].unique()
             sometimes_missing = sorted([str(v) for v in (set(unique_missing) & set(unique_not_missing))])
             always_missing = sorted([str(v) for v in (set(unique_missing) - set(unique_not_missing))])
 
             # Build a detailed error string
-            error = f"{len(values_with_missing_weight):,} observations are missing weights ({weight_name})" \
+            error = f"{missing_weight_mask.sum():,} observations are missing weights ({weight_name})" \
                     f" when the variable is not missing."
 
             # Add more information to the error and raise it, skipping analysis of this variable
@@ -455,46 +466,32 @@ class SurveyDesignSpec:
             # Update subset_array for tracking
             self.subset_array = self.subset_array & bool_array
             self.subset_count += 1
-
-            # Update data
-            if self.single_weight:
-                self.weight_values = self.weight_values.loc[bool_array]
-            elif self.multi_weight:
-                self.weight_values = {k: v.loc[bool_array] for k, v in self.weight_values.items()}
-            self.strata_values = self.strata_values.loc[bool_array]
-            self.cluster_values = self.cluster_values.loc[bool_array]
         except IndexingError:
             raise ValueError("The boolean array passed to `subset` could not be used:"
                              " the index is incompatible with the survey design")
 
-    def subset_data(self,
-                    data: pd.DataFrame,
-                    rv: str, outcome_variable: str, covariates: List[str]) -> pd.DataFrame:
-        """
-        Return a copy of the data with only the required variables.
-        Subset observations according to the design subset, and record categorical types that become empty
-        """
-        # Filter data (taking a copy)
-        columns = [rv, outcome_variable] + covariates
-        data = data.loc[self.subset_array, columns]
-        # Track categories that went missing (no observations) because of the subset and remove them
-        subset_empty_categories = _remove_empty_categories(data)
-        # Track which variables are affected
-        for empty_cat_var in subset_empty_categories.keys():
-            self.subset_empty_cat_vars.append(empty_cat_var)
-        return data
-
     def get_survey_design(self,
-                          data: pd.DataFrame,
                           regression_variable: str,
-                          complete_case_idx):
+                          complete_case_mask):
         """
+        Get a survey design based on the SurveyDesignSpec, but specific to the rv and data
+
+        Parameters
+        ----------
+        regression_variable: str
+            Name of the regression variable, used to match the weight if needed
+        complete_case_mask: pd.Series
+            Complete case rows in the data are True, others are False
+
+        Returns
+        -------
+        sd: SurveyDesign
 
         """
-        # Get parameters
-        has_strata, strata_values = self.get_strata(complete_case_idx)
-        has_cluster, cluster_values = self.get_clusters(complete_case_idx)
-        has_weights, weight_name, weight_values = self.get_weights(regression_variable, complete_case_idx)
+        # Get parameters using the complete case index
+        has_strata, strata_values = self.get_strata(complete_case_mask)
+        has_cluster, cluster_values = self.get_clusters(complete_case_mask)
+        has_weights, weight_name, weight_values = self.get_weights(regression_variable, complete_case_mask)
 
         # Initialize Survey Design
         sd = SurveyDesign(
@@ -506,7 +503,7 @@ class SurveyDesignSpec:
             clust_per_strat=self.clust_per_strat,
             strat_for_clust=self.strat_for_clust)
 
-        return sd, data
+        return sd
 
 
 class SurveyDesign(object):
@@ -603,23 +600,3 @@ class SurveyDesign(object):
             return X.shape[0] - self.n_strat - (X.shape[1] - 1)
         else:
             return X.shape[0] - (X.shape[1]) - 1
-
-    def check_single_clusters(self, index) -> List[str]:
-        """
-        Parameters
-        ----------
-        index: pd.Index
-            Index of rows from the survey design that will be used with the data
-
-        Returns
-        -------
-        single_cluster_names: List[str] or None
-            Return a list of names of the single clusters, or None if this isn't applicable
-        """
-        if self.has_strata and self.has_cluster and self.single_cluster not in {'average', 'certainty', 'adjust'}:
-            info = pd.merge(self.strat, self.clust, how="outer", left_index=True, right_index=True)
-            clust_per_strat = info.loc[index].groupby('strat').nunique().squeeze()
-            single_cluster_names = [str(c) for c in clust_per_strat[clust_per_strat == 1].index.values]
-            return single_cluster_names
-        else:
-            return []

@@ -112,16 +112,25 @@ class GLMRegression(Regression):
                 'Diff_AIC': np.nan,
                 'pvalue': np.nan}
 
-    def get_complete_case_idx(self, data, regression_variable):
-        """Get index of observations that are not missing in the test variable, the outcome variable, and covariates"""
-        return data.dropna(axis='index', how='any',
-                           subset=[regression_variable, self.outcome_variable] + self.covariates)\
-                   .index
+    def get_complete_case_mask(self, data, regression_variable):
+        """
+        Get boolean mask of observations that are not missing in the test variable, the outcome variable, and covariates
+        Parameters
+        ----------
+        data
+        regression_variable
 
-    def check_covariate_values(self, complete_case_idx) -> Tuple[List[str], List[str]]:
+        Returns
+        -------
+        mask: Pd.Series
+            Boolean series with True = complete case and False = missing one or more values
+        """
+        return ~data[[regression_variable, self.outcome_variable] + self.covariates].isna().any(axis=1)
+
+    def check_covariate_values(self, keep_row_mask) -> Tuple[List[str], List[str]]:
         """Remove covariates that do not vary, warning when this occurs"""
         warnings = []
-        unique_values = self.data.loc[complete_case_idx, self.covariates].nunique()
+        unique_values = self.data.loc[keep_row_mask, self.covariates].nunique()
         varying_covars = list(unique_values[unique_values > 1].index.values)
         non_varying_covars = list(unique_values[unique_values <= 1].index.values)
         if len(non_varying_covars) > 0:
@@ -173,10 +182,10 @@ class GLMRegression(Regression):
 
         return result
 
-    def run_continuous(self, data, regression_variable, complete_case_idx, formula) -> Dict:
+    def run_continuous(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Regress
-        est = smf.glm(formula, data=data.loc[complete_case_idx], family=self.family).fit(use_t=self.use_t)
+        est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
         # Save results if the regression converged
         if est.converged:
             result['Converged'] = True
@@ -187,10 +196,10 @@ class GLMRegression(Regression):
 
         return result
 
-    def run_binary(self, data, regression_variable, complete_case_idx, formula) -> Dict:
+    def run_binary(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Regress
-        est = smf.glm(formula, data=data.loc[complete_case_idx], family=self.family).fit(use_t=self.use_t)
+        est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
         # Check convergence
         # Save results if the regression converged
         if est.converged:
@@ -210,11 +219,11 @@ class GLMRegression(Regression):
 
         return result
 
-    def run_categorical(self, data, regression_variable, complete_case_idx, formula, formula_restricted) -> Dict:
+    def run_categorical(self, data, regression_variable, formula, formula_restricted) -> Dict:
         result = dict()
         # Regress both models
-        est = smf.glm(formula, data=data.loc[complete_case_idx], family=self.family).fit(use_t=self.use_t)
-        est_restricted = smf.glm(formula_restricted, data=self.data.loc[complete_case_idx],
+        est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
+        est_restricted = smf.glm(formula_restricted, data=data,
                                  family=self.family).fit(use_t=True)
         # Check convergence
         if est.converged & est_restricted.converged:
@@ -240,19 +249,20 @@ class GLMRegression(Regression):
                 self.results[rv]['Variable_type'] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
-                    # Get complete case index and filter by min_n
-                    complete_case_idx = self.get_complete_case_idx(self.data, rv)
-                    N = len(complete_case_idx)
+                    # Take a copy of the data (ignoring other RVs)
+                    keep_columns = [rv, self.outcome_variable] + self.covariates
+                    data = self.data[keep_columns]
+
+                    # Get complete case mask and filter by min_n
+                    complete_case_mask = self.get_complete_case_mask(data, rv)
+                    N = complete_case_mask.sum()
                     self.results[rv]['N'] = N
                     if N < self.min_n:
                         raise ValueError(f"too few complete observations (min_n filter: {N} < {self.min_n})")
 
                     # Check for covariates that do not vary (they get ignored)
-                    varying_covars, warnings = self.check_covariate_values(complete_case_idx)
+                    varying_covars, warnings = self.check_covariate_values(complete_case_mask)
                     self.warnings[rv].extend(warnings)
-
-                    # Take a copy of the required variables rather than operating directly on the stored data
-                    data = self.data[[rv, self.outcome_variable] + varying_covars]
 
                     # Remove unused categories (warning when this occurs)
                     removed_cats = _remove_empty_categories(data)
@@ -265,13 +275,16 @@ class GLMRegression(Regression):
                     # Get the formulas
                     formula_restricted, formula = self.get_formulas(rv, varying_covars)
 
+                    # Apply the keep_row_mask to the data
+                    data = data.loc[complete_case_mask]
+
                     # Run Regression
                     if rv_type == 'continuous':
-                        result = self.run_continuous(data, rv, complete_case_idx, formula)
+                        result = self.run_continuous(data, rv, formula)
                     elif rv_type == 'binary':  # Essentially same as continuous, except string used to key the results
-                        result = self.run_binary(data, rv, complete_case_idx, formula)
+                        result = self.run_binary(data, rv, formula)
                     elif rv_type == 'categorical':
-                        result = self.run_categorical(data, rv, complete_case_idx, formula, formula_restricted)
+                        result = self.run_categorical(data, rv, formula, formula_restricted)
                     else:
                         result = dict()
                     self.results[rv].update(result)

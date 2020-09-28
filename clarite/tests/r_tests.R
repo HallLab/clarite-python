@@ -599,27 +599,27 @@ result_LBXHBC <- get_glm_result("LBXHBC",
                                 glm_restricted=glm_restricted,
                                 use_weights=TRUE)
 # LBXVCF
-glm_full <- svyglm(as.formula(LBXLYPCT~LBXVCF+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
+glm_full_LBXVCF <- svyglm(as.formula(LBXLYPCT~LBXVCF+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
                           design=design,
                           na.action=na.omit)
 result_LBXVCF <- get_glm_result("LBXVCF",
-                                glm_full=glm_full,
+                                glm_full=glm_full_LBXVCF,
                                 glm_restricted=NULL,
                                 use_weights=TRUE)
 # SMD160
-glm_full <- svyglm(as.formula(LBXLYPCT~SMD160+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
+glm_full_SMD160 <- svyglm(as.formula(LBXLYPCT~SMD160+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
                           design=design,
                           na.action=na.omit)
 result_SMD160 <- get_glm_result("SMD160",
-                                glm_full=glm_full,
+                                glm_full=glm_full_SMD160,
                                 glm_restricted=NULL,
                                 use_weights=TRUE)
 # LBDEONO
-glm_full <- svyglm(as.formula(LBXLYPCT~LBDEONO+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
+glm_full_LBDEONO <- svyglm(as.formula(LBXLYPCT~LBDEONO+female+SES_LEVEL+RIDAGEYR+SDDSRVYR+BMXBMI),
                           design=design,
                           na.action=na.omit)
 result_LBDEONO <- get_glm_result("LBDEONO",
-                                glm_full=glm_full,
+                                glm_full=glm_full_LBDEONO,
                                 glm_restricted=NULL,
                                 use_weights=TRUE)
 # Merge and save R results
