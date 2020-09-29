@@ -108,8 +108,14 @@ class WeightedGLMRegression(GLMRegression):
             # Calculate pvalue using a Two-sided t-test
             tval = np.abs(result['Beta'] / result['SE'])  # T statistic is the absolute value of beta / SE
             dof = survey_design.get_dof(X)
-            result['Variable_pvalue'] = scipy.stats.t.sf(tval, df=dof)*2
-            result['pvalue'] = result['Variable_pvalue']
+            # Change SE to infinite and pvalue to 1 when dof < 1
+            if dof < 1:
+                result['SE'] = np.inf
+                result['Variable_pvalue'] = 1.0
+                result['pvalue'] = 1.0
+            else:
+                result['Variable_pvalue'] = scipy.stats.t.sf(tval, df=dof)*2
+                result['pvalue'] = result['Variable_pvalue']
 
         return result
 
@@ -206,12 +212,12 @@ class WeightedGLMRegression(GLMRegression):
                     removed_cats = _remove_empty_categories(data)
                     if len(removed_cats) >= 1:
                         for extra_cat_var, extra_cats in removed_cats.items():
-                            warning = f"'{str(extra_cat_var)}' had categories with no occurrences: " \
-                                      f"{', '.join([str(c) for c in extra_cats])} " \
+                            warning = f"'{str(extra_cat_var)}' had categories with no occurrences " \
                                       f"after removing observations with missing values"
                             if self.survey_design_spec.subset_count > 0:
                                 warning += f" and applying the {self.survey_design_spec.subset_count} subset(s)"
-                            self.warnings[rv].extend(warning)
+                            warning += f": {', '.join([repr(c) for c in extra_cats])} "
+                            self.warnings[rv].append(warning)
 
                     # Get the formulas
                     formula_restricted, formula = self.get_formulas(rv, varying_covars)

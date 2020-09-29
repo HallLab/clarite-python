@@ -83,14 +83,9 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
                                        fpc = fpc_values, ...)
   }
 
-  # Subset the design (and data) if needed
-  if(!is.null(subset_array)){
-    survey_design <- subset(survey_design, subset_array)
-    data <- data[subset_array,]
-  }
-
-  # Subset survey design for missing the tested variable value
-  survey_design <- subset(survey_design, !is.na(data[var_name]))
+  # Update subset array to drop NA values of the outcome variable and subset the survey design
+  subset_array <- subset_array & !is.na(data[var_name])
+  survey_design <- subset(survey_design, subset_array)
 
   # Create a regression formula
   if(length(varying_covariates)>0){
@@ -105,10 +100,18 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
   if (!is.null(var_result)){
     var_summary <- summary(var_result)
     # Update with processed summary results
-    # Assume non-convergence if no p values are generated
     num_coeff_cols <- length(var_summary$coefficients)/nrow(var_summary$coefficients)
-    if (num_coeff_cols < 4){
+    if (num_coeff_cols < 2){
+      # Assume non-convergence if no p values are generated
       return(NULL)
+    } else if (num_coeff_cols == 2) {
+      return(data.frame(
+        Converged = TRUE,
+        Beta = var_summary$coefficients[2,1],
+        SE = var_summary$coefficients[2,2],
+        Variable_pvalue = 1.0,
+        pval = 1.0
+      ))
     } else {
       return(data.frame(
         Converged = TRUE,
@@ -180,7 +183,7 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
                                        strata = strata_values,
                                        fpc = fpc_values, ...)
   }
-  # Update subset array to drop NA values of the outcome variable
+  # Update subset array to drop NA values of the outcome variable and subset the survey design
   subset_array <- subset_array & !is.na(data[var_name])
   survey_design <- subset(survey_design, subset_array)
   # Manually subset the survey design to drop observations missing the tested variable value
@@ -188,7 +191,8 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
   #   It aligns the resulting pvalue for binary variables with the simple regression result.
   #   It prevents the overrepresentation of categorical variables in the top results
   #   It keeps results concordant with running in R and passing the weight as a formula
-  # I'm not sure why the survey library doesn't seem to handle NAs correctly in the LRT test unless a subset is applied
+  # I'm not sure why the survey library doesn't seem to handle NAs correctly in the LRT test unless a subset is
+  # applied here or the weights are passed as a formula
 
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
@@ -223,7 +227,6 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
     return(data.frame(
       Converged = var_result$converged,
       LRT_pvalue = lrt$p,
-      Diff_AIC = var_result$aic - restricted_result$aic,
       pval = lrt$p
     ))
   } else {
@@ -237,18 +240,10 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
   # The result list will be used to update results for this variable
   result = list()
 
-  # Figure out which observations will drop due to NAs and record N
+  # Figure out which observations will drop due to NAs
   subset_data <- complete.cases(data[, c(y, var_name, covariates)])  # Returns a boolean array
   if(!is.null(subset_array)){
     subset_data <- subset_data & subset_array
-  }
-  non_na_obs <- sum(subset_data)
-  result$N <- non_na_obs
-
-  # Skip regression if the min_n filter isn't met
-  if (non_na_obs < min_n){
-    warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n, ")"))
-    return(data.frame(result, stringsAsFactors = FALSE))
   }
 
   # Skip regression if any covariates are constant (after removing NAs) without being specified as allowed
@@ -275,18 +270,11 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
       result$weight <- weight
     }
     # Get weight values, returning early if there is a problem with the weight
-    if(is.null(subset_array)){
-      not_na_data_val <- is.na(data[var_name])
-    }
-    else{
-      # Count data as non-NA only if it is part of the subset
-      not_na_data_val <- !is.na(data[var_name]) & subset_array
-    }
     if(!(weight %in% names(data))){
       warning(paste(var_name, " had a NULL result because its weight (", weight, ") was not found"))
       result$weight <- paste(weight, " (not found)")
       return(data.frame(result, stringsAsFactors = FALSE))
-    } else if(sum(not_na_data_val & is.na(data[weight])) > 0){
+    } else if(sum(!is.na(data[var_name]) & is.na(data[weight])) > 0){
       warning(paste(var_name, " had a NULL result because its weight (", weight, ") had ", sum(is.na(data[weight])), " missing values when the variable was not missing"))
       result$weight <- paste(weight, " (missing values)")
       return(data.frame(result, stringsAsFactors = FALSE))
@@ -314,9 +302,17 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
     }
   }
 
+  # Record N and skip regression if the min_n filter isn't met
+  non_na_obs <- sum(subset_data)
+  result$N <- non_na_obs
+  if (non_na_obs < min_n){
+    warning(paste(var_name, " had a NULL result due to the min_n filter (", non_na_obs, " < ", min_n, ")"))
+    return(data.frame(result, stringsAsFactors = FALSE))
+  }
+
   # Run Regression for the single variable
   if(!use_survey){
-    if(var_type == "bin"){
+    if(var_type == 'bin'){
       regression_result <- regress_cont(data, varying_covariates, phenotype=y, var_name, regression_family)
     } else if(var_type == 'cat'){
       regression_result <- regress_cat(data, varying_covariates, phenotype=y, var_name, regression_family)
