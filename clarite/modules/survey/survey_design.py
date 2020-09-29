@@ -1,11 +1,9 @@
-from typing import Optional, Union, Dict, List, Tuple
+from typing import Optional, Union, Dict, Tuple
 
 import click
 import numpy as np
 import pandas as pd
 from pandas.core.indexing import IndexingError
-
-from clarite.internal.utilities import _remove_empty_categories
 
 
 class SurveyDesignSpec:
