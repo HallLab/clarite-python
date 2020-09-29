@@ -17,7 +17,7 @@ def load_surveylib_results(filename):
 
 
 def compare_result(loaded_result, python_result, r_result, atol=0, rtol=1e-04):
-    """Binary variables must be specified, since there are expected differences"""
+    """Compare loaded results (run directly using the survey lib) to CLARITE results, with optional tolerances"""
     # Remove "Phenotype" from the index in calculated results
     python_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
     r_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
@@ -422,7 +422,7 @@ def test_nhanes_fulldesign_subset_category():
                              survey_design_spec=design, regression_kind='r_survey'),
     ], axis=0)
     # Compare
-    compare_result(loaded_result, python_result, r_result)
+    compare_result(loaded_result, python_result, r_result, rtol=1e-03)
 
 
 def test_nhanes_fulldesign_subset_continuous():
