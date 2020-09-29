@@ -1,4 +1,4 @@
-"Variable","N","Beta","SE","Diff_AIC","pvalue"
-"ell",183,"-5.167218e-01","3.240039e-01",NA,"1.390635e-01"
-"meals",183,"-3.123204e+00","2.780830e-01",NA,"2.290507e-07"
-"mobility",183,"-1.689197e-01","4.449184e-01",NA,"7.114222e-01"
+"Variable","Variable_type","N","Beta","SE","Diff_AIC","pvalue"
+"ell","continuous",183,"-5.167218e-01","3.240039e-01",NA,"1.390635e-01"
+"meals","continuous",183,"-3.123204e+00","2.780830e-01",NA,"2.290507e-07"
+"mobility","continuous",183,"-1.689197e-01","4.449184e-01",NA,"7.114222e-01"

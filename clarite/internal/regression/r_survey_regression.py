@@ -100,8 +100,11 @@ class RSurveyRegression(Regression):
         ro.r("options(warn=1)")
 
         # Lists of regression variables (NULL if empty)
-        cat_vars = ro.StrVector(self.regression_variables['binary'] + self.regression_variables['categorical'])
+        bin_vars = ro.StrVector(self.regression_variables['binary'])
+        cat_vars = ro.StrVector(self.regression_variables['categorical'])
         cont_vars = ro.StrVector(self.regression_variables['continuous'])
+        if len(bin_vars) == 0:
+            bin_vars = ro.NULL
         if len(cat_vars) == 0:
             cat_vars = ro.NULL
         if len(cont_vars) == 0:
@@ -109,9 +112,11 @@ class RSurveyRegression(Regression):
 
         # Lists of covariates (NULL if empty)
         dtypes = _get_dtypes(self.data)
-        cat_covars = ro.StrVector(
-            [v for v in self.covariates if (dtypes.loc[v] == 'categorical') or (dtypes.loc[v] == 'binary')])
+        bin_covars = ro.StrVector([v for v in self.covariates if (dtypes.loc[v] == 'binary')])
+        cat_covars = ro.StrVector([v for v in self.covariates if (dtypes.loc[v] == 'categorical')])
         cont_covars = ro.StrVector([v for v in self.covariates if dtypes.loc[v] == 'continuous'])
+        if len(bin_covars) == 0:
+            bin_covars = ro.NULL
         if len(cat_covars) == 0:
             cat_covars = ro.NULL
         if len(cont_covars) == 0:
@@ -128,8 +133,9 @@ class RSurveyRegression(Regression):
 
             with ro.conversion.localconverter(ro.default_converter + pandas2ri.converter):
                 data_r = df_pandas2r(data)
-                result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=self.outcome_variable,
-                                   cat_covars=cat_covars, cont_covars=cont_covars,
+                result = ro.r.ewas(d=data_r, bin_vars=bin_vars, cat_vars=cat_vars, cont_vars=cont_vars,
+                                   y=self.outcome_variable,
+                                   bin_covars=bin_covars, cat_covars=cat_covars, cont_covars=cont_covars,
                                    regression_family=self.family,
                                    allowed_nonvarying=allowed_nonvarying,
                                    min_n=self.min_n)
@@ -175,8 +181,9 @@ class RSurveyRegression(Regression):
                     # Must convert python dict of var:weight name to a named list in R
                     weights = ro.ListVector(weights)
 
-                result = ro.r.ewas(d=data_r, cat_vars=cat_vars, cont_vars=cont_vars, y=self.outcome_variable,
-                                   cat_covars=cat_covars, cont_covars=cont_covars,
+                result = ro.r.ewas(d=data_r, bin_vars=bin_vars, cat_vars=cat_vars, cont_vars=cont_vars,
+                                   y=self.outcome_variable,
+                                   bin_covars=bin_covars, cat_covars=cat_covars, cont_covars=cont_covars,
                                    regression_family=self.family,
                                    allowed_nonvarying=allowed_nonvarying,
                                    min_n=self.min_n,

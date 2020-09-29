@@ -1,4 +1,4 @@
-"Variable","N","Beta","SE","Diff_AIC","pvalue"
-"race",7846,"NA","NA","-6.091932e+00","7.074783e-03"
-"agecat",7846,"NA","NA","-4.741115e+02","9.741353e-104"
-"RIAGENDR",7846,"1.274738e-01","7.739337e-02","NA","9.953969e-02"
+"Variable","Variable_type","N","Beta","SE","Diff_AIC","pvalue"
+"race","categorical",7846,"NA","NA","-6.091932e+00","7.074783e-03"
+"agecat","categorical",7846,"NA","NA","-4.741115e+02","9.741353e-104"
+"RIAGENDR","binary",7846,"1.274738e-01","7.739337e-02","NA","9.953969e-02"

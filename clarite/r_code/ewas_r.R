@@ -316,13 +316,19 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
 
   # Run Regression for the single variable
   if(!use_survey){
-    if(var_type == 'cat'){
+    if(var_type == "bin"){
+      regression_result <- regress_cont(data, varying_covariates, phenotype=y, var_name, regression_family)
+    } else if(var_type == 'cat'){
       regression_result <- regress_cat(data, varying_covariates, phenotype=y, var_name, regression_family)
     } else if(var_type == 'cont'){
       regression_result <- regress_cont(data, varying_covariates, phenotype=y, var_name, regression_family)
     }
   } else {
-    if(var_type == 'cat'){
+    if(var_type == 'bin'){
+      regression_result <- regress_cont_survey(data, varying_covariates, phenotype=y, var_name, regression_family,
+                                               weight_values, strata_values, fpc_values, id_values,
+                                               subset_array, ...)
+    } else if(var_type == 'cat'){
       regression_result <- regress_cat_survey(data, varying_covariates, phenotype=y, var_name, regression_family,
                                               weight_values, strata_values, fpc_values, id_values,
                                               subset_array, ...)
@@ -352,10 +358,12 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
 #' the standard error is infinite and the anova calculation for categorical variables fails.  This is due to the
 #' \href{http://r-survey.r-forge.r-project.org/survey/exmample-lonely.html}{lonely psu} problem.
 #' @param d data.frame containing all of the data
-#' @param cat_vars List of variables to regress that are categorical or binary
+#' @param bin_vars List of variables to regress that are binary
+#' @param cat_vars List of variables to regress that are categorical
 #' @param cont_vars  List of variables to regress that are continuous
 #' @param y name(s) of response variable(s)
-#' @param cat_covars List of covariates that are categorical or binary
+#' @param bin_covars List of covariates that are continuous
+#' @param cat_covars List of covariates that are categorical
 #' @param cont_covars List of covariates that are continuous
 #' @param regression_family family for the regression model as specified in glm ('gaussian' by default)
 #' @param allowed_nonvarying list of covariates that are excluded from the regression when they do not vary instead of returning a NULL result.
@@ -373,7 +381,8 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
 #' \dontrun{
 #' ewas(d, cat_vars, cont_vars, y, cat_covars, cont_covars, regression_family)
 #' }
-ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_covars=NULL,
+ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
+                 bin_covars=NULL, cat_covars=NULL, cont_covars=NULL,
                  regression_family="gaussian", allowed_nonvarying=NULL, min_n=200, weights=NULL,
                  ids=NULL, strata=NULL, fpc=NULL, subset_array=NULL, ...){
   # Record start time
@@ -384,11 +393,17 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
   if(missing(y)){
     stop("Please specify an outcome 'y' variable")
   }
+  if(is.null(bin_vars)){
+    bin_vars <- list()
+  }
   if(is.null(cat_vars)){
     cat_vars <- list()
   }
   if(is.null(cont_vars)){
     cont_vars <- list()
+  }
+  if(is.null(bin_covars)){
+    bin_covars <- list()
   }
   if(is.null(cat_covars)){
     cat_covars <- list()
@@ -419,19 +434,15 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
   }
 
   # Ignore the covariates, phenotype, and ID if they were included in the variable lists
-  remove <- c(y, cat_covars, cont_covars, "ID")
+  remove <- c(y, bin_covars, cat_covars, cont_covars, "ID")
+  bin_vars <- setdiff(bin_vars, remove)
   cat_vars <- setdiff(cat_vars, remove)
   cont_vars <- setdiff(cont_vars, remove)
   # Ignore the phenotype, and ID if they were included in the covariates lists
   remove <- c(y, "ID")
+  bin_covars <- setdiff(bin_covars, remove)
   cat_covars <- setdiff(cat_covars, remove)
   cont_covars <- setdiff(cont_covars, remove)
-
-  # Ensure variables/covariates aren't listed as multiple different types
-  both <- intersect(cat_covars, cont_covars)
-  if (length(both) > 0){stop("Some covariates are listed as both categorical and continuous: ", paste(both, collapse=", "))}
-  both <- intersect(cat_vars, cont_vars)
-  if (length(both) > 0){stop("Some variables are listed as both categorical and continuous: ", paste(both, collapse=", "))}
 
   # Check data
   if(class(d)[1] != "data.frame"){
@@ -462,6 +473,9 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
   # ID
   if(is.element('ID', names(d))==FALSE){stop("Please add ID to the data as column 1")}
   d$ID <- factor(d$ID)
+  # Binary
+  if(length(bin_vars) > 0){d[bin_vars] <- lapply(d[bin_vars], factor)}
+  if(length(bin_covars) > 0){d[bin_covars] <- lapply(d[bin_covars], factor)}
   # Categorical
   if(length(cat_vars) > 0){d[cat_vars] <- lapply(d[cat_vars], factor)}
   if(length(cat_covars) > 0){d[cat_covars] <- lapply(d[cat_covars], factor)}
@@ -481,13 +495,13 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
   }
 
   # Get a combined vector of covariates (must 'unlist' lists to vectors)
-  covariates <- c(unlist(cat_covars), unlist(cont_covars))
+  covariates <- c(unlist(bin_covars), unlist(cat_covars), unlist(cont_covars))
 
   # Run Regressions
   #################
 
   # Create a placeholder dataframe for results, anything not updated will be NA
-  n <- length(cat_vars) + length(cont_vars)
+  n <- length(bin_vars) + length(cat_vars) + length(cont_vars)
   ewas_result_df <- data.frame(Variable = character(n),
                                Variable_type = character(n),
                                N = numeric(n),
@@ -505,6 +519,25 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
   ewas_result_df$Converged <- FALSE  # Default to not converged
   i <- 0 # Increment before processing each variable
 
+  # Process binary variables, if any
+  print(paste("Processing ", length(bin_vars), " binary variables", sep=""))
+  for(var_name in bin_vars){
+    # Get new row in the results
+    i <- i + 1
+    # Update var name and phenotype
+    ewas_result_df$Variable[i] <- var_name
+    ewas_result_df$phenotype[i] <- y
+    ewas_result_df$Variable_type[i] <- "binary"
+
+    result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="bin",
+                      use_survey, single_weight, weights, strata, fpc, ids, subset_array, ...)
+
+    # Save results
+    if(!is.null(result)){
+      ewas_result_df[i, colnames(result)] <- result
+    }
+  }
+
   # Process categorical variables, if any
   print(paste("Processing ", length(cat_vars), " categorical variables", sep=""))
   for(var_name in cat_vars){
@@ -513,7 +546,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     # Update var name and phenotype
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$phenotype[i] <- y
-    ewas_result_df$Variable_type[i] <- "Categorical/Binary"
+    ewas_result_df$Variable_type[i] <- "categorical"
 
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="cat",
                       use_survey, single_weight, weights, strata, fpc, ids, subset_array, ...)
@@ -532,7 +565,7 @@ ewas <- function(d, cat_vars=NULL, cont_vars=NULL, y, cat_covars=NULL, cont_cova
     # Update var name and phenotype
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$phenotype[i] <- y
-    ewas_result_df$Variable_type[i] <- "Continuous"
+    ewas_result_df$Variable_type[i] <- "continuous"
 
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="cont",
                       use_survey, single_weight, weights, strata, fpc, ids, subset_array, ...)

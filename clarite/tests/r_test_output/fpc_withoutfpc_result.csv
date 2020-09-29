@@ -1,2 +1,2 @@
-"Variable","N","Beta","SE","Diff_AIC","pvalue"
-"x",8,"1.127440e+00","1.530274e-01",NA,"7.237114e-04"
+"Variable","Variable_type","N","Beta","SE","Diff_AIC","pvalue"
+"x","continuous",8,"1.127440e+00","1.530274e-01",NA,"7.237114e-04"

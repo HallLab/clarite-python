@@ -7,48 +7,75 @@ import clarite
 DATA_PATH = Path(__file__).parent.parent / 'r_test_output'
 
 
-def load_r_results(filename):
-    """Load R results and convert column names to match python results"""
+def load_surveylib_results(filename):
+    """Load directly calculated results (from R) and convert column names to match python results"""
     r_result = pd.read_csv(filename)
     r_result = r_result.set_index('Variable')
-    r_result[["Beta", "SE", "Diff_AIC", "pvalue"]] = r_result[["Beta", "SE", "Diff_AIC", "pvalue"]].astype('float64')
+    r_result[["Beta", "SE", "Diff_AIC", "pvalue", "N"]] = \
+        r_result[["Beta", "SE", "Diff_AIC", "pvalue", "N"]].astype('float64')
     return r_result
 
 
-def compare_result(loaded_r_result, calculated_result, atol=0, rtol=1e-04):
+def compare_result(loaded_result, python_result, r_result, atol=0, rtol=1e-04):
     """Binary variables must be specified, since there are expected differences"""
     # Remove "Phenotype" from the index in calculated results
-    calculated_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
-    # Convert 'N' from IntegerArray to float64 so that the comparison works
-    calculated_result = calculated_result.astype({"N": 'float64'})
-    # Merge
-    merged = pd.merge(left=loaded_r_result, right=calculated_result,
-                      left_index=True, right_index=True,
-                      how="inner", suffixes=("_loaded", "_calculated"))
+    python_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
+    r_result.reset_index(drop=False).set_index('Variable').drop(columns=['Phenotype'])
+
+    # Convert 'N' from IntegerArray to float
+    python_result = python_result.astype({"N": 'float'})
+    r_result = r_result.astype({"N": 'float'})
+
+    # Merge and ensure no rows are dropped
+    loaded_result = loaded_result.add_suffix('_loaded')
+    python_result = python_result.add_suffix('_python')
+    r_result = r_result.add_suffix('_r')
+    merged = pd.merge(left=loaded_result, right=python_result, left_index=True, right_index=True, how="inner")
+    merged = pd.merge(left=merged, right=r_result, left_index=True, right_index=True, how="inner")
     try:
-        assert len(merged) == len(loaded_r_result) == len(calculated_result)
+        assert len(merged) == len(loaded_result) == len(python_result) == len(r_result)
     except AssertionError:
-        raise ValueError(f" Loaded Results have {len(loaded_r_result):,} rows,"
-                         f" Calculated results have {len(calculated_result):,} rows,"
+        raise ValueError(f" Loaded Results have {len(loaded_result):,} rows,"
+                         f" Python results have {len(python_result):,} rows,"
+                         f" R results have {len(r_result):,} rows,"
                          f" merged data has {len(merged):,} rows")
+
+    # Same variant_type
+    try:
+        assert merged["Variable_type_loaded"].equals(merged["Variable_type_python"])
+        assert merged["Variable_type_loaded"].equals(merged["Variable_type_r"])
+    except AssertionError:
+        raise ValueError(f"Variable_type:\n"
+                         f"{merged[f'Variable_type_loaded']}\n"
+                         f"{merged[f'Variable_type_python']}\n"
+                         f"{merged[f'Variable_type_r']}")
     # Close-enough equality of numeric values
     for var in ["N", "Beta", "SE", "pvalue"]:
         try:
-            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_calculated"],
+            assert np.allclose(merged[f"{var}_loaded"], merged[f"{var}_python"],
+                               equal_nan=True, atol=atol, rtol=rtol)
+            assert np.allclose(merged[f"{var}_python"], merged[f"{var}_r"],
                                equal_nan=True, atol=atol, rtol=rtol)
         except AssertionError:
             raise ValueError(f"{var}:\n"
                              f"{merged[f'{var}_loaded']}\n"
-                             f"{merged[f'{var}_calculated']}")
+                             f"{merged[f'{var}_python']}\n"
+                             f"{merged[f'{var}_r']}")
     for var in ["Diff_AIC"]:
         # Pass if loaded result is NaN (quasibinomial) or calculated result is NaN (survey data used)
-        either_nan = merged[[f'{var}_loaded', f'{var}_calculated']].isna().any(axis=1)
+        either_nan = merged[[f'{var}_loaded', f'{var}_python']].isna().any(axis=1)
         try:
             # Value must be close when both exist or both are NaN
             assert np.allclose(merged.loc[~either_nan, f"{var}_loaded"],
-                               merged.loc[~either_nan, f"{var}_calculated"], equal_nan=True)
+                               merged.loc[~either_nan, f"{var}_python"], equal_nan=True)
         except AssertionError:
-            raise ValueError(f"{var}: Loaded ({merged[f'{var}_loaded']}) != Calculated ({merged[f'{var}_calculated']})")
+            raise ValueError(f"{var}: Loaded ({merged[f'{var}_loaded']}) != Python ({merged[f'{var}_python']})")
+        try:
+            # Value must be close when both exist or both are NaN
+            assert np.allclose(merged.loc[~either_nan, f"{var}_python"],
+                               merged.loc[~either_nan, f"{var}_r"], equal_nan=True)
+        except AssertionError:
+            raise ValueError(f"{var}: Loaded ({merged[f'{var}_loaded']}) != R ({merged[f'{var}_r']})")
 
 ###############
 # fpc Dataset #
@@ -66,47 +93,53 @@ def test_fpc_withoutfpc():
     """Use a survey design specifying weights, cluster, strata"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "fpc_withoutfpc_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["x", "y"])
     design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata="stratid", nest=True)
     df = clarite.modify.colfilter(df, only=["x", "y"])
+    # Get results
+    loaded_result = load_surveylib_results(DATA_PATH / "fpc_withoutfpc_result.csv")
     python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1)
+    r_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1,
+                                    regression_kind='r_survey')
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_fpc_withfpc():
     """Use a survey design specifying weights, cluster, strata, fpc"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "fpc_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "fpc_withfpc_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["x", "y"])
     design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata="stratid",
                                              fpc="Nh", nest=True)
     df = clarite.modify.colfilter(df, only=["x", "y"])
+    # Get results
+    loaded_result = load_surveylib_results(DATA_PATH / "fpc_withfpc_result.csv")
     python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1)
+    r_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1,
+                                    regression_kind='r_survey')
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_fpc_withfpc_nostrata():
     """Use a survey design specifying weights, cluster, strata, fpc"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "fpc_nostrat_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "fpc_withfpc_nostrat_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["x", "y"])
     design = clarite.survey.SurveyDesignSpec(df, weights="weight", cluster="psuid", strata=None,
                                              fpc="Nh", nest=True)
     df = clarite.modify.colfilter(df, only=["x", "y"])
+    # Get results
+    loaded_result = load_surveylib_results(DATA_PATH / "fpc_withfpc_nostrat_result.csv")
     python_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1)
+    r_result = clarite.analyze.ewas(phenotype="y", covariates=[], data=df, survey_design_spec=design, min_n=1,
+                                    regression_kind='r_survey')
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 ###############
 # api Dataset #
@@ -124,48 +157,61 @@ def test_api_noweights():
     """Test the api dataset with no survey info"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "apipop_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "api_apipop_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
+    # Get results
+    loaded_result = load_surveylib_results(DATA_PATH / "api_apipop_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"], data=df, min_n=1),
         clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"], data=df, min_n=1),
         clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"], data=df, min_n=1),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"], data=df, min_n=1),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"], data=df, min_n=1),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_api_noweights_withNA():
     """Test the api dataset (with na) with no survey info"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "apipop_withna_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "api_apipop_withna_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "api_apipop_withna_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"], data=df, min_n=1),
         clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"], data=df, min_n=1),
         clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"], data=df, min_n=1),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
+                             data=df, min_n=1, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"],
+                             data=df, min_n=1, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
+                             data=df, min_n=1, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_api_stratified():
     """Test the api dataset with weights, strata, and fpc"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "apistrat_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "api_apistrat_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
     design = clarite.survey.SurveyDesignSpec(df, weights="pw", cluster=None, strata="stype", fpc="fpc")
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "api_apistrat_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
                              data=df, survey_design_spec=design, min_n=1),
@@ -174,20 +220,28 @@ def test_api_stratified():
         clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
                              data=df, survey_design_spec=design, min_n=1),
     ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
+                             data=df, survey_design_spec=design, min_n=1, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"],
+                             data=df, survey_design_spec=design, min_n=1, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
+                             data=df, survey_design_spec=design, min_n=1, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_api_cluster():
     """Test the api dataset with weights, clusters, and fpc"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "apiclus1_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "api_apiclus1_result.csv")
     # Process data
     df = clarite.modify.make_continuous(df, only=["api00", "ell", "meals", "mobility"])
     design = clarite.survey.SurveyDesignSpec(df, weights="pw", cluster="dnum", strata=None, fpc="fpc")
     df = clarite.modify.colfilter(df, only=["api00", "ell", "meals", "mobility"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "api_apiclus1_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
                              data=df, survey_design_spec=design, min_n=1),
@@ -196,8 +250,16 @@ def test_api_cluster():
         clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
                              data=df, survey_design_spec=design, min_n=1),
     ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="api00", covariates=["meals", "mobility"],
+                             data=df, survey_design_spec=design, min_n=1, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "mobility"],
+                             data=df, survey_design_spec=design, min_n=1, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="api00", covariates=["ell", "meals"],
+                             data=df, survey_design_spec=design, min_n=1, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 ##################
 # NHANES Dataset #
@@ -211,60 +273,73 @@ def test_api_cluster():
 # agecat  - Categorical Age group(0,19] (19,39] (39,59] (59,Inf]
 # RIAGENDR - Binary: Gender: 1=male, 2=female
 
-# Note that some tests are given wide tolerances to pass:
-#  -
-
 
 def test_nhanes_noweights():
     """Test the nhanes dataset with no survey info"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_noweights_result.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_noweights_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"],
+                             data=df, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"],
+                             data=df, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"],
+                             data=df, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_noweights_withNA():
     """Test the nhanes dataset with no survey info and some missing values in a categorical"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_NAs_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_noweights_withna_result.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_noweights_withna_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"],
+                             data=df, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"],
+                             data=df, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"],
+                             data=df, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_fulldesign():
     """Test the nhanes dataset with the full survey design"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_complete_result.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True)
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_complete_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -272,23 +347,31 @@ def test_nhanes_fulldesign():
                              survey_design_spec=design),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
                              survey_design_spec=design),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_fulldesign_withna():
     """Test the nhanes dataset with the full survey design"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_NAs_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_complete_withna_result.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True)
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_complete_withna_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -296,17 +379,23 @@ def test_nhanes_fulldesign_withna():
                              survey_design_spec=design),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
                              survey_design_spec=design),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_fulldesign_subset_category():
     """Test the nhanes dataset with the full survey design, subset by dropping a category"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_complete_result_subset_cat.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
@@ -314,6 +403,8 @@ def test_nhanes_fulldesign_subset_category():
                                              fpc=None, nest=True, drop_unweighted=True)
     design.subset(df['agecat'] != "(19,39]")
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_complete_result_subset_cat.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -321,17 +412,23 @@ def test_nhanes_fulldesign_subset_category():
                              survey_design_spec=design),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
                              survey_design_spec=design),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result, rtol=1e-03)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_fulldesign_subset_continuous():
     """Test the nhanes dataset with the full survey design and a random subset"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_data_subset.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_complete_result_subset_cont.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
@@ -340,6 +437,8 @@ def test_nhanes_fulldesign_subset_continuous():
     design.subset(df['subset'] > 0)
     df = df.drop(columns=['subset'])
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_complete_result_subset_cont.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -347,22 +446,30 @@ def test_nhanes_fulldesign_subset_continuous():
                              survey_design_spec=design),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
                              survey_design_spec=design),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_weightsonly():
     """Test the nhanes dataset with only weights in the survey design"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_weightsonly_result.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR")
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_weightsonly_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -370,23 +477,31 @@ def test_nhanes_weightsonly():
                              survey_design_spec=design),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
                              survey_design_spec=design),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_lonely_certainty():
     """Test the nhanes dataset with a lonely PSU and the value set to certainty"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_certainty_result.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True, single_cluster='certainty')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_certainty_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -394,23 +509,31 @@ def test_nhanes_lonely_certainty():
                              survey_design_spec=design),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
                              survey_design_spec=design),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_lonely_adjust():
     """Test the nhanes dataset with a lonely PSU and the value set to adjust"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_adjust_result.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True, single_cluster='adjust')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_adjust_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -418,23 +541,31 @@ def test_nhanes_lonely_adjust():
                              survey_design_spec=design),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
                              survey_design_spec=design),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_lonely_average():
     """Test the nhanes dataset with a lonely PSU and the value set to average"""
     # Load the data
     df = clarite.load.from_csv(DATA_PATH / "nhanes_lonely_data.csv", index_col=None)
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_average_result.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
                                              fpc=None, nest=True, single_cluster='average')
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_average_result.csv")
     python_result = pd.concat([
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
                              survey_design_spec=design),
@@ -442,19 +573,24 @@ def test_nhanes_lonely_average():
                              survey_design_spec=design),
         clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
                              survey_design_spec=design),
-        ], axis=0)
+    ], axis=0)
+    r_result = pd.concat([
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "RIAGENDR"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+        clarite.analyze.ewas(phenotype="HI_CHOL", covariates=["race", "agecat"], data=df,
+                             survey_design_spec=design, regression_kind='r_survey'),
+    ], axis=0)
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_realistic():
     """Test a more realistic set of NHANES data, specifically using multiple weights and missing values"""
     # Load the data
     df = clarite.load.from_tsv(DATA_PATH.parent / "test_data_files" / "nhanes_real.txt", index_col="ID")
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_real_python.csv")
     # Process data
-
     # Split out survey info
     survey_cols = ["SDMVPSU", "SDMVSTRA", "WTMEC4YR", "WTSHM4YR", "WTSVOC4Y"]
     survey_df = df[survey_cols]
@@ -475,13 +611,21 @@ def test_nhanes_realistic():
                                              strata="SDMVSTRA",
                                              fpc=None,
                                              nest=True)
-    calculated_result = clarite.analyze.ewas(
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_real_result.csv")
+    python_result = clarite.analyze.ewas(
         phenotype="BMXBMI",
         covariates=["SES_LEVEL", "SDDSRVYR", "female", "black", "mexican", "other_hispanic", "other_eth", "RIDAGEYR"],
         data=df,
         survey_design_spec=design)
+    r_result = clarite.analyze.ewas(
+        phenotype="BMXBMI",
+        covariates=["SES_LEVEL", "SDDSRVYR", "female", "black", "mexican", "other_hispanic", "other_eth", "RIDAGEYR"],
+        data=df,
+        survey_design_spec=design,
+        regression_kind='r_survey')
     # Compare
-    compare_result(r_result, calculated_result)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_subset_singleclusters():
@@ -490,8 +634,6 @@ def test_nhanes_subset_singleclusters():
     df = clarite.load.from_tsv(DATA_PATH.parent / "test_data_files" / "nhanes_subset" / "data.txt")
     survey_df = clarite.load.from_tsv(DATA_PATH.parent / "test_data_files" / "nhanes_subset" / "design_data.txt")
     survey_df = survey_df.loc[df.index]
-    # Load the expected results
-    r_result = load_r_results(DATA_PATH / "nhanes_subset_python.csv")
     # Process data
     df = clarite.modify.make_binary(df, only=["LBXHBC", "black", "female"])
     df = clarite.modify.make_categorical(df, only=["SES_LEVEL", "SDDSRVYR"])
@@ -501,10 +643,14 @@ def test_nhanes_subset_singleclusters():
                                              fpc=None, nest=True)
     design.subset(df['black'] == 1)
     df = df.drop(columns="black")
-    # Run
+    # Get Results
+    loaded_result = load_surveylib_results(DATA_PATH / "nhanes_subset_result.csv")
     covariates = ["female", "SES_LEVEL", "RIDAGEYR", "SDDSRVYR", "BMXBMI"]
     python_result = clarite.analyze.ewas(phenotype="LBXLYPCT", covariates=covariates,
                                          data=df, survey_design_spec=design,
                                          min_n=50)
+    r_result = clarite.analyze.ewas(phenotype="LBXLYPCT", covariates=covariates,
+                                    data=df, survey_design_spec=design,
+                                    min_n=50, regression_kind='r_survey')
     # Compare
-    compare_result(r_result, python_result)
+    compare_result(loaded_result, python_result, r_result)
