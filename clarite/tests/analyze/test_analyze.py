@@ -422,7 +422,7 @@ def test_nhanes_fulldesign_subset_category():
                              survey_design_spec=design, regression_kind='r_survey'),
     ], axis=0)
     # Compare
-    compare_result(loaded_result, python_result, r_result, rtol=1e-03)
+    compare_result(loaded_result, python_result, r_result)
 
 
 def test_nhanes_fulldesign_subset_continuous():
@@ -625,6 +625,7 @@ def test_nhanes_realistic():
         survey_design_spec=design,
         regression_kind='r_survey')
     # Compare
+    # TODO: Continuous results have an issue
     compare_result(loaded_result, python_result, r_result)
 
 

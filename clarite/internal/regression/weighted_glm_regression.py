@@ -1,3 +1,4 @@
+import re
 from typing import Optional, Dict
 
 import click
@@ -98,7 +99,7 @@ class WeightedGLMRegression(GLMRegression):
         # Save results if the regression converged
         if model.result.converged:
             result['Converged'] = True
-            rv_idx_list = [i for i, n in enumerate(X.columns) if regression_variable in n]
+            rv_idx_list = [i for i, n in enumerate(X.columns) if re.match(f"^{regression_variable}(\[T\..*\])?$", n)]
             if len(rv_idx_list) != 1:
                 raise ValueError(f"Failed to find regression variable column in the results for {regression_variable}")
             else:
@@ -128,7 +129,8 @@ class WeightedGLMRegression(GLMRegression):
         result = dict()
 
         # Regress full model
-        y, X = patsy.dmatrices(formula, data, return_type='dataframe', NA_action='drop')
+        y, X = patsy.dmatrices(formula, data,
+                               return_type='dataframe', NA_action='drop')
         model = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                             init_args=dict(family=self.family),
                             fit_args=dict(use_t=self.use_t))
@@ -136,12 +138,12 @@ class WeightedGLMRegression(GLMRegression):
 
         # Regress restricted model
         # Use same X and y (but fewer columns in X) to ensure correct comparison
-        _, X_restricted = patsy.dmatrices(formula_restricted, data, return_type='dataframe', NA_action='drop')
-        X_restricted = X_restricted.loc[X.index]
+        y_restricted, X_restricted = patsy.dmatrices(formula_restricted, data,
+                                                     return_type='dataframe', NA_action='drop')
         model_restricted = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                                        init_args=dict(family=self.family),
                                        fit_args=dict(use_t=self.use_t))
-        model_restricted.fit(y=y, X=X_restricted)
+        model_restricted.fit(y=y_restricted, X=X_restricted)
 
         # Save results if the regression converged
         if model.result.converged & model_restricted.result.converged:
@@ -166,46 +168,39 @@ class WeightedGLMRegression(GLMRegression):
                 self.results[rv]['Variable_type'] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
-                    # Use masks to track:
-                    # 1) Survey subset
-                    # 2) Missing weights
-                    # 3) Complete cases
-                    # Don't drop rows from data until the end, and drop the same rows when getting the survey design
-
                     # Take a copy of the data (ignoring other RVs) and create a keep_rows mask
                     keep_columns = [rv, self.outcome_variable] + self.covariates
                     data = self.data[keep_columns]
-                    keep_row_mask = pd.Series(True, index=self.data.index)
-
-                    # Apply any subset and track dropped categories caused by the subset
-                    keep_row_mask = keep_row_mask & self.survey_design_spec.subset_array
 
                     # Get missing weight mask
                     weight_name, missing_weight_mask, warning = self.survey_design_spec.check_missing_weights(data, rv)
                     if warning is not None:
                         self.warnings[rv].append(warning)
-                    keep_row_mask = keep_row_mask & ~missing_weight_mask  # Negate missing_weight_mask so True=keep
 
                     # Get complete case mask
                     complete_case_mask = self.get_complete_case_mask(data, rv)  # Complete cases
-                    keep_row_mask = keep_row_mask & complete_case_mask
+                    # If allowed (an error hasn't been raised) negate missing_weight_mask so True=keep to drop those
+                    complete_case_mask = complete_case_mask & ~missing_weight_mask
 
                     # Get survey design
-                    survey_design = self.survey_design_spec.get_survey_design(rv, keep_row_mask)
+                    survey_design = self.survey_design_spec.get_survey_design(rv)
+
+                    # Count restricted rows
+                    restricted_rows = self.survey_design_spec.subset_array & complete_case_mask
 
                     # Filter by min_n
-                    N = keep_row_mask.sum()
+                    N = (restricted_rows).sum()
                     self.results[rv]['N'] = N
                     if N < self.min_n:
                         raise ValueError(f"too few complete observations (min_n filter: {N} < {self.min_n})")
 
                     # Check for covariates that do not vary (they get ignored)
-                    varying_covars, warnings = self.check_covariate_values(keep_row_mask)
+                    varying_covars, warnings = self.check_covariate_values(restricted_rows)
                     self.warnings[rv].extend(warnings)
                     data = data[[rv, self.outcome_variable] + varying_covars]  # Drop any nonvarying covars
 
-                    # Apply the keep_row_mask to the data
-                    data = data.loc[keep_row_mask]
+                    # Apply the subset to the data
+                    data = data.loc[self.survey_design_spec.subset_array]
 
                     # Remove unused categories caused by dropping all occurrences of that value
                     # during the above filtering (warning when this occurs)

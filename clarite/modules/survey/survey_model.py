@@ -75,10 +75,6 @@ class SurveyModel(object):
         ---------
         http://www.stata.com/manuals13/svyvarianceestimation.pdf
         """
-        # Input data indicies must match design indicies
-        design_index = self.design.strat.index  # May be all ones, but it always exists
-        assert X.index.equals(design_index)
-        assert y.index.equals(design_index)
 
         # The term "variables" used below means the variables in the specific regression, such as:
         #  Intercept
@@ -99,7 +95,7 @@ class SurveyModel(object):
         # Statsmodels stores this in the model
         # This matrix has one row for each observation (index = 'ID') and a column for each variable
         d_hat = pd.DataFrame(self.initialized_model.score_obs(self.params),
-                             index=self.design.strat.index,
+                             index=X.index,
                              columns=self.params.index)
 
         # Add strat and clust information to the d_hat index (this just modifies the index labels)
@@ -157,10 +153,11 @@ class SurveyModel(object):
         for c in self.design.clust_names:
             w = self.design.get_jackknife_rep_weights(dropped_clust=c)
             init_args = {k: v for k, v in self.init_args.items()}
+            # Add weights parameter, indexing by 'X' to remove rows that dropped b/c they were not complete cases
             if self.glm_flag:
-                init_args["freq_weights"] = w
+                init_args["freq_weights"] = w.loc[X.index]
             else:
-                init_args["weights"] = w
+                init_args["weights"] = w.loc[X.index]
             replicate_params[c] = self._calc_params(y, X, init_args, self.fit_args)
 
         # Collect data into a dataframe and center it
@@ -185,8 +182,10 @@ class SurveyModel(object):
         assert y.index.equals(X.index)
         self.center_by = center_by
 
-        # Get weights (will be an array of ones if not provided)
-        weights = self.design.weights
+        # Get weights
+        # Will be an array of ones if not provided
+        # Need to index by X since patsy dropped incomplete cases when creating X and the weights array includes them
+        weights = self.design.weights.loc[X.index]
 
         # Use weights in the regression
         if self.glm_flag:

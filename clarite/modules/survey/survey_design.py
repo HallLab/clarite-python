@@ -290,47 +290,30 @@ class SurveyDesignSpec:
 
         return result
 
-    def get_strata(self, complete_case_mask: Optional[pd.Series] = None) -> Tuple[bool, Optional[pd.Series]]:
-        """Return strata information subset to match the data"""
-        if complete_case_mask is not None:
-            return self.has_strata, self.strata_values.loc[complete_case_mask]
-        else:
-            return self.has_strata, self.strata_values
-
-    def get_clusters(self, complete_case_mask: Optional[pd.Series] = None) -> Tuple[bool, Optional[pd.Series]]:
-        """Return cluster information subset to match the data"""
-        if complete_case_mask is not None:
-            return self.has_cluster, self.cluster_values.loc[complete_case_mask]
-        else:
-            return self.has_cluster, self.cluster_values
-
-    def get_fpc(self, complete_case_mask: Optional[pd.Series] = None) -> Tuple[bool, Optional[pd.Series]]:
-        """Return fpc information subset to match the data"""
-        if complete_case_mask is not None:
-            return self.has_fpc, self.fpc_values.loc[complete_case_mask]
-        else:
-            return self.has_fpc, self.fpc_values
-
-    def get_weights(self,
-                    regression_variable: str,
-                    complete_case_mask: Optional[pd.Series] = None) \
-            -> Tuple[bool, Optional[str], Optional[pd.Series]]:
+    def get_weights(self, regression_variable: str) -> Tuple[bool, Optional[str], Optional[pd.Series]]:
         """
         Return weight information for a specific regression variable, subset to match the data
         """
         if self.single_weight:
-            has_weights, weight_name, weight_values = True, self.weight_name, self.weight_values
+            has_weights = True
+            weight_name = self.weight_name,
+            weight_values = self.weight_values
         elif self.multi_weight:
+            has_weights = True
             weight_name = self.weight_names.get(regression_variable, None)
             if weight_name is None:
                 raise ValueError(f"No weight found in the survey design for the '{regression_variable}' variable")
             else:
-                has_weights, weight_name, weight_values = True, weight_name, self.weight_values[weight_name]
+                weight_values = self.weight_values[weight_name]
         else:
             return False, None, None
 
-        if complete_case_mask is not None:
-            weight_values = weight_values.loc[complete_case_mask]
+        # Normalize weights before subsetting
+        weight_values = weight_values.div(weight_values.mean())
+
+        # Subset
+        weight_values = weight_values.loc[self.subset_array]
+
         return has_weights, weight_name, weight_values
 
     def check_missing_weights(self, data: pd.DataFrame, regression_variable: str) \
@@ -468,9 +451,7 @@ class SurveyDesignSpec:
             raise ValueError("The boolean array passed to `subset` could not be used:"
                              " the index is incompatible with the survey design")
 
-    def get_survey_design(self,
-                          regression_variable: str,
-                          complete_case_mask):
+    def get_survey_design(self, regression_variable):
         """
         Get a survey design based on the SurveyDesignSpec, but specific to the rv and data
 
@@ -487,9 +468,9 @@ class SurveyDesignSpec:
 
         """
         # Get parameters using the complete case index
-        has_strata, strata_values = self.get_strata(complete_case_mask)
-        has_cluster, cluster_values = self.get_clusters(complete_case_mask)
-        has_weights, weight_name, weight_values = self.get_weights(regression_variable, complete_case_mask)
+        has_strata, strata_values = self.has_strata, self.strata_values.loc[self.subset_array]
+        has_cluster, cluster_values = self.has_cluster, self.cluster_values.loc[self.subset_array]
+        has_weights, weight_name, weight_values = self.get_weights(regression_variable)
 
         # Initialize Survey Design
         sd = SurveyDesign(
