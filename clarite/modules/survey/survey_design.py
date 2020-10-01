@@ -290,30 +290,30 @@ class SurveyDesignSpec:
 
         return result
 
-    def get_strata(self, complete_case_idx: Optional[pd.Index] = None) -> Tuple[bool, Optional[pd.Series]]:
+    def get_strata(self, complete_case_mask: Optional[pd.Series] = None) -> Tuple[bool, Optional[pd.Series]]:
         """Return strata information subset to match the data"""
-        if complete_case_idx is not None:
-            return self.has_strata, self.strata_values.loc[complete_case_idx]
+        if complete_case_mask is not None:
+            return self.has_strata, self.strata_values.loc[complete_case_mask]
         else:
             return self.has_strata, self.strata_values
 
-    def get_clusters(self, complete_case_idx: Optional[pd.Index] = None) -> Tuple[bool, Optional[pd.Series]]:
+    def get_clusters(self, complete_case_mask: Optional[pd.Series] = None) -> Tuple[bool, Optional[pd.Series]]:
         """Return cluster information subset to match the data"""
-        if complete_case_idx is not None:
-            return self.has_cluster, self.cluster_values.loc[complete_case_idx]
+        if complete_case_mask is not None:
+            return self.has_cluster, self.cluster_values.loc[complete_case_mask]
         else:
             return self.has_cluster, self.cluster_values
 
-    def get_fpc(self, complete_case_idx: Optional[pd.Index] = None) -> Tuple[bool, Optional[pd.Series]]:
+    def get_fpc(self, complete_case_mask: Optional[pd.Series] = None) -> Tuple[bool, Optional[pd.Series]]:
         """Return fpc information subset to match the data"""
-        if complete_case_idx is not None:
-            return self.has_fpc, self.fpc_values.loc[complete_case_idx]
+        if complete_case_mask is not None:
+            return self.has_fpc, self.fpc_values.loc[complete_case_mask]
         else:
             return self.has_fpc, self.fpc_values
 
     def get_weights(self,
                     regression_variable: str,
-                    complete_case_idx: Optional[pd.Index] = None) \
+                    complete_case_mask: Optional[pd.Series] = None) \
             -> Tuple[bool, Optional[str], Optional[pd.Series]]:
         """
         Return weight information for a specific regression variable, subset to match the data
@@ -329,8 +329,8 @@ class SurveyDesignSpec:
         else:
             return False, None, None
 
-        if complete_case_idx is not None:
-            weight_values = weight_values.loc[complete_case_idx]
+        if complete_case_mask is not None:
+            weight_values = weight_values.loc[complete_case_mask]
         return has_weights, weight_name, weight_values
 
     def check_missing_weights(self, data: pd.DataFrame, regression_variable: str) \
