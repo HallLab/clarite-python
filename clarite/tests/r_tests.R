@@ -268,7 +268,7 @@ dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, 
 glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)
 glm_nhanes_complete_race <- svyglm(
     HI_CHOL~race+agecat+RIAGENDR,
-    design=subset(dnhanes_complete, !is.na(dnhanes_complete$variables$race)),
+    design=dnhanes_complete,
     family=binomial(link="logit"),
     na.action=na.omit)
 glm_result_nhanes_complete <- rbind(
@@ -403,9 +403,7 @@ data[is.na(data$WTSVOC4Y), "WTSVOC4Y"] <- 0
 
 # RHQ570 - skip nonvarying 'female' covariate
 glm_full_RHQ570 <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+black+mexican+other_hispanic+other_eth+RIDAGEYR+RHQ570),
-                          design=subset(
-                            svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
-                            !is.na(data$RHQ570)),
+                          design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
                           na.action=na.omit)
 result_RHQ570 <- get_glm_result("RHQ570", glm_full_RHQ570, glm_restricted=NULL, alt_name="RHQ5701")
 

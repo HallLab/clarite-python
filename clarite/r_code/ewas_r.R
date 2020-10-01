@@ -84,7 +84,6 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
   }
 
   # Update subset array to drop NA values of the outcome variable and subset the survey design
-  subset_array <- subset_array & !is.na(data[var_name])
   survey_design <- subset(survey_design, subset_array)
 
   # Create a regression formula
@@ -184,7 +183,6 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
                                        fpc = fpc_values, ...)
   }
   # Update subset array to drop NA values of the outcome variable and subset the survey design
-  subset_array <- subset_array & !is.na(data[var_name])
   survey_design <- subset(survey_design, subset_array)
   # Manually subset the survey design to drop observations missing the tested variable value
   # This seems correct:
