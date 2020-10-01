@@ -140,16 +140,10 @@ class GLMRegression(Regression):
     def get_formulas(self, regression_variable, varying_covars) -> Tuple[str, str]:
         # Restricted Formula, just outcome and covariates
         formula_restricted = f"{self.outcome_variable} ~ "
-        formula_restricted += " + ".join(
-            [f"C({var_name})"
-             if str(self.data.dtypes[var_name]) == 'category'
-             else var_name for var_name in varying_covars])
+        formula_restricted += " + ".join(varying_covars)
 
         # Full Formula, adding the regression variable to the restricted formula
-        if str(self.data.dtypes[regression_variable]) == 'category':
-            formula = formula_restricted + f" + C({regression_variable})"
-        else:
-            formula = formula_restricted + f" + {regression_variable}"
+        formula = formula_restricted + f" + {regression_variable}"
 
         return formula_restricted, formula
 
