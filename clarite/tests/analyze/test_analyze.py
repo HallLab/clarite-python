@@ -400,7 +400,7 @@ def test_nhanes_fulldesign_subset_category():
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     design = clarite.survey.SurveyDesignSpec(df, weights="WTMEC2YR", cluster="SDMVPSU", strata="SDMVSTRA",
-                                             fpc=None, nest=True, drop_unweighted=True)
+                                             fpc=None, nest=True)
     design.subset(df['agecat'] != "(19,39]")
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     # Get Results
@@ -422,7 +422,7 @@ def test_nhanes_fulldesign_subset_category():
                              survey_design_spec=design, regression_kind='r_survey'),
     ], axis=0)
     # Compare
-    compare_result(loaded_result, python_result, r_result)
+    compare_result(loaded_result, python_result, r_result, rtol=1e-03)
 
 
 def test_nhanes_fulldesign_subset_continuous():
