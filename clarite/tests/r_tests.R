@@ -409,9 +409,7 @@ result_RHQ570 <- get_glm_result("RHQ570", glm_full_RHQ570, glm_restricted=NULL, 
 
 # first_degree_support
 glm_full_first_degree_support <- svyglm(as.formula(BMXBMI~SES_LEVEL+SDDSRVYR+female+black+mexican+other_hispanic+other_eth+RIDAGEYR+first_degree_support),
-                                        design=subset(
-                                          svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
-                                          !is.na(data$first_degree_support)),
+                                        design=svydesign(weights=~WTMEC4YR, ids=~SDMVPSU, strata=~SDMVSTRA, data=data, nest=TRUE),
                                         na.action=na.omit)
 result_first_degree_support <- get_glm_result("first_degree_support",
                                               glm_full_first_degree_support,
