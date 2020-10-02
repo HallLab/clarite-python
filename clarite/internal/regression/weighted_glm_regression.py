@@ -85,10 +85,13 @@ class WeightedGLMRegression(GLMRegression):
                 'Diff_AIC': np.nan,
                 'pvalue': np.nan}
 
-    def run_continuous_weighted(self, data, survey_design, regression_variable, formula) -> Dict:
+    def run_continuous_weighted(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Get data based on the formula
         y, X = patsy.dmatrices(formula, data, return_type='dataframe', NA_action='drop')
+
+        # Get survey design
+        survey_design = self.survey_design_spec.get_survey_design(regression_variable, X.index)
 
         # Create and fit the model
         model = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
@@ -120,8 +123,7 @@ class WeightedGLMRegression(GLMRegression):
 
         return result
 
-    def run_categorical_weighted(self, data, survey_design, regression_variable,
-                                 formula, formula_restricted) -> Dict:
+    def run_categorical_weighted(self, data, regression_variable, formula, formula_restricted) -> Dict:
         """
         The change in deviance between a model and a nested version (with n fewer predictors) follows a chi-square distribution with n DoF
         See https://en.wikipedia.org/wiki/Deviance_(statistics)
@@ -131,16 +133,18 @@ class WeightedGLMRegression(GLMRegression):
         # Regress full model
         y, X = patsy.dmatrices(formula, data,
                                return_type='dataframe', NA_action='drop')
+        # Get survey design
+        survey_design = self.survey_design_spec.get_survey_design(regression_variable, X.index)
         model = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                             init_args=dict(family=self.family),
                             fit_args=dict(use_t=self.use_t))
         model.fit(y=y, X=X)
 
         # Regress restricted model
-        # Use same X and y (but fewer columns in X) to ensure correct comparison
         y_restricted, X_restricted = patsy.dmatrices(formula_restricted, data,
                                                      return_type='dataframe', NA_action='drop')
-        model_restricted = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
+        survey_design_restricted = self.survey_design_spec.get_survey_design(regression_variable, X_restricted.index)
+        model_restricted = SurveyModel(design=survey_design_restricted, model_class=sm.GLM, cov_method=self.cov_method,
                                        init_args=dict(family=self.family),
                                        fit_args=dict(use_t=self.use_t))
         model_restricted.fit(y=y_restricted, X=X_restricted)
@@ -182,9 +186,6 @@ class WeightedGLMRegression(GLMRegression):
                     # If allowed (an error hasn't been raised) negate missing_weight_mask so True=keep to drop those
                     complete_case_mask = complete_case_mask & ~missing_weight_mask
 
-                    # Get survey design
-                    survey_design = self.survey_design_spec.get_survey_design(rv)
-
                     # Count restricted rows
                     restricted_rows = self.survey_design_spec.subset_array & complete_case_mask
 
@@ -219,11 +220,11 @@ class WeightedGLMRegression(GLMRegression):
 
                     # Run Regression
                     if rv_type == 'continuous':
-                        result = self.run_continuous_weighted(data, survey_design, rv, formula)
+                        result = self.run_continuous_weighted(data, rv, formula)
                     elif rv_type == 'binary':  # The same calculation as for continuous variables
-                        result = self.run_continuous_weighted(data, survey_design, rv, formula)
+                        result = self.run_continuous_weighted(data, rv, formula)
                     elif rv_type == 'categorical':
-                        result = self.run_categorical_weighted(data, survey_design, rv, formula, formula_restricted)
+                        result = self.run_categorical_weighted(data, rv, formula, formula_restricted)
                     else:
                         result = dict()
                     self.results[rv].update(result)

@@ -451,7 +451,7 @@ class SurveyDesignSpec:
             raise ValueError("The boolean array passed to `subset` could not be used:"
                              " the index is incompatible with the survey design")
 
-    def get_survey_design(self, regression_variable):
+    def get_survey_design(self, regression_variable, complete_case_idx):
         """
         Get a survey design based on the SurveyDesignSpec, but specific to the rv and data
 
@@ -459,18 +459,24 @@ class SurveyDesignSpec:
         ----------
         regression_variable: str
             Name of the regression variable, used to match the weight if needed
-        complete_case_mask: pd.Series
-            Complete case rows in the data are True, others are False
+        complete_case_idx: pd.Index
+            Index of the data being analyzed.  Either the same as the existing design arrays
+            or smaller due to dropping rows with NA values during regression
 
         Returns
         -------
         sd: SurveyDesign
 
         """
-        # Get parameters using the complete case index
+        # Get parameters using the built-in subset
         has_strata, strata_values = self.has_strata, self.strata_values.loc[self.subset_array]
         has_cluster, cluster_values = self.has_cluster, self.cluster_values.loc[self.subset_array]
         has_weights, weight_name, weight_values = self.get_weights(regression_variable)
+
+        # Filter out any incomplete cases
+        strata_values = strata_values.loc[complete_case_idx]
+        cluster_values = cluster_values.loc[complete_case_idx]
+        weight_values = weight_values.loc[complete_case_idx]
 
         # Initialize Survey Design
         sd = SurveyDesign(
@@ -563,7 +569,7 @@ class SurveyDesign(object):
         Parameters
         ----------
         X : pd.DataFrame
-            Input data used in the calculation
+            Input data used in the calculation, possibly fewer rows than exist in the design
 
         Returns
         -------
