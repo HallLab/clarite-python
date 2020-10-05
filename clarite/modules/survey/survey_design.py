@@ -27,7 +27,7 @@ class SurveyDesignSpec:
         The name of the variable in the survey_df that contains the finite population correction information.
         This reduces variance when a substantial portion of the population is sampled.
         May be specified as the total population size, or the fraction of the population that was sampled.
-    single_cluster: str
+    single_cluster: {'fail', 'adjust', 'average', 'certainty'}
         Setting controlling variance calculation in single-cluster ('lonely psu') strata
         'fail': default, throw an error
         'adjust': use the average of all observations (more conservative)
@@ -573,7 +573,7 @@ class SurveyDesign(object):
 
         Returns
         -------
-        dof : int
+        int
             Degrees of freedom
         """
         # num of clusters minus num of strata minus (num of predictors - 1)

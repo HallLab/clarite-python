@@ -18,20 +18,22 @@ class WeightedGLMRegression(GLMRegression):
     Statsmodels GLM Regression with adjustments for survey design.
     This class handles running a regression for each variable of interest and collecing results.
     The statistical adjustments (primarily the covariance calculation) are designed to match results when running with
-     the R `survey` library.
+    the R `survey` library.
 
+    Regression Methods
+    ------------------
     Binary variables
-      Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
+        Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
     Categorical variables
-      The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
+        The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
     Continuous variables
-      A GLM is used to obtain Beta, SE, and pvalue results.  The family used is either Gaussian (continuous outcomes) or
-      binomial(logit) for binary outcomes.
+        A GLM is used to obtain Beta, SE, and pvalue results.
 
     Notes
     -----
+    * The family used is either Gaussian (continuous outcomes) or binomial(logit) for binary outcomes.
     * Covariates variables that are constant (after dropping rows due to missing data or applying subsets) produce
-     warnings and are ignored
+    warnings and are ignored
     * Rows missing a weight but not missing the tested variable will cause an error unless the `SurveyDesignSpec`
     specifies `drop_unweighted` as True (in which case those rows are dropped)
     * The restricted model used in the LRT test for categorical values will contain more rows than the full model if
@@ -58,7 +60,7 @@ class WeightedGLMRegression(GLMRegression):
 
     Returns
     -------
-    df: pd.DataFrame
+    result: pd.DataFrame
         Results DataFrame with these columns:
          ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
 

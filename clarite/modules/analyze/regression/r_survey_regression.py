@@ -26,12 +26,6 @@ class RSurveyRegression(Regression):
       Defaults to 200
     survey_design_spec: SurveyDesignSpec or None
         A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
-
-    Returns
-    -------
-    df: pd.DataFrame
-        Results DataFrame with these columns:
-        ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
     """
     def __init__(self, data, outcome_variable, covariates, min_n=200, survey_design_spec=None):
 
@@ -85,7 +79,13 @@ class RSurveyRegression(Regression):
 
     def get_results(self) -> Tuple[pd.DataFrame, Dict[str, List[str]], Dict[str, str]]:
         """
-        Merge results into a dataFrame
+        Get regression results if `run` has already been called
+
+        Returns
+        -------
+        result: pd.DataFrame
+            Results DataFrame with these columns:
+            ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
         """
         if not self.run_complete:
             raise ValueError("No results: either the 'run' method was not called, or there was a problem running")

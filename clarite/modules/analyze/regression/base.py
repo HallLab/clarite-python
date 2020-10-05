@@ -11,10 +11,20 @@ class Regression(metaclass=ABCMeta):
     """
     Abstract Base Class for Regression objects used in EWAS.
 
-    All regression objects are initialized with:
-      data - pd.DataFrame
-      outcome_variable - name of the outcome variable in the data
-      covariates - name of other variables in the data included in the regression formula
+    Minimum Parameters
+    ------------------
+    data: pd.DataFrame
+        Data used in the analysis
+    outcome_variable: str
+        The variable to be used as the output (y) of the regression(s)
+    covariates: List[str], optional
+        The variables to be used as covariates in each regression.
+        Any variables in the DataFrames not listed as covariates are regressed.
+
+    Abstract Methods
+    ----------------
+    run() -> None
+    get_results() -> pd.DataFrame
     """
     def __init__(self, data: pd.DataFrame, outcome_variable: str, covariates: List[str]):
         # Print a warning if there are any empty categories and remove them

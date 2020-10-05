@@ -16,18 +16,20 @@ from .base import Regression
 class GLMRegression(Regression):
     """
     Statsmodels GLM Regression.
-    This class handles running a regression for each variable of interest and collecing results.
+    This class handles running a regression for each variable of interest and collecting results.
 
+    Regression Methods
+    ------------------
     Binary variables
-      Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
+        Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
     Categorical variables
-      The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
+        The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
     Continuous variables
-      A GLM is used to obtain Beta, SE, and pvalue results.  The family used is either Gaussian (continuous outcomes) or
-      binomial(logit) for binary outcomes.
+        A GLM is used to obtain Beta, SE, and pvalue results.
 
     Notes
     -----
+    * The family used is either Gaussian (continuous outcomes) or binomial(logit) for binary outcomes.
     * Covariates variables that are constant produce warnings and are ignored
     * The dataset is subset to drop missing values, and the same dataset is used for both models in the LRT
 
@@ -42,12 +44,6 @@ class GLMRegression(Regression):
     min_n: int or None
         Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
         Defaults to 200
-
-    Returns
-    -------
-    df: pd.DataFrame
-        Results DataFrame with these columns:
-          ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
 
     Examples
     --------
@@ -130,7 +126,7 @@ class GLMRegression(Regression):
 
         Returns
         -------
-        mask: Pd.Series
+        Pd.Series
             Boolean series with True = complete case and False = missing one or more values
         """
         return ~data[[regression_variable, self.outcome_variable] + self.covariates].isna().any(axis=1)
@@ -157,7 +153,13 @@ class GLMRegression(Regression):
 
     def get_results(self) -> Tuple[pd.DataFrame, Dict[str, List[str]], Dict[str, str]]:
         """
-        Merge results into a dataFrame
+        Get regression results if `run` has already been called
+
+        Returns
+        -------
+        result: pd.DataFrame
+            Results DataFrame with these columns:
+            ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
         """
         if not self.run_complete:
             raise ValueError("No results: either the 'run' method was not called, or there was a problem running")
