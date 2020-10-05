@@ -2,7 +2,7 @@
 Analyze
 ========
 
-EWAS and associated calculations
+Functions used for analyses such as EWAS
 
   .. autosummary::
      :toctree: modules/analyze
@@ -10,6 +10,8 @@ EWAS and associated calculations
      ewas
      add_corrected_pvalues
 
+     regression
+     Regression classes used in analyses
 
 """
 from typing import List, Optional, Type, Union, Any
@@ -18,8 +20,7 @@ import click
 from numpy import nan
 from statsmodels.stats.multitest import multipletests
 
-from clarite.internal.regression import GLMRegression, WeightedGLMRegression, RSurveyRegression
-from ..internal.regression.base import Regression
+from clarite.internal import regression
 
 required_result_columns = {'N', 'pvalue', 'error', 'warnings'}
 result_columns = ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pvalue',
@@ -27,16 +28,16 @@ result_columns = ['Variable_type', 'Converged', 'N', 'Beta', 'SE', 'Variable_pva
 corrected_pvalue_columns = ['pvalue_bonferroni', 'pvalue_fdr']
 
 builtin_regression_kinds = {
-    'glm': GLMRegression,
-    'weighted_glm': WeightedGLMRegression,
-    'r_survey': RSurveyRegression
+    'glm': regression.GLMRegression,
+    'weighted_glm': regression.WeightedGLMRegression,
+    'r_survey': regression.RSurveyRegression
 }
 
 
 def ewas(phenotype: str,
          covariates: List[str],
          data: Any,
-         regression_kind: Optional[Union[str, Type[Regression]]] = None,
+         regression_kind: Optional[Union[str, Type[regression.Regression]]] = None,
          **kwargs):
     """
     Run an Environment-Wide Association Study
@@ -85,7 +86,7 @@ def ewas(phenotype: str,
         regression_cls = builtin_regression_kinds.get(regression_kind, None)
         if regression_cls is None:
             raise ValueError(f"Unknown regression kind '{regression_kind}")
-    elif Regression in regression_kind.mro():
+    elif regression_kind in regression_kind.mro():
         regression_cls = regression_kind
     else:
         raise ValueError(f"Incorrect regression kind type ({type(regression_kind)}).  "
