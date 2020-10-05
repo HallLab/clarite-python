@@ -5,7 +5,6 @@ import click
 import numpy as np
 import scipy
 import patsy
-import pandas as pd
 import statsmodels.api as sm
 
 from .glm_regression import GLMRegression
@@ -16,15 +15,29 @@ from ..utilities import _remove_empty_categories
 
 class WeightedGLMRegression(GLMRegression):
     """
-    Statsmodels GLM Regression with adjustments for survey design
+    Statsmodels GLM Regression with adjustments for survey design.
+    This class handles running a regression for each variable of interest and collecing results.
+    The statistical adjustments (primarily the covariance calculation) are designed to match results when running with
+     the R `survey` library.
 
-    Note:
-      * Binary variables are treated as continuous features, with values of 0 and 1.
-      * The results of a likelihood ratio test are used for categorical variables, so no Beta values or SE are reported.
-      * The regression family is automatically selected based on the type of the phenotype.
-        * Continuous phenotypes use gaussian regression
-        * Binary phenotypes use binomial regression (the larger of the two values is counted as "success")
-      * Categorical variables run with a survey design will not report Diff_AIC
+    Binary variables
+      Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
+    Categorical variables
+      The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
+    Continuous variables
+      A GLM is used to obtain Beta, SE, and pvalue results.  The family used is either Gaussian (continuous outcomes) or
+      binomial(logit) for binary outcomes.
+
+    Notes
+    -----
+    * Covariates variables that are constant (after dropping rows due to missing data or applying subsets) produce
+     warnings and are ignored
+    * Rows missing a weight but not missing the tested variable will cause an error unless the `SurveyDesignSpec`
+    specifies `drop_unweighted` as True (in which case those rows are dropped)
+    * The restricted model used in the LRT test for categorical values will contain more rows than the full model if
+    there are rows missing the variable that is being tested.  This is done to match the R `survey` library.
+    * Categorical variables run with a survey design will not report Diff_AIC as it may not be possible to calculate
+    it accurately
 
     Parameters
     ----------
@@ -40,12 +53,14 @@ class WeightedGLMRegression(GLMRegression):
     survey_design_spec: SurveyDesignSpec or None
         A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
     cov_method: str or None
-        Covariance calculation method (if survey_design_spec is passed in).  'stata' or 'jackknife'
+        Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
+        Warning: `jackknife` is untested and may not be accurate
 
     Returns
     -------
     df: pd.DataFrame
-        EWAS results DataFrame with these columns: ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+        Results DataFrame with these columns:
+         ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
 
     Examples
     --------
@@ -102,7 +117,7 @@ class WeightedGLMRegression(GLMRegression):
         # Save results if the regression converged
         if model.result.converged:
             result['Converged'] = True
-            rv_idx_list = [i for i, n in enumerate(X.columns) if re.match(f"^{regression_variable}(\[T\..*\])?$", n)]
+            rv_idx_list = [i for i, n in enumerate(X.columns) if re.match(fr"^{regression_variable}(\[T\..*\])?$", n)]
             if len(rv_idx_list) != 1:
                 raise ValueError(f"Failed to find regression variable column in the results for {regression_variable}")
             else:

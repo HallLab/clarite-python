@@ -1,3 +1,4 @@
+import re
 from typing import Dict, List, Tuple
 
 import click
@@ -15,14 +16,20 @@ from .base import Regression
 class GLMRegression(Regression):
     """
     Statsmodels GLM Regression.
+    This class handles running a regression for each variable of interest and collecing results.
 
-    Note:
-      * Binary variables are treated as continuous features, with values of 0 and 1.
-      * The results of a likelihood ratio test are used for categorical variables, so no Beta values or SE are reported.
-      * The regression family is automatically selected based on the type of the phenotype.
-        * Continuous phenotypes use gaussian regression
-        * Binary phenotypes use binomial regression (the larger of the two values is counted as "success")
-      * Categorical variables run with a survey design will not report Diff_AIC
+    Binary variables
+      Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
+    Categorical variables
+      The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
+    Continuous variables
+      A GLM is used to obtain Beta, SE, and pvalue results.  The family used is either Gaussian (continuous outcomes) or
+      binomial(logit) for binary outcomes.
+
+    Notes
+    -----
+    * Covariates variables that are constant produce warnings and are ignored
+    * The dataset is subset to drop missing values, and the same dataset is used for both models in the LRT
 
     Parameters
     ----------
@@ -39,7 +46,8 @@ class GLMRegression(Regression):
     Returns
     -------
     df: pd.DataFrame
-        EWAS results DataFrame with these columns: ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+        Results DataFrame with these columns:
+          ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
 
     Examples
     --------
@@ -200,7 +208,8 @@ class GLMRegression(Regression):
             result['Converged'] = True
             # Categorical-type RVs get a different name in the results, and aren't always at the end
             # (since categorical come before non-categorical)
-            rv_keys = [k for k in est.params.keys() if regression_variable in k]
+            rv_keys = [k for k in est.params.keys()
+                       if re.match(fr"^{regression_variable}(\[T\..*\])?$", k)]  # <regression_variable>[T.<category>]
             try:
                 assert len(rv_keys) == 1
                 rv_key = rv_keys[0]
@@ -213,7 +222,7 @@ class GLMRegression(Regression):
 
         return result
 
-    def run_categorical(self, data, regression_variable, formula, formula_restricted) -> Dict:
+    def run_categorical(self, data, formula, formula_restricted) -> Dict:
         result = dict()
         # Regress both models
         est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
@@ -269,7 +278,7 @@ class GLMRegression(Regression):
                     # Get the formulas
                     formula_restricted, formula = self.get_formulas(rv, varying_covars)
 
-                    # Apply the keep_row_mask to the data
+                    # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
                     data = data.loc[complete_case_mask]
 
                     # Run Regression
@@ -278,7 +287,7 @@ class GLMRegression(Regression):
                     elif rv_type == 'binary':  # Essentially same as continuous, except string used to key the results
                         result = self.run_binary(data, rv, formula)
                     elif rv_type == 'categorical':
-                        result = self.run_categorical(data, rv, formula, formula_restricted)
+                        result = self.run_categorical(data, formula, formula_restricted)
                     else:
                         result = dict()
                     self.results[rv].update(result)

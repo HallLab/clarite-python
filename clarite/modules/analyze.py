@@ -41,6 +41,10 @@ def ewas(phenotype: str,
     """
     Run an Environment-Wide Association Study
 
+    All variables in `data` other than the phenotype (outcome) and covariates are tested individually.
+    Individual regression classes selected with `regression_kind` may work slightly differently.
+    Results are sorted in order of increasing `pvalue`
+
     Parameters
     ----------
     phenotype: string

@@ -10,22 +10,31 @@ from .base import Regression
 
 class RSurveyRegression(Regression):
     """
-    Run regressions using R, specificially the *survey* library
+    Run regressions by calling R from Python
+    When a SurveyDesignSpec is provided, the R *survey* library is used.
+    Results should match those run with either GLMRegression or WeightedGLMRegression.
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+    outcome_variable: str
+      The variable to be used as the output (y) of the regression
+    covariates: List[str]
+      The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
+    min-n: int or None
+      Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
+      Defaults to 200
+    survey_design_spec: SurveyDesignSpec or None
+        A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
+
+    Returns
+    -------
+    df: pd.DataFrame
+        Results DataFrame with these columns:
+        ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
     """
     def __init__(self, data, outcome_variable, covariates, min_n=200, survey_design_spec=None):
-        """
-        Parameters
-        ----------
-        data - pd.DataFrame
-        outcome_variable - name of the outcome variable
-        covariates - other variables to include in the regression formula
-        min-n - Minimum number of complete-case observations
-        survey_design_spec - optional SurveyDesignSpec
 
-        Kwargs
-        ______
-        min_n - minimum number of observations (after discarding any with NA)
-        """
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
         # initializes additional parameters (outcome dtype, regression variables, error, and warnings)

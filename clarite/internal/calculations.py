@@ -15,7 +15,7 @@ def regTermTest(full_model, restricted_model, ddf, X_names, var_name):
     chisq = restricted_model.result.deviance - full_model.result.deviance
 
     # Get Misspec
-    idx = [n for n in X_names if re.match(f"^{var_name}(\[T\..*\])?$", n)]  # Var name, with [T.<cat>] for categorical
+    idx = [n for n in X_names if re.match(fr"^{var_name}(\[T\..*\])?$", n)]  # Var name, with [T.<cat>] for categorical
     V = full_model.vcov.loc[idx, idx]
     V0 = (full_model.result.cov_params()/full_model.result.scale).loc[idx, idx]
     misspec = np.linalg.eig(np.matmul(np.linalg.pinv(V0), V))[0]
