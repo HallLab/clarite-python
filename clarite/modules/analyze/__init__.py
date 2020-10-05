@@ -8,10 +8,7 @@ Functions used for analyses such as EWAS
      :toctree: modules/analyze
 
      ewas
-
      regression
-     Regression classes used in analyses
-
      add_corrected_pvalues
 
 """
