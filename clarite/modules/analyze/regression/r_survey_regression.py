@@ -100,8 +100,8 @@ class RSurveyRegression(Regression):
         # Source R script to define the function
         import rpy2.robjects as ro
         from rpy2.robjects import pandas2ri
-        from ...r_code.r_utilities import ewasresult2py, df_pandas2r
-        r_code_folder = (Path(__file__).parent.parent.parent / 'r_code')
+        from .r_code.r_utilities import ewasresult2py, df_pandas2r
+        r_code_folder = (Path(__file__).parent / 'r_code')
         filename = str(r_code_folder / "ewas_r.R")
         ro.r.source(filename)
 

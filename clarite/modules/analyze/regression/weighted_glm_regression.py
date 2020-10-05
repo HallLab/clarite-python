@@ -10,7 +10,7 @@ import statsmodels.api as sm
 from .glm_regression import GLMRegression
 from clarite.modules.survey import SurveyDesignSpec, SurveyModel
 from clarite.internal.calculations import regTermTest
-from ..utilities import _remove_empty_categories
+from clarite.internal.utilities import _remove_empty_categories
 
 
 class WeightedGLMRegression(GLMRegression):

@@ -1,9 +1,9 @@
 """
 regression
-========
+==========
 
-The `regression_kind` parameter can be set to use one of three regression classes, or a custom subclass
-of `Regression` can be created and used.
+The `regression_kind` parameter can be set to use one of three regression classes,
+ or a custom subclass of `Regression` can be created and used.
 
 .. autoclass:: Regression
 
