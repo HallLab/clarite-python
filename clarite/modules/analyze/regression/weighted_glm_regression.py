@@ -33,13 +33,13 @@ class WeightedGLMRegression(GLMRegression):
     -----
     * The family used is either Gaussian (continuous outcomes) or binomial(logit) for binary outcomes.
     * Covariates variables that are constant (after dropping rows due to missing data or applying subsets) produce
-    warnings and are ignored
+      warnings and are ignored
     * Rows missing a weight but not missing the tested variable will cause an error unless the `SurveyDesignSpec`
-    specifies `drop_unweighted` as True (in which case those rows are dropped)
+      specifies `drop_unweighted` as True (in which case those rows are dropped)
     * The restricted model used in the LRT test for categorical values will contain more rows than the full model if
-    there are rows missing the variable that is being tested.  This is done to match the R `survey` library.
+      there are rows missing the variable that is being tested.  This is done to match the R `survey` library.
     * Categorical variables run with a survey design will not report Diff_AIC as it may not be possible to calculate
-    it accurately
+      it accurately
 
     Parameters
     ----------
@@ -57,12 +57,6 @@ class WeightedGLMRegression(GLMRegression):
     cov_method: str or None
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
         Warning: `jackknife` is untested and may not be accurate
-
-    Returns
-    -------
-    result: pd.DataFrame
-        Results DataFrame with these columns:
-         ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
 
     Examples
     --------

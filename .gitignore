@@ -1,6 +1,7 @@
 # Specific
 /docs/notebooks/output
 /docs/notebooks/.ipynb_checkpoints
+/docs/source/modules
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
