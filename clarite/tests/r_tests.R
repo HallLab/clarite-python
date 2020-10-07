@@ -265,10 +265,11 @@ write_result(glm_result_nhanes_complete, 'nhanes_complete_result.csv')
 # Full design: cluster, strata, weights with some categorical data missing
 print("Full Design with missing")
 dnhanes_complete <- svydesign(id=~SDMVPSU, strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE, data=nhanes_NAs)
+dnhanes_complete_race <- subset(dnhanes_complete, !is.na(race))
 glm_nhanes_complete <- svyglm(HI_CHOL~race+agecat+RIAGENDR, design=dnhanes_complete, family=binomial(link="logit"), na.action=na.omit)
 glm_nhanes_complete_race <- svyglm(
     HI_CHOL~race+agecat+RIAGENDR,
-    design=dnhanes_complete,
+    design=dnhanes_complete_race,
     family=binomial(link="logit"),
     na.action=na.omit)
 glm_result_nhanes_complete <- rbind(

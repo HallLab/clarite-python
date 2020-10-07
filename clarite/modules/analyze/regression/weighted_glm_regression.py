@@ -31,13 +31,11 @@ class WeightedGLMRegression(GLMRegression):
 
     Notes
     -----
-    * The family used is either Gaussian (continuous outcomes) or binomial(logit) for binary outcomes.
+    * The family used is Gaussian for continuous outcomes or binomial(logit) for binary outcomes.
     * Covariates variables that are constant (after dropping rows due to missing data or applying subsets) produce
       warnings and are ignored
     * Rows missing a weight but not missing the tested variable will cause an error unless the `SurveyDesignSpec`
       specifies `drop_unweighted` as True (in which case those rows are dropped)
-    * The restricted model used in the LRT test for categorical values will contain more rows than the full model if
-      there are rows missing the variable that is being tested.  This is done to match the R `survey` library.
     * Categorical variables run with a survey design will not report Diff_AIC as it may not be possible to calculate
       it accurately
 
@@ -136,8 +134,9 @@ class WeightedGLMRegression(GLMRegression):
 
     def run_categorical_weighted(self, data, regression_variable, formula, formula_restricted) -> Dict:
         """
-        The change in deviance between a model and a nested version (with n fewer predictors) follows a chi-square distribution with n DoF
-        See https://en.wikipedia.org/wiki/Deviance_(statistics)
+        See:
+        Lumley, Thomas, and Alastair Scott. "Tests for regression models fitted to survey data."
+        Australian & New Zealand Journal of Statistics 56.1 (2014): 1-14.
         """
         result = dict()
 
@@ -154,8 +153,7 @@ class WeightedGLMRegression(GLMRegression):
         # Regress restricted model
         y_restricted, X_restricted = patsy.dmatrices(formula_restricted, data,
                                                      return_type='dataframe', NA_action='drop')
-        survey_design_restricted = self.survey_design_spec.get_survey_design(regression_variable, X_restricted.index)
-        model_restricted = SurveyModel(design=survey_design_restricted, model_class=sm.GLM, cov_method=self.cov_method,
+        model_restricted = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
                                        init_args=dict(family=self.family),
                                        fit_args=dict(use_t=self.use_t))
         model_restricted.fit(y=y_restricted, X=X_restricted)
@@ -211,8 +209,8 @@ class WeightedGLMRegression(GLMRegression):
                     self.warnings[rv].extend(warnings)
                     data = data[[rv, self.outcome_variable] + varying_covars]  # Drop any nonvarying covars
 
-                    # Apply the subset to the data
-                    data = data.loc[self.survey_design_spec.subset_array]
+                    # Keep only restricted rows
+                    data = data.loc[restricted_rows]
 
                     # Remove unused categories caused by dropping all occurrences of that value
                     # during the above filtering (warning when this occurs)

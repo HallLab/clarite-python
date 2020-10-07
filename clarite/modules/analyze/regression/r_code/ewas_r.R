@@ -182,15 +182,9 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
                                        strata = strata_values,
                                        fpc = fpc_values, ...)
   }
-  # Update subset array to drop NA values of the outcome variable and subset the survey design
+  # Subset the survey design.  Including where the variable is NA to ensure same data is used for both models.
+  subset_array <- subset_array & !is.na(data[var_name])
   survey_design <- subset(survey_design, subset_array)
-  # Manually subset the survey design to drop observations missing the tested variable value
-  # This seems correct:
-  #   It aligns the resulting pvalue for binary variables with the simple regression result.
-  #   It prevents the overrepresentation of categorical variables in the top results
-  #   It keeps results concordant with running in R and passing the weight as a formula
-  # I'm not sure why the survey library doesn't seem to handle NAs correctly in the LRT test unless a subset is
-  # applied here or the weights are passed as a formula
 
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
