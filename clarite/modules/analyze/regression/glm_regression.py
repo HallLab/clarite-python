@@ -44,11 +44,6 @@ class GLMRegression(Regression):
     min_n: int or None
         Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
         Defaults to 200
-
-    Examples
-    --------
-    >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
-    Running EWAS on a continuous variable
     """
     def __init__(self, data, outcome_variable, covariates, min_n=200):
         """

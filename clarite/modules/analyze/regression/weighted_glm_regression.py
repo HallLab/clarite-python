@@ -55,11 +55,6 @@ class WeightedGLMRegression(GLMRegression):
     cov_method: str or None
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
         Warning: `jackknife` is untested and may not be accurate
-
-    Examples
-    --------
-    >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
-    Running EWAS on a continuous variable
     """
     def __init__(self, data, outcome_variable, covariates,
                  survey_design_spec: SurveyDesignSpec,
