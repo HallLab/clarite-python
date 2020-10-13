@@ -112,6 +112,7 @@ def test_interactions_nhanes_pairwise(data_NHANES):
                                                         data=df,
                                                         interactions=None,
                                                         report_betas=False)
-    print()
+    clarite.analyze.add_corrected_pvalues(python_result, pvalue='Beta_pvalue')
+    clarite.analyze.add_corrected_pvalues(python_result, pvalue='LRT_pvalue', groupby="Test_Number")
     # Compare
     # compare_result(loaded_result, python_result)
