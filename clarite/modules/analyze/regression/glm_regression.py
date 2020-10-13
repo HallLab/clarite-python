@@ -146,7 +146,7 @@ class GLMRegression(Regression):
 
         return formula_restricted, formula
 
-    def get_results(self) -> Tuple[pd.DataFrame, Dict[str, List[str]], Dict[str, str]]:
+    def get_results(self) -> pd.DataFrame:
         """
         Get regression results if `run` has already been called
 
