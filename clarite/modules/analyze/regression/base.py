@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
 from typing import List
 
 import click
@@ -46,13 +47,9 @@ class Regression(metaclass=ABCMeta):
         self.regression_variables = dict()  # Mapping dtype to the variable names
         self.validate_regression_params()
         # Store defaults/placeholders (mapping each regressed variable to the value
-        self.results = dict()
+        self.results = defaultdict(dict)
         self.errors = dict()
-        self.warnings = dict()
-        for rv_list in self.regression_variables.values():
-            for rv in rv_list:
-                self.results[rv] = dict()
-                self.warnings[rv] = list()
+        self.warnings = defaultdict(list)
         # Flag marking whether self.run() was called, determining if it is valid to use self.get_results()
         self.run_complete = False
 

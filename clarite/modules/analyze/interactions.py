@@ -6,12 +6,12 @@ import click
 from .regression import InteractionRegression
 
 
-def test_interactions(outcome_variable: str,
-                      covariates: List[str],
-                      data: pd.DataFrame,
-                      min_n: int = 200,
-                      interactions: Optional[List[Tuple[str]]] = None,
-                      report_betas: bool = False):
+def interactions(outcome_variable: str,
+                 covariates: List[str],
+                 data: pd.DataFrame,
+                 min_n: int = 200,
+                 interactions: Optional[List[Tuple[str, str]]] = None,
+                 report_betas: bool = False):
     """
     Run an Environment-Wide Association Study
 
@@ -68,8 +68,8 @@ def test_interactions(outcome_variable: str,
 
     # Process Results
     result['Outcome'] = outcome_variable
-    result = result.sort_values('pvalue').set_index(['Interaction', 'Outcome'])  # Sort and set index
-    result = result[['Variable_type', 'Weight', 'Converged', 'N', 'Beta', 'SE',
-                     'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
-    click.echo("Completed EWAS\n")
+    result = result.sort_values('LRT_pvalue').set_index(['Interaction', 'Outcome'])  # Sort and set index
+    column_order = ['Test_Number', 'Converged', 'N', 'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue']
+    result = result[column_order]  # Sort columns
+    click.echo("Completed Interaction Analysis\n")
     return result

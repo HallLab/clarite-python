@@ -85,7 +85,8 @@ def ewas(phenotype: str,
     result = result.sort_values('pvalue').set_index(['Variable', 'Phenotype'])  # Sort and set index
     if 'Weight' not in result.columns:
         result['Weight'] = None
-    result = result[['Variable_type', 'Weight', 'Converged', 'N', 'Beta', 'SE',
-                     'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue']]  # Sort columns
+    column_order = ['Variable_type', 'Weight', 'Converged', 'N', 'Beta', 'SE',
+                    'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue']
+    result = result[column_order]  # Sort columns
     click.echo("Completed EWAS\n")
     return result
