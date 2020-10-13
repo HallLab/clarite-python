@@ -61,6 +61,7 @@ def compare_result(loaded_result, python_result, atol=0, rtol=1e-04):
         except AssertionError:
             raise ValueError(f"{var}: Loaded ({merged[f'{var}_loaded']}) != Python ({merged[f'{var}_python']})")
 
+
 ##################
 # NHANES Dataset #
 ##################
@@ -79,14 +80,20 @@ def test_interactions_nhanes_ageXgender(data_NHANES):
     # Process data
     df = clarite.modify.colfilter(data_NHANES, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     # Get Results
-    #loaded_result = load_r_results(RESULT_PATH / "nhanes_noweights_result.csv")
+    # loaded_result = load_r_results(RESULT_PATH / "nhanes_noweights_result.csv")
     python_result = clarite.analyze.interactions(outcome_variable="HI_CHOL",
                                                  covariates=["race"],
                                                  data=df,
                                                  interactions=[("agecat", "RIAGENDR")],
                                                  report_betas=True)
+    python_result_nobeta = clarite.analyze.interactions(outcome_variable="HI_CHOL",
+                                                        covariates=["race"],
+                                                        data=df,
+                                                        interactions=[("agecat", "RIAGENDR")],
+                                                        report_betas=False)
+    print()
     ## Compare
-    #compare_result(loaded_result, python_result)
+    # compare_result(loaded_result, python_result)
 
 
 def test_interactions_nhanes_pairwise(data_NHANES):
@@ -94,11 +101,17 @@ def test_interactions_nhanes_pairwise(data_NHANES):
     # Process data
     df = clarite.modify.colfilter(data_NHANES, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     # Get Results
-    #loaded_result = load_r_results(RESULT_PATH / "nhanes_noweights_result.csv")
+    # loaded_result = load_r_results(RESULT_PATH / "nhanes_noweights_result.csv")
     python_result = clarite.analyze.interactions(outcome_variable="HI_CHOL",
                                                  covariates=[],
                                                  data=df,
                                                  interactions=None,
                                                  report_betas=True)
+    python_result_nobeta = clarite.analyze.interactions(outcome_variable="HI_CHOL",
+                                                        covariates=[],
+                                                        data=df,
+                                                        interactions=None,
+                                                        report_betas=False)
+    print()
     # Compare
-    #compare_result(loaded_result, python_result)
+    # compare_result(loaded_result, python_result)

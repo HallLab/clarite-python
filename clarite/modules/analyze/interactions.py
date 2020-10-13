@@ -68,7 +68,8 @@ def interactions(outcome_variable: str,
 
     # Process Results
     result['Outcome'] = outcome_variable
-    result = result.sort_values('LRT_pvalue').set_index(['Interaction', 'Outcome'])  # Sort and set index
+    result = result.sort_values(['LRT_pvalue', 'Beta_pvalue'])\
+                   .set_index(['Interaction', 'Outcome'])  # Sort and set index
     column_order = ['Test_Number', 'Converged', 'N', 'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue']
     result = result[column_order]  # Sort columns
     click.echo("Completed Interaction Analysis\n")

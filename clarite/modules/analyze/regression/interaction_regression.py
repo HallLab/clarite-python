@@ -87,11 +87,10 @@ class InteractionRegression(Regression):
             self.description += f"\n\t{na_outcome_count:,} are missing a value for the outcome variable"
 
         # Process interactions
-        # TODO: Only binary and categorical
-        regression_var_list =
+        regression_var_list = self.regression_variables['binary'] + self.regression_variables['categorical']
 
         if interactions is None:
-            self.interactions = [c for c in combinations(self.regression_variables, r=2)]
+            self.interactions = [c for c in combinations(regression_var_list, r=2)]
         else:
             # Check all interactions include two variables that are present
             errors = []
@@ -148,8 +147,7 @@ class InteractionRegression(Regression):
 
     def get_formulas(self, i1, i2, varying_covars) -> Tuple[str, str]:
         # Restricted Formula, just outcome and covariates
-        formula_restricted = f"{self.outcome_variable} ~ "
-        formula_restricted += " + ".join(varying_covars)
+        formula_restricted = f"{self.outcome_variable} ~ 1 " + " + ".join(varying_covars)
 
         # Full Formula, adding the regression variable to the restricted formula
         formula = formula_restricted + f" + {i1}:{i2}"
