@@ -147,7 +147,10 @@ class InteractionRegression(Regression):
 
     def get_formulas(self, i1, i2, varying_covars) -> Tuple[str, str]:
         # Restricted Formula, just outcome and covariates
-        formula_restricted = f"{self.outcome_variable} ~ 1 " + " + ".join(varying_covars)
+        formula_restricted = f"{self.outcome_variable} ~ 1"
+        if len(varying_covars) > 0:
+            formula_restricted += " + "
+            formula_restricted += " + ".join(varying_covars)
 
         # Full Formula, adding the regression variable to the restricted formula
         formula = formula_restricted + f" + {i1}:{i2}"
