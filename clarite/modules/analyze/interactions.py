@@ -35,14 +35,15 @@ def interactions(outcome_variable: str,
         will be tested for any variables in the data that are not the outcome or covariates.
     report_betas: boolean
         False by default.
-          If True, the results will contain one row for each interaction term and will include the beta value
-          for that term.  The number of terms increases with the number of categories in each interacting term.
+          If True, the results will contain one row for each interaction term and will include the beta value,
+          standard error (SE), and beta pvalue for that specific interaction. The number of terms increases with
+          the number of categories in each interacting variable.
 
 
     Returns
     -------
     df: pd.DataFrame
-        DataFrame with at least these columns: ['N', 'pvalue', 'error', 'warnings']
+        DataFrame with these columns: ['Test_Number', 'Converged', 'N', 'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue']
         indexed by the interaction and the outcome
 
     Examples
