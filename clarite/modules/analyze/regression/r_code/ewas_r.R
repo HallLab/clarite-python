@@ -228,7 +228,7 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
 
 # General Regression function which applies some filters/tests before calling the actual regression
 regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type,
-                    use_survey, single_weight, weights, strata, fpc, ids, subset_array, ...){
+                    use_survey, single_weight, weights, strata, fpc, ids, subset_array, drop_unweighted, ...){
   # The result list will be used to update results for this variable
   result = list()
 
@@ -263,19 +263,26 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
     }
     # Get weight values, returning early if there is a problem with the weight
     if(!(weight %in% names(data))){
+      # Weight values are missing
       warning(paste(var_name, " had a NULL result because its weight (", weight, ") was not found"))
       result$weight <- paste(weight, " (not found)")
       return(data.frame(result, stringsAsFactors = FALSE))
-    } else if(sum(!is.na(data[var_name]) & is.na(data[weight])) > 0){
-      warning(paste(var_name, " had a NULL result because its weight (", weight, ") had ", sum(is.na(data[weight])), " missing values when the variable was not missing"))
-      result$weight <- paste(weight, " (missing values)")
-      return(data.frame(result, stringsAsFactors = FALSE))
-    } else {
-      # Get weights
-      weight_values <- data[weight]
-      # Fill NA weight values with 0 to pass an internal check by survey
-      weight_values[is.na(weight_values),] <- 0
     }
+    missing_weight_count <- sum(!is.na(data[var_name]) & is.na(data[weight]) & subset_data)
+    if(missing_weight_count > 0){
+      # Some weights in the subset are missing when the variable is not
+      warning(paste(var_name, " had a NULL result because its weight (", weight, ") had ", missing_weight_count, " missing values when the variable was not missing"))
+      result$weight <- paste0(weight, " (", missing_weight_count, " observations are missing weights)")
+      if (!drop_unweighted){
+        # Return early with no result if dropping unweighted was not enabled
+        return(data.frame(result, stringsAsFactors = FALSE))
+      }
+    }
+    # Get weights
+    weight_values <- data[weight]
+    # Fill NA weight values with 0 to pass an internal check by survey
+    weight_values[is.na(weight_values),] <- 0
+
     # Load strata, fpc, and ids
     if(!is.null(strata)){
       strata_values <- data[strata]
