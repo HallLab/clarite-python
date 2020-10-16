@@ -276,6 +276,9 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
       if (!drop_unweighted){
         # Return early with no result if dropping unweighted was not enabled
         return(data.frame(result, stringsAsFactors = FALSE))
+      } else {
+        # Drop rows with missing weights
+        subset_data <- subset_data & !(!is.na(data[var_name]) & is.na(data[weight]))
       }
     }
     # Get weights
