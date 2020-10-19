@@ -1,0 +1,4 @@
+"","Test_Number","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue"
+"agecat:RIAGENDR",1,TRUE,7846,"    NaN","    NaN",NA,3.51779430631649e-109
+"race:agecat",2,TRUE,7846,"    NaN","    NaN",NA,2.92131298397054e-98
+"RIAGENDR:race",3,TRUE,7846,"    NaN","    NaN",NA,6.1203932589893e-06
