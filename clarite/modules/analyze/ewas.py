@@ -70,6 +70,7 @@ def ewas(phenotype: str,
                          f"A valid string or a subclass of Regression is required.")
 
     # Initialize the regression and print details
+    print(kwargs)
     regression = regression_cls(data=data,
                                 outcome_variable=phenotype,
                                 covariates=covariates,

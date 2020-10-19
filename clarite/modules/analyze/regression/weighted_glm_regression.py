@@ -58,12 +58,17 @@ class WeightedGLMRegression(GLMRegression):
         Warning: `jackknife` is untested and may not be accurate
     """
     def __init__(self,
-                 data: pd.Dataframe,
+                 data: pd.DataFrame,
                  outcome_variable: str,
                  covariates: Optional[List[str]],
-                 survey_design_spec: SurveyDesignSpec,
+                 survey_design_spec: Optional[SurveyDesignSpec] = None,
                  min_n: int = 200,
                  cov_method: Optional[str] = 'stata'):
+        # survey_design_spec should actually not be None, but is a keyword for convenience
+        if survey_design_spec is None:
+            raise ValueError("A 'survey_design_spec' must be provided")
+
+        # Base class __init__
         super().__init__(data=data,
                          outcome_variable=outcome_variable,
                          covariates=covariates,

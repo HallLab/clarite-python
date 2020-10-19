@@ -23,19 +23,19 @@ class RSurveyRegression(Regression):
       The variable to be used as the output (y) of the regression
     covariates:
       The variables to be used as covariates. Any variables in the DataFrames not listed as covariates are regressed.
+    survey_design_spec:
+        A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
+        Use None if unweighted regression is desired.
     min-n:
       Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
       Defaults to 200
-    survey_design_spec:
-        A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
     """
     def __init__(self,
-                 data: pd.Dataframe,
+                 data: pd.DataFrame,
                  outcome_variable: str,
                  covariates: Optional[List[str]],
-                 survey_design_spec: SurveyDesignSpec,
+                 survey_design_spec: Optional[SurveyDesignSpec] = None,
                  min_n: int = 200):
-
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
         # initializes additional parameters (outcome dtype, regression variables, error, and warnings)
