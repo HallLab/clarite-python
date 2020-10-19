@@ -1,11 +1,12 @@
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import pandas as pd
 
 from clarite.internal.utilities import requires, _get_dtypes
 
 from .base import Regression
+from ...survey import SurveyDesignSpec
 
 
 class RSurveyRegression(Regression):
@@ -16,18 +17,24 @@ class RSurveyRegression(Regression):
 
     Parameters
     ----------
-    data: pd.DataFrame
-    outcome_variable: str
+    data:
+      The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+    outcome_variable:
       The variable to be used as the output (y) of the regression
-    covariates: List[str]
-      The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
-    min-n: int or None
+    covariates:
+      The variables to be used as covariates. Any variables in the DataFrames not listed as covariates are regressed.
+    min-n:
       Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
       Defaults to 200
-    survey_design_spec: SurveyDesignSpec or None
+    survey_design_spec:
         A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
     """
-    def __init__(self, data, outcome_variable, covariates, min_n=200, survey_design_spec=None):
+    def __init__(self,
+                 data: pd.Dataframe,
+                 outcome_variable: str,
+                 covariates: Optional[List[str]],
+                 survey_design_spec: SurveyDesignSpec,
+                 min_n: int = 200):
 
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and

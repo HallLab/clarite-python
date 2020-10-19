@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import click
 import numpy as np
@@ -35,17 +35,21 @@ class GLMRegression(Regression):
 
     Parameters
     ----------
-    data: pd.DataFrame
+    data:
         The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
-    outcome_variable: string
+    outcome_variable:
         The variable to be used as the output (y) of the regression
-    covariates: list (strings),
+    covariates:
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
-    min_n: int or None
+    min_n:
         Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
         Defaults to 200
     """
-    def __init__(self, data, outcome_variable, covariates, min_n=200):
+    def __init__(self,
+                 data: pd.DataFrame,
+                 outcome_variable: str,
+                 covariates: Optional[List[str]] = None,
+                 min_n: int = 200):
         """
         Parameters
         ----------
