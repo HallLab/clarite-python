@@ -205,6 +205,7 @@ class RSurveyRegression(Regression):
                                    min_n=self.min_n,
                                    weights=weights,
                                    subset=self.survey_design_spec.subset_array,
+                                   drop_unweighted=self.survey_design_spec.drop_unweighted,
                                    **kwargs)
 
         result = ewasresult2py(result)

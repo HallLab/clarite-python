@@ -193,6 +193,7 @@ class WeightedGLMRegression(GLMRegression):
                     weight_name, missing_weight_mask, warning = self.survey_design_spec.check_missing_weights(data, rv)
                     if warning is not None:
                         self.warnings[rv].append(warning)
+                    self.results[rv]["Weight"] = weight_name
 
                     # Get complete case mask
                     complete_case_mask = self.get_complete_case_mask(data, rv)  # Complete cases
