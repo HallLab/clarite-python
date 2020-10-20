@@ -19,7 +19,7 @@ write_result <- function(data, filename) {
   # Fix where "NA" was modified by the above
   data <- replace(data, data=="     NA", "NA")
 
-  write.csv(data, filename, row.names=FALSE)
+  write.csv(data, file.path("r_test_output/analyze", filename), row.names=FALSE)
 }
 
 get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=TRUE, alt_name=NULL) {
@@ -79,23 +79,12 @@ get_glm_result <- function(variable, glm_full, glm_restricted=NULL, use_weights=
   }
 }
 
-# Change to the output folder
-current_dir <- getwd()
-output_dir <- file.path(current_dir, "r_test_output")
-dir.create(output_dir)
-setwd(output_dir)
-
 #################
 # fpc Test data #
 #################
 print("fpc Test data")
 # One outcome (y) and one variable (x)
-data(fpc)
-# Add an outcome variable
-fpc$y <- fpc$x + (fpc$stratid * 2) + (fpc$psuid * 0.5) 
-write.csv(fpc, 'fpc_data.csv', row.names=FALSE)
-# Reload to ensure there are no rounding differences
-fpc <- read.csv(file = 'fpc_data.csv')
+fpc <- read.csv(file = 'test_data_files/fpc_data.csv')
 
 # No weights
 glm_result_fpcnoweights <- rbind(get_glm_result("x", glm(y~x, data=fpc, na.action=na.omit), use_weights=FALSE))
@@ -113,9 +102,7 @@ write_result(glm_result_withfpc, 'fpc_withfpc_result.csv')
 
 # Test with specifying fpc and no strata
 # Have to make fpc identical now that it is one strata
-fpc_nostrat <- fpc
-fpc_nostrat$Nh <- 30
-write.csv(fpc_nostrat, 'fpc_nostrat_data.csv', row.names=FALSE)
+fpc_nostrat <- read.csv(file="test_data_files/fpc_nostrat_data.csv")
 withfpc_nostrata <- svydesign(weights=~weight, ids=~psuid, strata=NULL, fpc=~Nh, data=fpc_nostrat)
 glm_result_withfpc_nostrata <- rbind(get_glm_result("x", svyglm(y~x, design=withfpc_nostrata, na.action=na.omit)))
 write_result(glm_result_withfpc_nostrata, 'fpc_withfpc_nostrat_result.csv')
@@ -125,19 +112,10 @@ write_result(glm_result_withfpc_nostrata, 'fpc_withfpc_nostrat_result.csv')
 #################
 print("api Test data")
 # one outcome (api00) and 3 continuous variables (ell, meals, mobility)
-data(api)
-write.csv(apipop, 'apipop_data.csv', row.names=FALSE)
-write.csv(apistrat, 'apistrat_data.csv', row.names=FALSE)
-write.csv(apiclus1, 'apiclus1_data.csv', row.names=FALSE)
-# Make a modified version
-api_withna <- apipop
-api_withna$api00[2:200] <- NA
-write.csv(api_withna, 'apipop_withna_data.csv', row.names=FALSE)
-
-apipop <- read.csv(file = 'apipop_data.csv')
-apipop_withna <- read.csv(file = 'apipop_withna_data.csv')
-apistrat <- read.csv(file = 'apistrat_data.csv')
-apiclus1 <- read.csv(file = 'apiclus1_data.csv')
+apipop <- read.csv(file = 'test_data_files/apipop_data.csv')
+apipop_withna <- read.csv(file = 'test_data_files/apipop_withna_data.csv')
+apistrat <- read.csv(file = 'test_data_files/apistrat_data.csv')
+apiclus1 <- read.csv(file = 'test_data_files/apiclus1_data.csv')
 
 # Full population no weights
 glm_apipop <- glm(api00~ell+meals+mobility, data=apipop, na.action=na.omit)
@@ -190,24 +168,12 @@ print("NHANES Test data")
 # agecat  - Categorical Age group(0,19] (19,39] (39,59] (59,Inf]
 # RIAGENDR - Binary: Gender: 1=male, 2=female
 
-data(nhanes)
-# Update types (all previous tests were using continuous)
+nhanes <- read.csv('test_data_files/nhanes_data.csv')
 nhanes$HI_CHOL <- as.factor(nhanes$HI_CHOL)
 nhanes$race <- as.factor(nhanes$race)
 nhanes$agecat <- as.factor(nhanes$agecat)
 nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)
-write.csv(nhanes, 'nhanes_data.csv', row.names=FALSE)
-# Save a copy with a random normal variable for testing subsets
-nhanes$subset <- rnorm(nrow(nhanes))
-write.csv(nhanes, 'nhanes_data_subset.csv', row.names=FALSE)
-
-# Reload data
-nhanes <- read.csv('nhanes_data.csv')
-nhanes$HI_CHOL <- as.factor(nhanes$HI_CHOL)
-nhanes$race <- as.factor(nhanes$race)
-nhanes$agecat <- as.factor(nhanes$agecat)
-nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)
-nhanes_subset <- read.csv('nhanes_data_subset.csv')
+nhanes_subset <- read.csv('test_data_files/nhanes_data_subset.csv')
 nhanes_subset$HI_CHOL <- as.factor(nhanes_subset$HI_CHOL)
 nhanes_subset$race <- as.factor(nhanes_subset$race)
 nhanes_subset$agecat <- as.factor(nhanes_subset$agecat)
@@ -229,9 +195,13 @@ write_result(glm_result_nhanes_noweights, 'nhanes_noweights_result.csv')
 
 # Full population no weights, with some categorical data missing
 print("Full population no weights, with some categorical data missing")
-nhanes_NAs <- nhanes
-nhanes_NAs$race[2:800] <- NA
-write.csv(nhanes_NAs, 'nhanes_NAs_data.csv', row.names=FALSE)
+# Load data
+nhanes_NAs <- read.csv('test_data_files/nhanes_NAs_data.csv')
+nhanes_NAs$HI_CHOL <- as.factor(nhanes_NAs$HI_CHOL)
+nhanes_NAs$race <- as.factor(nhanes_NAs$race)
+nhanes_NAs$agecat <- as.factor(nhanes_NAs$agecat)
+nhanes_NAs$RIAGENDR <- as.factor(nhanes_NAs$RIAGENDR)
+
 glm_nhanes_noweights <- glm(HI_CHOL~race+agecat+RIAGENDR, family=binomial(link="logit"), data=nhanes_NAs, na.action=na.omit)
 glm_result_nhanes_noweights <- rbind(
   get_glm_result("race", glm_nhanes_noweights,
@@ -283,7 +253,7 @@ glm_result_nhanes_complete <- rbind(
                                          family=binomial(link="logit"))),
   get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
 )
-write.csv(glm_result_nhanes_complete, 'nhanes_complete_withna_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_complete, 'nhanes_complete_withna_result.csv')
 
 # Full design: cluster, strata, weights with subset agecat != (19,39]
 print("Full Design with subset")
@@ -301,7 +271,7 @@ glm_result_nhanes_complete <- rbind(
                                          family=binomial(link="logit"))),
   get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
 )
-write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cat.csv', row.names=FALSE)
+write_result(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cat.csv')
 
 # Full design: cluster, strata, weights with about half of observations randomly selected
 print("Full Design with continous subset")
@@ -319,7 +289,7 @@ glm_result_nhanes_complete <- rbind(
                                          family=binomial(link="logit"))),
   get_glm_result("RIAGENDR", glm_nhanes_complete, alt_name="RIAGENDR2")
 )
-write.csv(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cont.csv', row.names=FALSE)
+write_result(glm_result_nhanes_complete, 'nhanes_complete_result_subset_cont.csv')
 
 # Weights Only
 print("Weights Only")
@@ -332,26 +302,21 @@ glm_result_nhanes_weightsonly <- rbind(
                  glm_restricted = svyglm(HI_CHOL~race+RIAGENDR, design=glm_nhanes_weightsonly$survey.design, family=binomial(link="logit"))),
   get_glm_result("RIAGENDR", glm_nhanes_weightsonly, alt_name="RIAGENDR2")
 )
-write.csv(glm_result_nhanes_weightsonly, 'nhanes_weightsonly_result.csv', row.names=FALSE)
+write_result(glm_result_nhanes_weightsonly, 'nhanes_weightsonly_result.csv')
 
 #################
 # NHANES Lonely #
 #################
 print("NHANES Lonely Tests")
 # Lonely PSU (only one PSU in a stratum)
-nhanes_lonely <- nhanes
 # Make Lonely PSUs by dropping some rows
-nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==81) & (nhanes_lonely$SDMVPSU!=1)),]
-nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==82) & (nhanes_lonely$SDMVPSU!=1)),]
-nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==83) & (nhanes_lonely$SDMVPSU!=1)),]
-nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==84) & (nhanes_lonely$SDMVPSU!=1)),]
-nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==85) & (nhanes_lonely$SDMVPSU!=1)),]
-nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==86) & (nhanes_lonely$SDMVPSU!=1)),]
-nhanes_lonely <- nhanes_lonely[!((nhanes_lonely$SDMVSTRA==87) & (nhanes_lonely$SDMVPSU!=1)),]
-print(paste("Removed", nrow(nhanes) - nrow(nhanes_lonely), "rows to make lonely PSUs", sep=" "))
-# Save data
-write.csv(nhanes_lonely, 'nhanes_lonely_data.csv', row.names=FALSE)
-# Don't need to reload nhanes_lonely since it is subset from a reload
+
+nhanes_lonely <- read.csv('test_data_files/nhanes_lonely_data.csv')
+nhanes_lonely$HI_CHOL <- as.factor(nhanes_lonely$HI_CHOL)
+nhanes_lonely$race <- as.factor(nhanes_lonely$race)
+nhanes_lonely$agecat <- as.factor(nhanes_lonely$agecat)
+nhanes_lonely$RIAGENDR <- as.factor(nhanes_lonely$RIAGENDR)
+
 
 get_lonely_glm_results <- function(setting){
   options(survey.lonely.psu=setting)
@@ -363,7 +328,7 @@ get_lonely_glm_results <- function(setting){
       get_glm_result("race", glm_nhanes_lonely,
                      glm_restricted = svyglm(HI_CHOL~agecat+RIAGENDR, design=glm_nhanes_lonely$survey.design, family=binomial(link="logit"))),
       get_glm_result("agecat", glm_nhanes_lonely,
-                     glm_restricted = svyglm(HI_CHOL~race+RIAGENDR, , design=glm_nhanes_lonely$survey.design, family=binomial(link="logit"))),
+                     glm_restricted = svyglm(HI_CHOL~race+RIAGENDR, design=glm_nhanes_lonely$survey.design, family=binomial(link="logit"))),
       get_glm_result("RIAGENDR", glm_nhanes_lonely, alt_name="RIAGENDR2")
   )
   return(glm_result_nhanes_lonely)
@@ -387,7 +352,7 @@ write_result(glm_result_nhanes_adjust, 'nhanes_average_result.csv')
 print("Realistic NHANES Test")
 
 # Multiple weights, missing data, etc
-data <- read.table("../test_data_files/nhanes_real.txt", sep="\t", header=TRUE)
+data <- read.table("test_data_files/nhanes_real.txt", sep="\t", header=TRUE)
 data$RHQ570 <- as.factor(data$RHQ570)
 data$first_degree_support <- as.factor(data$first_degree_support)
 data$SDDSRVYR <- as.factor(data$SDDSRVYR)
@@ -459,8 +424,8 @@ write_result(result, 'nhanes_real_result.csv')
 print("NHANES Subset Test")
 
 # Load Data
-data <- read.table("../test_data_files/nhanes_subset/data.txt", sep="\t", header=TRUE)
-survey_data <- read.table("../test_data_files/nhanes_subset/design_data.txt", sep="\t", header=TRUE)
+data <- read.table("test_data_files/nhanes_subset/data.txt", sep="\t", header=TRUE)
+survey_data <- read.table("test_data_files/nhanes_subset/design_data.txt", sep="\t", header=TRUE)
 data$LBXHBC <- as.factor(data$LBXHBC)
 data$black <- as.factor(data$black)
 data$female <- as.factor(data$female)

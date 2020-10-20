@@ -4,14 +4,14 @@ import pytest
 
 import clarite
 
-R_DATA_PATH = Path(__file__).parent.parent / 'r_test_output'
+DATA_PATH = Path(__file__).parent.parent / 'test_data_files'
 PY_DATA_PATH = Path(__file__).parent.parent / 'py_test_output'
 
 
 @pytest.fixture
 def resultNHANESReal():
     # Load the data
-    df = clarite.load.from_tsv(R_DATA_PATH.parent / "test_data_files" / "nhanes_real.txt", index_col="ID")
+    df = clarite.load.from_tsv(DATA_PATH / "nhanes_real.txt", index_col="ID")
 
     # Split out survey info
     survey_cols = ["SDMVPSU", "SDMVSTRA", "WTMEC4YR", "WTSHM4YR", "WTSVOC4Y"]
@@ -44,7 +44,7 @@ def resultNHANESReal():
 @pytest.fixture
 def resultNHANESsmall():
     # Load the data
-    df = clarite.load.from_csv(R_DATA_PATH / "nhanes_data.csv", index_col=None)
+    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
     # Process data
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])

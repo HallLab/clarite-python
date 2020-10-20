@@ -1,9 +1,10 @@
 import re
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 import click
 import numpy as np
 import scipy
+import pandas as pd
 import patsy
 import statsmodels.api as sm
 
@@ -41,25 +42,33 @@ class WeightedGLMRegression(GLMRegression):
 
     Parameters
     ----------
-    data: pd.DataFrame
+    data:
         The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
-    outcome_variable: string
+    outcome_variable:
         The variable to be used as the output (y) of the regression
-    covariates: list (strings),
+    covariates:
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
-    min_n: int or None
+    survey_design_spec:
+        A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
+    min_n:
         Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
         Defaults to 200
-    survey_design_spec: SurveyDesignSpec or None
-        A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
-    cov_method: str or None
+    cov_method:
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
         Warning: `jackknife` is untested and may not be accurate
     """
-    def __init__(self, data, outcome_variable, covariates,
-                 survey_design_spec: SurveyDesignSpec,
+    def __init__(self,
+                 data: pd.DataFrame,
+                 outcome_variable: str,
+                 covariates: Optional[List[str]],
+                 survey_design_spec: Optional[SurveyDesignSpec] = None,
                  min_n: int = 200,
                  cov_method: Optional[str] = 'stata'):
+        # survey_design_spec should actually not be None, but is a keyword for convenience
+        if survey_design_spec is None:
+            raise ValueError("A 'survey_design_spec' must be provided")
+
+        # Base class __init__
         super().__init__(data=data,
                          outcome_variable=outcome_variable,
                          covariates=covariates,

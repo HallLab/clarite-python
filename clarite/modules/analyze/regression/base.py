@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from typing import List
+from collections import defaultdict
+from typing import List, Optional
 
 import click
 import pandas as pd
@@ -20,13 +21,17 @@ class Regression(metaclass=ABCMeta):
     covariates: List[str], optional
         The variables to be used as covariates in each regression.
         Any variables in the DataFrames not listed as covariates are regressed.
+        Use `None` or an empty list when no covariates are being used.
 
     Abstract Methods
     ----------------
     run() -> None
     get_results() -> pd.DataFrame
     """
-    def __init__(self, data: pd.DataFrame, outcome_variable: str, covariates: List[str]):
+    def __init__(self,
+                 data: pd.DataFrame,
+                 outcome_variable: str,
+                 covariates: Optional[List[str]] = None):
         # Print a warning if there are any empty categories and remove them
         # This is done to distinguish from those that become missing during analysis (and could be an issue)
         empty_categories = _remove_empty_categories(data)
@@ -40,19 +45,17 @@ class Regression(metaclass=ABCMeta):
         # Store minimal regression parameters
         self.data = data
         self.outcome_variable = outcome_variable
+        if covariates is None:
+            covariates = []
         self.covariates = covariates
         # Validate parameters
         self.outcome_dtype = None
         self.regression_variables = dict()  # Mapping dtype to the variable names
         self.validate_regression_params()
         # Store defaults/placeholders (mapping each regressed variable to the value
-        self.results = dict()
+        self.results = defaultdict(dict)
         self.errors = dict()
-        self.warnings = dict()
-        for rv_list in self.regression_variables.values():
-            for rv in rv_list:
-                self.results[rv] = dict()
-                self.warnings[rv] = list()
+        self.warnings = defaultdict(list)
         # Flag marking whether self.run() was called, determining if it is valid to use self.get_results()
         self.run_complete = False
 
@@ -68,7 +71,7 @@ class Regression(metaclass=ABCMeta):
         """
         # Covariates must be a list
         if type(self.covariates) != list:
-            raise ValueError("'covariates' must be specified as a list.  Use an empty list ([]) if there aren't any.")
+            raise ValueError("'covariates' must be specified as a list or set to None")
 
         # Make sure the index of each dataset is not a multiindex and give it a consistent name
         if isinstance(self.data.index, pd.MultiIndex):
