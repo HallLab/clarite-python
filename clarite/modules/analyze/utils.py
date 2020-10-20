@@ -7,7 +7,7 @@ from statsmodels.stats.multitest import multipletests
 
 def add_corrected_pvalues(data: pd.DataFrame,
                           pvalue: str = 'pvalue',
-                          groupby: Optional[str]=None):
+                          groupby: Optional[str] = None):
     """
     Calculate bonferroni and FDR pvalues and sort by increasing FDR (in-place).
     Rows with a missing pvalue are not counted as a test.
