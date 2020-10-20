@@ -7,17 +7,9 @@ Functions used for analyses such as EWAS
   .. autosummary::
      :toctree: modules/analyze
 
-     functions
-     ^^^^^^^^^
      ewas
      interactions
-
      regression
-     ^^^^^^^^^^
-     regression
-
-     utilities
-     ^^^^^^^^^
      add_corrected_pvalues
 
 """
