@@ -6,12 +6,14 @@ import click
 from .regression import InteractionRegression
 
 
-def interactions(outcome_variable: str,
-                 covariates: List[str],
-                 data: pd.DataFrame,
-                 min_n: int = 200,
-                 interactions: Optional[List[Tuple[str, str]]] = None,
-                 report_betas: bool = False):
+def interactions(
+    outcome_variable: str,
+    covariates: List[str],
+    data: pd.DataFrame,
+    min_n: int = 200,
+    interactions: Optional[List[Tuple[str, str]]] = None,
+    report_betas: bool = False,
+):
     """
     Run an Environment-Wide Association Study
 
@@ -55,12 +57,14 @@ def interactions(outcome_variable: str,
     data = data.copy(deep=True)
 
     # Initialize the regression and print details
-    regression = InteractionRegression(data=data,
-                                       outcome_variable=outcome_variable,
-                                       covariates=covariates,
-                                       min_n=min_n,
-                                       interactions=interactions,
-                                       report_betas=report_betas)
+    regression = InteractionRegression(
+        data=data,
+        outcome_variable=outcome_variable,
+        covariates=covariates,
+        min_n=min_n,
+        interactions=interactions,
+        report_betas=report_betas,
+    )
     print(regression)
 
     # Run and get results
@@ -68,10 +72,19 @@ def interactions(outcome_variable: str,
     result = regression.get_results()
 
     # Process Results
-    result['Outcome'] = outcome_variable
-    result = result.sort_values(['LRT_pvalue', 'Beta_pvalue'])\
-                   .set_index(['Interaction', 'Outcome'])  # Sort and set index
-    column_order = ['Test_Number', 'Converged', 'N', 'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue']
+    result["Outcome"] = outcome_variable
+    result = result.sort_values(["LRT_pvalue", "Beta_pvalue"]).set_index(
+        ["Interaction", "Outcome"]
+    )  # Sort and set index
+    column_order = [
+        "Test_Number",
+        "Converged",
+        "N",
+        "Beta",
+        "SE",
+        "Beta_pvalue",
+        "LRT_pvalue",
+    ]
     result = result[column_order]  # Sort columns
     click.echo("Completed Interaction Analysis\n")
     return result

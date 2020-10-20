@@ -32,7 +32,10 @@ class SurveyModel(object):
     stderr : (p, ) array
         Standard error of cofficients
     """
-    def __init__(self, design, model_class, cov_method='stata', init_args={}, fit_args={}):
+
+    def __init__(
+        self, design, model_class, cov_method="stata", init_args={}, fit_args={}
+    ):
         # TODO: Take in original (full) data which may have more observations than the fitted data (due to NA dropouts)
         self.design = design
         self.model = model_class
@@ -84,31 +87,45 @@ class SurveyModel(object):
         # Get hessian and inverse hessian
         # Rows and Columns are the variables
         # Both are symmetric across the diagonal
-        hessian = pd.DataFrame(self.initialized_model.hessian(self.params, observed=True),
-                               index=self.params.index,
-                               columns=self.params.index)
-        hess_inv = pd.DataFrame(np.linalg.inv(hessian.values),
-                                index=self.params.index,
-                                columns=self.params.index)
+        hessian = pd.DataFrame(
+            self.initialized_model.hessian(self.params, observed=True),
+            index=self.params.index,
+            columns=self.params.index,
+        )
+        hess_inv = pd.DataFrame(
+            np.linalg.inv(hessian.values),
+            index=self.params.index,
+            columns=self.params.index,
+        )
 
         # Get the Jacobian/Gradient of log-likelihood evaluated at params for each observation
         # Statsmodels stores this in the model
         # This matrix has one row for each observation (index = 'ID') and a column for each variable
-        d_hat = pd.DataFrame(self.initialized_model.score_obs(self.params),
-                             index=X.index,
-                             columns=self.params.index)
+        d_hat = pd.DataFrame(
+            self.initialized_model.score_obs(self.params),
+            index=X.index,
+            columns=self.params.index,
+        )
 
         # Add strat and clust information to the d_hat index (this just modifies the index labels)
-        d_hat = pd.merge(d_hat, self.design.strat, left_index=True, right_index=True).set_index('strat', append=True)
-        d_hat = pd.merge(d_hat, self.design.clust, left_index=True, right_index=True).set_index('clust', append=True)
+        d_hat = pd.merge(
+            d_hat, self.design.strat, left_index=True, right_index=True
+        ).set_index("strat", append=True)
+        d_hat = pd.merge(
+            d_hat, self.design.clust, left_index=True, right_index=True
+        ).set_index("clust", append=True)
 
         # Get sum of d_hat within each cluster (rows = clusters, columns = variables)
-        jdata = d_hat.groupby(axis=0, level='clust').apply(sum)
+        jdata = d_hat.groupby(axis=0, level="clust").apply(sum)
 
         if self.design.has_strata:
             # Add strata label to jdata (just updates the index labels)
-            jdata = pd.merge(jdata, self.design.strat_for_clust.loc[jdata.index].rename('strat'), left_index=True, right_index=True)\
-                      .set_index('strat', append=True)
+            jdata = pd.merge(
+                jdata,
+                self.design.strat_for_clust.loc[jdata.index].rename("strat"),
+                left_index=True,
+                right_index=True,
+            ).set_index("strat", append=True)
 
             # Center each stratum in jdata (which is one or more rows, each corresponding to individual clusters)
 
@@ -116,7 +133,7 @@ class SurveyModel(object):
                 """
                 Center strata around zero, logging any single-cluster strata
                 """
-                if len(data) == 1 and single_cluster_setting == 'adjust':
+                if len(data) == 1 and single_cluster_setting == "adjust":
                     # Subtract the population mean from the single-cluster strata
                     return data - pop_mean
                 else:
@@ -124,25 +141,37 @@ class SurveyModel(object):
                     # This results in a value of 0 for the strata when there is only 1 cluster
                     return data - data.mean()
 
-            jdata = jdata.groupby(axis=0, level='strat')\
-                         .apply(lambda g: center_strata(g, self.design.single_cluster, d_hat.mean()))
+            jdata = jdata.groupby(axis=0, level="strat").apply(
+                lambda g: center_strata(g, self.design.single_cluster, d_hat.mean())
+            )
 
             # Scale after centering, if required
             # TODO: Scale may be different if some strat/clusters drop?
-            if self.design.single_cluster == 'average':
-                single_cluster_scale = np.sqrt(self.design.n_strat / (self.design.n_strat - sum(self.design.clust_per_strat == 1)))
+            if self.design.single_cluster == "average":
+                single_cluster_scale = np.sqrt(
+                    self.design.n_strat
+                    / (self.design.n_strat - sum(self.design.clust_per_strat == 1))
+                )
                 jdata *= single_cluster_scale
 
         # nh is one row per cluster, listing the number of clusters in the strata that the cluster belongs to
         # Note that this includes strata in the original design, before any subsetting of any kind
-        nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64)
-        mh = np.sqrt(nh / (nh-1))
-        mh[mh == np.inf] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
-        fh = np.sqrt(1 - self.design.fpc)  # self.design.fpc has fpc value for each cluster (one row per cluster)
-        jdata *= (fh.values[:, None] * mh.values[:, None])  # This is each column in jdata being multiplied by an array
+        nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(
+            np.float64
+        )
+        mh = np.sqrt(nh / (nh - 1))
+        mh[
+            mh == np.inf
+        ] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
+        fh = np.sqrt(
+            1 - self.design.fpc
+        )  # self.design.fpc has fpc value for each cluster (one row per cluster)
+        jdata *= (
+            fh.values[:, None] * mh.values[:, None]
+        )  # This is each column in jdata being multiplied by an array
 
         v_hat = np.dot(jdata.T, jdata)  # variables X variables
-        vcov = np.dot(hess_inv, v_hat).dot(hess_inv.T)   # variables X variables
+        vcov = np.dot(hess_inv, v_hat).dot(hess_inv.T)  # variables X variables
         # Return as a data.frame
         vcov = pd.DataFrame(vcov, index=self.params.index, columns=self.params.index)
         return vcov
@@ -161,15 +190,21 @@ class SurveyModel(object):
             replicate_params[c] = self._calc_params(y, X, init_args, self.fit_args)
 
         # Collect data into a dataframe and center it
-        replicate_params = pd.DataFrame.from_dict(replicate_params, orient='index', columns=self.params.index)
-        replicate_params.index.name = 'clust'
+        replicate_params = pd.DataFrame.from_dict(
+            replicate_params, orient="index", columns=self.params.index
+        )
+        replicate_params.index.name = "clust"
         self.replicate_params = replicate_params - self.params
 
-        nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(np.float64)
+        nh = self.design.clust_per_strat.loc[self.design.strat_for_clust].astype(
+            np.float64
+        )
         mh = np.sqrt((nh - 1) / nh)
-        mh[mh == np.inf] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
+        mh[
+            mh == np.inf
+        ] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
         fh = np.sqrt(1 - self.design.fpc)
-        self.replicate_params *= (mh[:, None] * fh[:, None])
+        self.replicate_params *= mh[:, None] * fh[:, None]
 
         vcov = np.dot(self.replicate_params.T, self.replicate_params)
 
@@ -177,7 +212,7 @@ class SurveyModel(object):
         vcov = pd.DataFrame(vcov, index=self.params.index, columns=self.params.index)
         return vcov
 
-    def fit(self, y, X, center_by='est'):
+    def fit(self, y, X, center_by="est"):
 
         assert y.index.equals(X.index)
         self.center_by = center_by
@@ -196,9 +231,9 @@ class SurveyModel(object):
 
         if self.design.has_strata or self.design.has_cluster or self.design.has_weights:
             # Calculate stderr based on covariance
-            if self.cov_method == 'jackknife':
+            if self.cov_method == "jackknife":
                 self.vcov = self._jackknife_vcov(X, y)
-            elif self.cov_method == 'stata':
+            elif self.cov_method == "stata":
                 self.vcov = self._stata_linearization_vcov(X, y)
             else:
                 return ValueError(f"cov_method '{self.cov_method}' is not supported")

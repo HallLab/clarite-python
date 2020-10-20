@@ -13,9 +13,8 @@ class ClariteData:
     """
     This class manages loading various files related to the 'data' parameter in the CLI
     """
-    def __init__(self,
-                 name: str,
-                 df: Optional[pd.DataFrame] = None):
+
+    def __init__(self, name: str, df: Optional[pd.DataFrame] = None):
         """
         Either initialize with pre-loaded data in an io function (passing df) or just a name
         """
@@ -23,14 +22,18 @@ class ClariteData:
         self.df = df
         if self.df is None:
             self.load_data()
-        self.dtypes = self.get_dtypes()  # Load dtypes if a df was passed- otherwise gets set to None
+        self.dtypes = (
+            self.get_dtypes()
+        )  # Load dtypes if a df was passed- otherwise gets set to None
 
     def describe(self):
         """Describe the df for logging"""
         if self.df is None:
             return "empty DataFrame"
         else:
-            return f"{len(self.df):,} observations of {len(self.df.columns):,} variables"
+            return (
+                f"{len(self.df):,} observations of {len(self.df.columns):,} variables"
+            )
 
     def load_data(self):
         """
@@ -50,11 +53,13 @@ class ClariteData:
         dtypes_file = Path(dtypes_filename)
         if not dtypes_file.exists():
             raise ValueError(f"Could not read '{dtypes_filename}'")
-        with dtypes_file.open('r') as f:
+        with dtypes_file.open("r") as f:
             try:
                 self.dtypes = json.load(f)
             except json.JSONDecodeError as e:
-                raise ValueError(f"'{dtypes_filename}' was not a valid dtypes file: {e}")
+                raise ValueError(
+                    f"'{dtypes_filename}' was not a valid dtypes file: {e}"
+                )
         # Update df dtypes
         self.set_dtypes(self.dtypes)
 
@@ -68,9 +73,16 @@ class ClariteData:
         """
         if self.df is None:
             return None
-        dtypes = {variable_name: {'type': str(dtype)} if str(dtype) != 'category'
-                  else {'type': str(dtype), 'categories': list(dtype.categories.values.tolist()), 'ordered': dtype.ordered}
-                  for variable_name, dtype in self.df.dtypes.iteritems()}
+        dtypes = {
+            variable_name: {"type": str(dtype)}
+            if str(dtype) != "category"
+            else {
+                "type": str(dtype),
+                "categories": list(dtype.categories.values.tolist()),
+                "ordered": dtype.ordered,
+            }
+            for variable_name, dtype in self.df.dtypes.iteritems()
+        }
         return dtypes
 
     def set_dtypes(self, dtypes):
@@ -81,15 +93,22 @@ class ClariteData:
         missing_types = set(list(self.df)) - set(dtypes.keys())
         extra_dtypes = set(dtypes.keys()) - set(list(self.df))
         if len(missing_types) > 0:
-            raise ValueError(f"Dtypes file is missing some values: {', '.join(missing_types)}")
+            raise ValueError(
+                f"Dtypes file is missing some values: {', '.join(missing_types)}"
+            )
         if len(extra_dtypes) > 0:
-            raise ValueError(f"Dtypes file has types for variables not found in the data: {', '.join(extra_dtypes)}")
+            raise ValueError(
+                f"Dtypes file has types for variables not found in the data: {', '.join(extra_dtypes)}"
+            )
 
         for col in list(self.df):
             typeinfo = dtypes[col]
-            newtype = typeinfo['type']
-            if typeinfo['type'] == 'category':
-                newtype = pd.CategoricalDtype(categories=np.array(typeinfo['categories']), ordered=typeinfo['ordered'])
+            newtype = typeinfo["type"]
+            if typeinfo["type"] == "category":
+                newtype = pd.CategoricalDtype(
+                    categories=np.array(typeinfo["categories"]),
+                    ordered=typeinfo["ordered"],
+                )
             self.df[col] = self.df[col].astype(newtype)
 
 
@@ -103,7 +122,11 @@ def save_clarite_data(data: ClariteData, output: str = None):
 
     # Skip saving if there is no data
     if len(data.df) == 0:
-        click.echo(click.style(f"No variables to output: {output}.txt was not written.", fg='yellow'))
+        click.echo(
+            click.style(
+                f"No variables to output: {output}.txt was not written.", fg="yellow"
+            )
+        )
 
     # Refresh dtypes in case the df was modified
     data.dtypes = data.get_dtypes()
@@ -116,14 +139,14 @@ def save_clarite_data(data: ClariteData, output: str = None):
     # Save dtypes
     dtypes_filename = output + ".dtypes"
     dtypes_file = Path(dtypes_filename)
-    with dtypes_file.open('w') as f:
+    with dtypes_file.open("w") as f:
         json.dump(data.dtypes, f)
 
     # Save Log file
     # TODO
 
     # Log
-    click.echo(click.style(f"Done: Saved {data.describe()} to {output}", fg='green'))
+    click.echo(click.style(f"Done: Saved {data.describe()} to {output}", fg="green"))
 
 
 def save_clarite_ewas(data: pd.DataFrame, output: str = None):
@@ -132,7 +155,11 @@ def save_clarite_ewas(data: pd.DataFrame, output: str = None):
     """
     # Skip saving if there is no data
     if len(data) == 0:
-        click.echo(click.style(f"No variables to output: {output}.txt was not written.", fg='yellow'))
+        click.echo(
+            click.style(
+                f"No variables to output: {output}.txt was not written.", fg="yellow"
+            )
+        )
 
     # Save data
     output_filename = output + ".txt"
@@ -140,7 +167,12 @@ def save_clarite_ewas(data: pd.DataFrame, output: str = None):
     data.to_csv(output_file, sep="\t")
 
     # Log
-    click.echo(click.style(f"Done: Saved EWAS results for {len(data):,} variables to {output}", fg='green'))
+    click.echo(
+        click.style(
+            f"Done: Saved EWAS results for {len(data):,} variables to {output}",
+            fg="green",
+        )
+    )
 
 
 class ClariteDataParamType(click.ParamType):
@@ -150,14 +182,18 @@ class ClariteDataParamType(click.ParamType):
         if param is None:
             return None
         try:
-            data = ClariteData(name=value, df=None)  # df = None b/c it will be loaded from file
+            data = ClariteData(
+                name=value, df=None
+            )  # df = None b/c it will be loaded from file
             return data
         except ValueError as e:
-            self.fail(f"Failed to read {value} as a CLARITE dataset. "
-                      f"Has it been converted using an io function?"
-                      f"\n\t{e}",
-                      param,
-                      ctx)
+            self.fail(
+                f"Failed to read {value} as a CLARITE dataset. "
+                f"Has it been converted using an io function?"
+                f"\n\t{e}",
+                param,
+                ctx,
+            )
 
 
 class ClariteEwasResultParamType(click.ParamType):
@@ -168,15 +204,23 @@ class ClariteEwasResultParamType(click.ParamType):
             return None
         try:
             # Load data
-            data = pd.read_csv(value+".txt", sep="\t", index_col=['Variable', 'Phenotype'])
+            data = pd.read_csv(
+                value + ".txt", sep="\t", index_col=["Variable", "Phenotype"]
+            )
             # Check columns
             cols_original = analyze.result_columns
-            cols_with_corrected_pvals = analyze.result_columns + analyze.corrected_pvalue_columns
-            if (list(data) != cols_original) & (list(data) != cols_with_corrected_pvals):
+            cols_with_corrected_pvals = (
+                analyze.result_columns + analyze.corrected_pvalue_columns
+            )
+            if (list(data) != cols_original) & (
+                list(data) != cols_with_corrected_pvals
+            ):
                 raise ValueError(f"{value} was not a valid EWAS result file.")
             return (value, data)  # tuple to include name
         except ValueError as e:
-            self.fail(f"Failed to read {value}.txt as a CLARITE EWAS result dataset. "
-                      f"\n\t{e}",
-                      param,
-                      ctx)
+            self.fail(
+                f"Failed to read {value}.txt as a CLARITE EWAS result dataset. "
+                f"\n\t{e}",
+                param,
+                ctx,
+            )

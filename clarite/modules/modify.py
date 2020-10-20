@@ -32,12 +32,18 @@ import numpy as np
 import pandas as pd
 
 from ..internal.utilities import (
-    _validate_skip_only, _get_dtypes, _process_colfilter,
-    print_wrap, _remove_empty_categories)
+    _validate_skip_only,
+    _get_dtypes,
+    _process_colfilter,
+    print_wrap,
+    _remove_empty_categories,
+)
 
 
 @print_wrap
-def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min: int = 15):
+def categorize(
+    data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min: int = 15
+):
     """
     Classify variables into constant, binary, categorical, continuous, and 'unknown'.  Drop variables that only have NaN values.
 
@@ -83,31 +89,33 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
     unique_count = data.nunique(dropna=True)
 
     # No unique non-NA values - Drop these variables
-    empty_vars = (unique_count == 0)
+    empty_vars = unique_count == 0
     if empty_vars.sum() > 0:
         columns = list(empty_vars[empty_vars].index)
         data = data.drop(columns=columns)
 
     # One unique non-NA value - Convert non-NA values to category (for constant)
-    keep_constant = (unique_count == 1)
+    keep_constant = unique_count == 1
     if keep_constant.sum() > 0:
         columns = list(keep_constant[keep_constant].index)
-        data = data.astype({c: 'category' for c in columns})
+        data = data.astype({c: "category" for c in columns})
 
     # Two unique non-NA values - Convert non-NA values to category (for binary)
-    keep_bin = (unique_count == 2)
+    keep_bin = unique_count == 2
     if keep_bin.sum() > 0:
         columns = list(keep_bin[keep_bin].index)
-        data = data.astype({c: 'category' for c in columns})
+        data = data.astype({c: "category" for c in columns})
 
     # Categorical - Convert non-NA values to category type
     keep_cat = (unique_count >= cat_min) & (unique_count <= cat_max)
     if keep_cat.sum() > 0:
         columns = list(keep_cat[keep_cat].index)
-        data = data.astype({c: 'category' for c in columns})  # NaNs are handled correctly, no need skip
+        data = data.astype(
+            {c: "category" for c in columns}
+        )  # NaNs are handled correctly, no need skip
 
     # Continuous - Convert non-NA values to numeric type (even though they probably already are)
-    keep_cont = (unique_count >= cont_min)
+    keep_cont = unique_count >= cont_min
     check_cont = pd.Series(False, index=keep_cont.index)
     if keep_cont.sum() > 0:
         for col in keep_cont[keep_cont].index:
@@ -120,41 +128,63 @@ def categorize(data: pd.DataFrame, cat_min: int = 3, cat_max: int = 6, cont_min:
                 data[col] = data.loc[:, col].astype(str)
 
     # Other - Convert non-NA values to string type
-    check_other = ~empty_vars & ~keep_constant & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
+    check_other = (
+        ~empty_vars & ~keep_constant & ~keep_bin & ~keep_cat & ~check_cont & ~keep_cont
+    )
     if check_other.sum() > 0:
         columns = list(check_other[check_other].index)
         for c in columns:
             data.loc[~data[c].isna(), c] = data.loc[~data[c].isna(), c].astype(str)
 
     # Log categorized results
-    click.echo(f"{keep_constant.sum():,} of {total_vars:,} variables ({keep_constant.sum() / total_vars:.2%}) "
-               f"are classified as constant (1 unique value).")
-    click.echo(f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
-               f"are classified as binary (2 unique values).")
-    click.echo(f"{keep_cat.sum():,} of {total_vars:,} variables ({keep_cat.sum()/total_vars:.2%}) "
-               f"are classified as categorical ({cat_min} to {cat_max} unique values).")
-    click.echo(f"{keep_cont.sum():,} of {total_vars:,} variables ({keep_cont.sum()/total_vars:.2%}) "
-               f"are classified as continuous (>= {cont_min} unique values).")
+    click.echo(
+        f"{keep_constant.sum():,} of {total_vars:,} variables ({keep_constant.sum() / total_vars:.2%}) "
+        f"are classified as constant (1 unique value)."
+    )
+    click.echo(
+        f"{keep_bin.sum():,} of {total_vars:,} variables ({keep_bin.sum()/total_vars:.2%}) "
+        f"are classified as binary (2 unique values)."
+    )
+    click.echo(
+        f"{keep_cat.sum():,} of {total_vars:,} variables ({keep_cat.sum()/total_vars:.2%}) "
+        f"are classified as categorical ({cat_min} to {cat_max} unique values)."
+    )
+    click.echo(
+        f"{keep_cont.sum():,} of {total_vars:,} variables ({keep_cont.sum()/total_vars:.2%}) "
+        f"are classified as continuous (>= {cont_min} unique values)."
+    )
 
     # Log dropped variables
     dropped = empty_vars.sum()
-    click.echo(f"{dropped:,} of {total_vars:,} variables ({dropped/total_vars:.2%}) were dropped.")
+    click.echo(
+        f"{dropped:,} of {total_vars:,} variables ({dropped/total_vars:.2%}) were dropped."
+    )
     if dropped > 0:
         click.echo(f"\t{empty_vars.sum():,} variables had zero unique values (all NA).")
 
     # Log non-categorized results
     num_not_categorized = check_other.sum() + check_cont.sum()
-    click.echo(f"{num_not_categorized:,} of {total_vars:,} variables ({num_not_categorized/total_vars:.2%})"
-               f" were not categorized and need to be set manually.")
+    click.echo(
+        f"{num_not_categorized:,} of {total_vars:,} variables ({num_not_categorized/total_vars:.2%})"
+        f" were not categorized and need to be set manually."
+    )
     if num_not_categorized > 0:
-        click.echo(f"\t{check_other.sum():,} variables had between {cat_max} and {cont_min} unique values")
-        click.echo(f"\t{check_cont.sum():,} variables had >= {cont_min} values but couldn't be converted to continuous (numeric) values")
+        click.echo(
+            f"\t{check_other.sum():,} variables had between {cat_max} and {cont_min} unique values"
+        )
+        click.echo(
+            f"\t{check_cont.sum():,} variables had >= {cont_min} values but couldn't be converted to continuous (numeric) values"
+        )
 
     return data
 
 
 @print_wrap
-def colfilter(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def colfilter(
+    data,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Remove some variables (skip) or keep only certain variables (only)
 
@@ -190,8 +220,8 @@ def colfilter(data, skip: Optional[Union[str, List[str]]] = None, only: Optional
     dtypes = _get_dtypes(data)
     click.echo(f"Keeping {boolean_keep.sum():,} of {len(data.columns):,} variables:")
 
-    for kind in ['binary', 'categorical', 'continuous', 'unknown']:
-        is_kind = (dtypes == kind)
+    for kind in ["binary", "categorical", "continuous", "unknown"]:
+        is_kind = dtypes == kind
         is_kept = is_kind & boolean_keep
         click.echo(f"\t{is_kept.sum():,} of {is_kind.sum():,} {kind} variables")
 
@@ -199,7 +229,12 @@ def colfilter(data, skip: Optional[Union[str, List[str]]] = None, only: Optional
 
 
 @print_wrap
-def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def colfilter_min_cat_n(
+    data,
+    n: int = 200,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Remove binary and categorical variables which have less than <n> occurences of each unique value
 
@@ -236,17 +271,25 @@ def colfilter_min_cat_n(data, n: int = 200, skip: Optional[Union[str, List[str]]
     min_category_counts = data.apply(lambda col: col.value_counts().min())
     fail_filter = min_category_counts < n
 
-    kept = _process_colfilter(data, skip, only,
-                              fail_filter=fail_filter,
-                              explanation=f"which had a category with less than {n} values.",
-                              kinds=['binary', 'categorical'])
+    kept = _process_colfilter(
+        data,
+        skip,
+        only,
+        fail_filter=fail_filter,
+        explanation=f"which had a category with less than {n} values.",
+        kinds=["binary", "categorical"],
+    )
     # Return
     return data.loc[:, kept]
 
 
 @print_wrap
-def colfilter_min_n(data: pd.DataFrame, n: int = 200,
-                    skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def colfilter_min_n(
+    data: pd.DataFrame,
+    n: int = 200,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Remove variables which have less than <n> non-NA values
 
@@ -282,21 +325,31 @@ def colfilter_min_n(data: pd.DataFrame, n: int = 200,
             Removed 8 (1.66%) tested continuous variables which had less than 200 non-null values
     """
     assert type(data) == pd.DataFrame
-    counts = data.count()  # by default axis=0 (rows) so counts number of non-NA rows in each column
+    counts = (
+        data.count()
+    )  # by default axis=0 (rows) so counts number of non-NA rows in each column
     fail_filter = counts < n
 
-    kept = _process_colfilter(data, skip, only,
-                              fail_filter=fail_filter,
-                              explanation=f"which had less than {n} non-null values.",
-                              kinds=['binary', 'categorical', 'continuous'])
+    kept = _process_colfilter(
+        data,
+        skip,
+        only,
+        fail_filter=fail_filter,
+        explanation=f"which had less than {n} non-null values.",
+        kinds=["binary", "categorical", "continuous"],
+    )
 
     # Return
     return data.loc[:, kept]
 
 
 @print_wrap
-def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
-                           skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def colfilter_percent_zero(
+    data: pd.DataFrame,
+    filter_percent: float = 90.0,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Remove continuous variables which have <proportion> or more values of zero (excluding NA)
 
@@ -331,16 +384,24 @@ def colfilter_percent_zero(data: pd.DataFrame, filter_percent: float = 90.0,
     percent_value = 100 * data.apply(lambda col: (col == 0).sum() / col.count())
     fail_filter = percent_value >= filter_percent
 
-    kept = _process_colfilter(data, skip, only,
-                              fail_filter=fail_filter,
-                              explanation=f"which were equal to zero in at least {filter_percent:.2f}% of non-NA observations.",
-                              kinds=['continuous'])
+    kept = _process_colfilter(
+        data,
+        skip,
+        only,
+        fail_filter=fail_filter,
+        explanation=f"which were equal to zero in at least {filter_percent:.2f}% of non-NA observations.",
+        kinds=["continuous"],
+    )
     # Return
     return data.loc[:, kept]
 
 
 @print_wrap
-def make_binary(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def make_binary(
+    data: pd.DataFrame,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Set variable types as Binary
 
@@ -380,19 +441,27 @@ def make_binary(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None
     non_binary = (unique_values != 2) & columns
     num_non_binary = non_binary.sum()
     if num_non_binary > 0:
-        raise ValueError(f"{num_non_binary} variable(s) did not have 2 unique values and couldn't be processed as a binary type: "
-                         f"{', '.join(non_binary[non_binary].index)}")
+        raise ValueError(
+            f"{num_non_binary} variable(s) did not have 2 unique values and couldn't be processed as a binary type: "
+            f"{', '.join(non_binary[non_binary].index)}"
+        )
 
     # Convert dtype
     columns = columns[columns].index
-    data = data.astype({c: 'category' for c in columns})
-    click.echo(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as binary, each with {len(data):,} observations")
+    data = data.astype({c: "category" for c in columns})
+    click.echo(
+        f"Set {len(columns):,} of {len(data.columns):,} variable(s) as binary, each with {len(data):,} observations"
+    )
 
     return data
 
 
 @print_wrap
-def make_categorical(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def make_categorical(
+    data: pd.DataFrame,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Set variable types as Categorical
 
@@ -426,14 +495,20 @@ def make_categorical(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] =
 
     # Convert dtype
     columns = columns[columns].index
-    data = data.astype({c: 'category' for c in columns})
-    click.echo(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as categorical, each with {len(data):,} observations")
+    data = data.astype({c: "category" for c in columns})
+    click.echo(
+        f"Set {len(columns):,} of {len(data.columns):,} variable(s) as categorical, each with {len(data):,} observations"
+    )
 
     return data
 
 
 @print_wrap
-def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def make_continuous(
+    data: pd.DataFrame,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Set variable types as Numeric
 
@@ -466,23 +541,35 @@ def make_continuous(data: pd.DataFrame, skip: Optional[Union[str, List[str]]] = 
     columns = _validate_skip_only(data, skip, only)
 
     # Convert dtype, ignoring errors
-    data.loc[:, columns] = data.loc[:, columns].apply(lambda col: pd.to_numeric(col, errors='ignore'))
+    data.loc[:, columns] = data.loc[:, columns].apply(
+        lambda col: pd.to_numeric(col, errors="ignore")
+    )
 
     # Check if any variables could not be converted
-    failed_conversion = data.loc[:, columns].dtypes.apply(lambda dt: not pd.api.types.is_numeric_dtype(dt))
+    failed_conversion = data.loc[:, columns].dtypes.apply(
+        lambda dt: not pd.api.types.is_numeric_dtype(dt)
+    )
     if failed_conversion.sum() > 0:
-        raise ValueError(f"{failed_conversion.sum()} variable(s) couldn't be processed as continuous (numeric) type(s): "
-                         f"{', '.join(failed_conversion[failed_conversion].index)}")
+        raise ValueError(
+            f"{failed_conversion.sum()} variable(s) couldn't be processed as continuous (numeric) type(s): "
+            f"{', '.join(failed_conversion[failed_conversion].index)}"
+        )
 
     columns = columns[columns].index
-    click.echo(f"Set {len(columns):,} of {len(data.columns):,} variable(s) as continuous, each with {len(data):,} observations")
+    click.echo(
+        f"Set {len(columns):,} of {len(data.columns):,} variable(s) as continuous, each with {len(data):,} observations"
+    )
 
     return data
 
 
 @print_wrap
-def recode_values(data, replacement_dict,
-                  skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def recode_values(
+    data,
+    replacement_dict,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Convert values in a dataframe.  By default, replacement occurs in all columns but this may be modified with 'skip' or 'only'.
     Pandas has more powerful 'replace' methods for more complicated scenarios.
@@ -515,7 +602,9 @@ def recode_values(data, replacement_dict,
     # Limit columns if needed
     if skip is not None or only is not None:
         columns = _validate_skip_only(data, skip, only)
-        columns = columns[columns].index.get_level_values(0)  # variable names where columns = True
+        columns = columns[columns].index.get_level_values(
+            0
+        )  # variable names where columns = True
         replacement_dict = {c: replacement_dict for c in columns}
 
     # Replace
@@ -528,17 +617,26 @@ def recode_values(data, replacement_dict,
     cols_with_changes = (diff.sum() > 0).sum()
     cells_with_changes = diff.sum().sum()
     if cells_with_changes > 0:
-        click.echo(f"Replaced {cells_with_changes:,} values from {len(data):,} observations in {cols_with_changes:,} variables")
+        click.echo(
+            f"Replaced {cells_with_changes:,} values from {len(data):,} observations in {cols_with_changes:,} variables"
+        )
     else:
-        click.echo("No occurences of replaceable values were found, so nothing was replaced.")
+        click.echo(
+            "No occurences of replaceable values were found, so nothing was replaced."
+        )
 
     # Return
     return result
 
 
 @print_wrap
-def remove_outliers(data, method: str = 'gaussian', cutoff=3,
-                    skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def remove_outliers(
+    data,
+    method: str = "gaussian",
+    cutoff=3,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Remove outliers from continuous variables by replacing them with np.nan
 
@@ -581,20 +679,26 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
 
     # Which columns
     columns = _validate_skip_only(data, skip, only)
-    is_continuous = _get_dtypes(data) == 'continuous'
+    is_continuous = _get_dtypes(data) == "continuous"
     columns = columns & is_continuous
 
     # Check cutoff and method, printing what is being done
     if cutoff <= 0:
         raise ValueError("'cutoff' must be >= 0")
-    if method == 'iqr':
-        click.echo(f"Removing outliers from {len(data):,} observations of {columns.sum():,} continuous variables "
-                   f"with values < 1st Quartile - ({cutoff} * IQR) or > 3rd quartile + ({cutoff} * IQR)")
-    elif method == 'gaussian':
-        click.echo(f"Removing outliers from {len(data):,} observations of {columns.sum():,} continuous variables "
-                   f"with values more than {cutoff} standard deviations from the mean")
+    if method == "iqr":
+        click.echo(
+            f"Removing outliers from {len(data):,} observations of {columns.sum():,} continuous variables "
+            f"with values < 1st Quartile - ({cutoff} * IQR) or > 3rd quartile + ({cutoff} * IQR)"
+        )
+    elif method == "gaussian":
+        click.echo(
+            f"Removing outliers from {len(data):,} observations of {columns.sum():,} continuous variables "
+            f"with values more than {cutoff} standard deviations from the mean"
+        )
     else:
-        raise ValueError(f"'{method}' is not a supported method for outlier removal - only 'gaussian' and 'iqr'.")
+        raise ValueError(
+            f"'{method}' is not a supported method for outlier removal - only 'gaussian' and 'iqr'."
+        )
 
     # Define outlier replacemet functions
     def iqr_outliers(col):
@@ -607,8 +711,10 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
         outliers_top = col > top
         col.loc[outliers_bottom] = np.nan
         col.loc[outliers_top] = np.nan
-        click.echo(f"\tRemoved {outliers_bottom.sum():,} low and {outliers_top.sum():,} high IQR outliers "
-                   f"from {col.name} (outside {bottom:,.2f} to {top:,.2f})")
+        click.echo(
+            f"\tRemoved {outliers_bottom.sum():,} low and {outliers_top.sum():,} high IQR outliers "
+            f"from {col.name} (outside {bottom:,.2f} to {top:,.2f})"
+        )
 
     def gaussian_outliers(col):
         mean = col.mean()
@@ -619,20 +725,26 @@ def remove_outliers(data, method: str = 'gaussian', cutoff=3,
         outliers_top = col > top
         col.loc[outliers_bottom] = np.nan
         col.loc[outliers_top] = np.nan
-        click.echo(f"\tRemoved {outliers_bottom.sum()} low and {outliers_top.sum()} high gaussian outliers "
-                   f"from {col.name} (outside {bottom:,.2f} to {top:,.2f})")
+        click.echo(
+            f"\tRemoved {outliers_bottom.sum()} low and {outliers_top.sum()} high gaussian outliers "
+            f"from {col.name} (outside {bottom:,.2f} to {top:,.2f})"
+        )
 
     # Remove outliers
-    if method == 'iqr':
+    if method == "iqr":
         data.loc[:, columns].apply(iqr_outliers)
-    elif method == 'gaussian':
+    elif method == "gaussian":
         data.loc[:, columns].apply(gaussian_outliers)
 
     return data
 
 
 @print_wrap
-def rowfilter_incomplete_obs(data, skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def rowfilter_incomplete_obs(
+    data,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Remove rows containing null values
 
@@ -661,17 +773,20 @@ def rowfilter_incomplete_obs(data, skip: Optional[Union[str, List[str]]] = None,
     """
     columns = _validate_skip_only(data, skip, only)
 
-    keep_IDs = data.loc[:, columns].isnull().sum(axis=1) == 0  # Number of NA in each row is 0
+    keep_IDs = (
+        data.loc[:, columns].isnull().sum(axis=1) == 0
+    )  # Number of NA in each row is 0
     n_removed = len(data) - sum(keep_IDs)
 
-    click.echo(f"Removed {n_removed:,} of {len(data):,} observations ({n_removed/len(data):.2%}) "
-               f"due to NA values in any of {columns.sum()} variables")
+    click.echo(
+        f"Removed {n_removed:,} of {len(data):,} observations ({n_removed/len(data):.2%}) "
+        f"due to NA values in any of {columns.sum()} variables"
+    )
     return data[keep_IDs]
 
 
 @print_wrap
-def merge_observations(top: pd.DataFrame,
-                       bottom: pd.DataFrame):
+def merge_observations(top: pd.DataFrame, bottom: pd.DataFrame):
     """
     Merge two datasets, keeping only the columns present in both.  Raise an error if a datatype conflict occurs.
 
@@ -689,16 +804,25 @@ def merge_observations(top: pd.DataFrame,
     # Throw an error if any observation ID is repeated
     overlapped_observations = set(top.index) & set(bottom.index)
     if len(overlapped_observations) > 0:
-        raise ValueError(f"Can't merge: {len(overlapped_observations):,} observation IDs occur in both datasets")
+        raise ValueError(
+            f"Can't merge: {len(overlapped_observations):,} observation IDs occur in both datasets"
+        )
 
     # Merge data, keeping only the columns in common
-    combined = pd.concat([top, bottom], join='inner', sort=False)
+    combined = pd.concat([top, bottom], join="inner", sort=False)
 
     # If a categorical is only in one dataframe, or the categorical has different levels, it is coerced to an object and must be changed back
     # Exclude cases where either variable was an object originally
-    combined = combined.astype({col: 'category'
-                                if (dt == 'object') & (top.dtypes[col] != 'object') & (bottom.dtypes[col] != 'object')
-                                else dt for col, dt in combined.dtypes.iteritems()})
+    combined = combined.astype(
+        {
+            col: "category"
+            if (dt == "object")
+            & (top.dtypes[col] != "object")
+            & (bottom.dtypes[col] != "object")
+            else dt
+            for col, dt in combined.dtypes.iteritems()
+        }
+    )
 
     # Check datatypes for changes
     top_dtypes = _get_dtypes(top[combined.columns])
@@ -708,20 +832,26 @@ def merge_observations(top: pd.DataFrame,
     diff_dtypes = top_dtypes != bottom_dtypes
     diff_dtype_vars = list(diff_dtypes[diff_dtypes].index)
     if diff_dtypes.sum() > 0:
-        raise ValueError(f"{diff_dtypes.sum():,} variables have mismatched datatypes: \n{' '.join(diff_dtype_vars)}")
+        raise ValueError(
+            f"{diff_dtypes.sum():,} variables have mismatched datatypes: \n{' '.join(diff_dtype_vars)}"
+        )
 
     diff_cats = (top_dtypes != combined_dtypes) | (bottom_dtypes != combined_dtypes)
     diff_cats_vars = set(diff_cats[diff_cats].index) - set(diff_dtype_vars)
     if len(diff_cats_vars) > 0:
-        raise ValueError(f"{len(diff_cats_vars):,} variables have categories present in only one dataset: \n{' '.join(diff_cats_vars)}")
+        raise ValueError(
+            f"{len(diff_cats_vars):,} variables have categories present in only one dataset: \n{' '.join(diff_cats_vars)}"
+        )
 
     return combined
 
 
 @print_wrap
-def merge_variables(left: Union[pd.DataFrame, pd.Series],
-                    right: Union[pd.DataFrame, pd.Series],
-                    how: str = 'outer'):
+def merge_variables(
+    left: Union[pd.DataFrame, pd.Series],
+    right: Union[pd.DataFrame, pd.Series],
+    how: str = "outer",
+):
     """
     Merge a list of dataframes with different variables side-by-side.  Keep all observations ('outer' merge) by default.
 
@@ -745,17 +875,25 @@ def merge_variables(left: Union[pd.DataFrame, pd.Series],
     if type(right) == pd.Series:
         right = pd.DataFrame(right)
 
-    click.echo(f"{how} Merge:\n"
-               f"\tleft = {len(left):,} observations of {len(left.columns):,} variables\n"
-               f"\tright = {len(right):,} observations of {len(right.columns):,} variables")
+    click.echo(
+        f"{how} Merge:\n"
+        f"\tleft = {len(left):,} observations of {len(left.columns):,} variables\n"
+        f"\tright = {len(right):,} observations of {len(right.columns):,} variables"
+    )
     result = left.merge(right, left_index=True, right_index=True, how=how)
-    click.echo(f"Kept {len(result):,} observations of {len(result.columns):,} variables.")
+    click.echo(
+        f"Kept {len(result):,} observations of {len(result.columns):,} variables."
+    )
     return result
 
 
 @print_wrap
-def move_variables(left: pd.DataFrame, right: Union[pd.DataFrame, pd.Series],
-                   skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None):
+def move_variables(
+    left: pd.DataFrame,
+    right: Union[pd.DataFrame, pd.Series],
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Move one or more variables from one DataFrame to another
 
@@ -792,7 +930,7 @@ def move_variables(left: pd.DataFrame, right: Union[pd.DataFrame, pd.Series],
     right = merge_variables(right, left[columns])
 
     # Remove from original
-    left = left.drop(columns, axis='columns')
+    left = left.drop(columns, axis="columns")
 
     # Log
     if columns.sum() == 1:
@@ -805,10 +943,12 @@ def move_variables(left: pd.DataFrame, right: Union[pd.DataFrame, pd.Series],
 
 
 @print_wrap
-def transform(data: pd.DataFrame,
-              transform_method: str,
-              skip: Optional[Union[str, List[str]]] = None, only: Optional[Union[str, List[str]]] = None
-              ):
+def transform(
+    data: pd.DataFrame,
+    transform_method: str,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Apply a transformation function to a variable
 
@@ -850,16 +990,20 @@ def transform(data: pd.DataFrame,
         dtype = dtypes.get(variable, None)
         if dtype is None:
             raise ValueError(f"The variable ('{variable}') was not found in the data")
-        elif dtype != 'continuous':
-            raise ValueError(f"The variable ('{variable}') was {dtype}: "
-                             f"transformations may only be applied to continuous variables")
+        elif dtype != "continuous":
+            raise ValueError(
+                f"The variable ('{variable}') was {dtype}: "
+                f"transformations may only be applied to continuous variables"
+            )
 
     # Transform each variable
     for variable in transform_variables:
         try:
             data.loc[:, variable] = data.loc[:, variable].apply(transform_method)
         except Exception as e:
-            raise ValueError(f"Couldn't apply a function named '{transform_method}' to '{variable}'.\n\t{e}")
+            raise ValueError(
+                f"Couldn't apply a function named '{transform_method}' to '{variable}'.\n\t{e}"
+            )
 
         click.echo(f"Transformed '{variable}' using '{transform_method}'")
 
@@ -867,9 +1011,11 @@ def transform(data: pd.DataFrame,
 
 
 @print_wrap
-def drop_extra_categories(data: pd.DataFrame,
-                          skip: Optional[Union[str, List[str]]] = None,
-                          only: Optional[Union[str, List[str]]] = None):
+def drop_extra_categories(
+    data: pd.DataFrame,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Update variable types to remove categories that don't occur in the data
 

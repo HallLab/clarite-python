@@ -69,9 +69,13 @@ def correlations(data: pd.DataFrame, threshold: float = 0.75):
         .reset_index()
     )
     # Remove those with correlation below threshold
-    correlation = correlation.loc[correlation["correlation"].abs() >= threshold, ]
+    correlation = correlation.loc[
+        correlation["correlation"].abs() >= threshold,
+    ]
     # Sort by absolute value
-    correlation = correlation.reindex(correlation["correlation"].abs().sort_values(ascending=False).index)
+    correlation = correlation.reindex(
+        correlation["correlation"].abs().sort_values(ascending=False).index
+    )
     # Return with a reset index
     return correlation.reset_index(drop=True)
 
@@ -191,7 +195,7 @@ def percent_na(data: pd.DataFrame):
     assert type(data) == pd.DataFrame
     result = 100 * (1 - (data.count() / data.apply(len)))
     result = result.reset_index()
-    result.columns = ['Variable', 'percent_na']
+    result.columns = ["Variable", "percent_na"]
     return result
 
 
@@ -226,20 +230,27 @@ def skewness(data: pd.DataFrame, dropna: bool = False):
     """
     # Get continuous variables
     dtypes = _get_dtypes(data)
-    continuous_idx = dtypes[dtypes == 'continuous'].index
+    continuous_idx = dtypes[dtypes == "continuous"].index
 
     # Format result df, starting with NA
-    result = pd.DataFrame(data=None, index=dtypes.index, columns=["type", "skew", "zscore", "pvalue"], dtype=float)
+    result = pd.DataFrame(
+        data=None,
+        index=dtypes.index,
+        columns=["type", "skew", "zscore", "pvalue"],
+        dtype=float,
+    )
     result["type"] = dtypes
 
     # Calculate skew and statistical test
     if dropna:
-        nan_policy = 'omit'
+        nan_policy = "omit"
     else:
-        nan_policy = 'propagate'
-    result['skew'] = stats.skew(data[continuous_idx], nan_policy=nan_policy)
-    result.loc[continuous_idx, 'zscore'], result.loc[continuous_idx, 'pvalue'] =\
-        stats.skewtest(data[continuous_idx], nan_policy=nan_policy)
+        nan_policy = "propagate"
+    result["skew"] = stats.skew(data[continuous_idx], nan_policy=nan_policy)
+    (
+        result.loc[continuous_idx, "zscore"],
+        result.loc[continuous_idx, "pvalue"],
+    ) = stats.skewtest(data[continuous_idx], nan_policy=nan_policy)
 
     # Format
     result.index.name = "Variable"
@@ -272,8 +283,10 @@ def summarize(data: pd.DataFrame):
     dtype: object
     """
     type_counts = _get_dtypes(data).value_counts()
-    click.echo(f"{len(data):,} observations of {len(data.columns):,} variables\n"
-               f"\t{type_counts.get('binary', 0):,} Binary Variables\n"
-               f"\t{type_counts.get('categorical', 0):,} Categorical Variables\n"
-               f"\t{type_counts.get('continuous', 0):,} Continuous Variables\n"
-               f"\t{type_counts.get('unknown', 0):,} Unknown-Type Variables\n")
+    click.echo(
+        f"{len(data):,} observations of {len(data.columns):,} variables\n"
+        f"\t{type_counts.get('binary', 0):,} Binary Variables\n"
+        f"\t{type_counts.get('categorical', 0):,} Categorical Variables\n"
+        f"\t{type_counts.get('continuous', 0):,} Continuous Variables\n"
+        f"\t{type_counts.get('unknown', 0):,} Unknown-Type Variables\n"
+    )

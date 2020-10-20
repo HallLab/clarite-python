@@ -5,17 +5,19 @@ import click
 from clarite.modules.analyze import regression
 
 builtin_regression_kinds = {
-    'glm': regression.GLMRegression,
-    'weighted_glm': regression.WeightedGLMRegression,
-    'r_survey': regression.RSurveyRegression
+    "glm": regression.GLMRegression,
+    "weighted_glm": regression.WeightedGLMRegression,
+    "r_survey": regression.RSurveyRegression,
 }
 
 
-def ewas(phenotype: str,
-         covariates: List[str],
-         data: Any,
-         regression_kind: Optional[Union[str, Type[regression.Regression]]] = None,
-         **kwargs):
+def ewas(
+    phenotype: str,
+    covariates: List[str],
+    data: Any,
+    regression_kind: Optional[Union[str, Type[regression.Regression]]] = None,
+    **kwargs,
+):
     """
     Run an Environment-Wide Association Study
 
@@ -54,10 +56,10 @@ def ewas(phenotype: str,
     # Set up regression object
     # Emulate existing API by figuring out which method automatically
     if regression_kind is None:
-        if 'survey_design_spec' in kwargs:
-            regression_kind = 'weighted_glm'
+        if "survey_design_spec" in kwargs:
+            regression_kind = "weighted_glm"
         else:
-            regression_kind = 'glm'
+            regression_kind = "glm"
 
     if type(regression_kind) == str:
         regression_cls = builtin_regression_kinds.get(regression_kind, None)
@@ -66,15 +68,16 @@ def ewas(phenotype: str,
     elif regression_kind in regression_kind.mro():
         regression_cls = regression_kind
     else:
-        raise ValueError(f"Incorrect regression kind type ({type(regression_kind)}).  "
-                         f"A valid string or a subclass of Regression is required.")
+        raise ValueError(
+            f"Incorrect regression kind type ({type(regression_kind)}).  "
+            f"A valid string or a subclass of Regression is required."
+        )
 
     # Initialize the regression and print details
     print(kwargs)
-    regression = regression_cls(data=data,
-                                outcome_variable=phenotype,
-                                covariates=covariates,
-                                **kwargs)
+    regression = regression_cls(
+        data=data, outcome_variable=phenotype, covariates=covariates, **kwargs
+    )
     print(regression)
 
     # Run and get results
@@ -82,12 +85,24 @@ def ewas(phenotype: str,
     result = regression.get_results()
 
     # Process Results
-    result['Phenotype'] = phenotype  # Add phenotype
-    result = result.sort_values('pvalue').set_index(['Variable', 'Phenotype'])  # Sort and set index
-    if 'Weight' not in result.columns:
-        result['Weight'] = None
-    column_order = ['Variable_type', 'Weight', 'Converged', 'N', 'Beta', 'SE',
-                    'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue']
+    result["Phenotype"] = phenotype  # Add phenotype
+    result = result.sort_values("pvalue").set_index(
+        ["Variable", "Phenotype"]
+    )  # Sort and set index
+    if "Weight" not in result.columns:
+        result["Weight"] = None
+    column_order = [
+        "Variable_type",
+        "Weight",
+        "Converged",
+        "N",
+        "Beta",
+        "SE",
+        "Variable_pvalue",
+        "LRT_pvalue",
+        "Diff_AIC",
+        "pvalue",
+    ]
     result = result[column_order]  # Sort columns
     click.echo("Completed EWAS\n")
     return result

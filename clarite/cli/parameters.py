@@ -8,11 +8,13 @@ INPUT_FILE = click.Path(exists=True, file_okay=True, dir_okay=False, readable=Tr
 OUTPUT_FILE = click.Path(file_okay=True, dir_okay=False, writable=True)
 
 # Frequently used output parameters
-arg_output = click.argument('output', type=OUTPUT_FILE)
+arg_output = click.argument("output", type=OUTPUT_FILE)
 
 # Standard datatypes that use multiple files together
-CLARITE_DATA = ClariteDataParamType()  # Instantiate it to use as a type in arguments/options
-arg_data = click.argument('data', type=CLARITE_DATA)
+CLARITE_DATA = (
+    ClariteDataParamType()
+)  # Instantiate it to use as a type in arguments/options
+arg_data = click.argument("data", type=CLARITE_DATA)
 
 # Tuple of dataset name, ewas df
 EWAS_RESULT = ClariteEwasResultParamType()
@@ -33,9 +35,11 @@ def process_skip_only(ctx, param, value):
             p = Path(v)
             if p.exists() and p.is_file():
                 # Try loading a list of variables
-                with p.open('r') as f:
+                with p.open("r") as f:
                     file_result = [v.strip() for v in f.readlines()]
-                    file_result = [v for v in file_result if v != ""]  # skip blank lines
+                    file_result = [
+                        v for v in file_result if v != ""
+                    ]  # skip blank lines
                     as_files[v] = len(file_result)
                     result += file_result
             else:
@@ -49,7 +53,19 @@ def process_skip_only(ctx, param, value):
         return result
 
 
-option_skip = click.option('-s', '--skip', type=click.STRING, multiple=True, callback=process_skip_only,
-                           help="variables to skip.  Either individual names, or a file containing one name per line.")
-option_only = click.option('-o', '--only', type=click.STRING, multiple=True, callback=process_skip_only,
-                           help="variables to process, skipping all others.  Either individual names, or a file containing one name per line.")
+option_skip = click.option(
+    "-s",
+    "--skip",
+    type=click.STRING,
+    multiple=True,
+    callback=process_skip_only,
+    help="variables to skip.  Either individual names, or a file containing one name per line.",
+)
+option_only = click.option(
+    "-o",
+    "--only",
+    type=click.STRING,
+    multiple=True,
+    callback=process_skip_only,
+    help="variables to process, skipping all others.  Either individual names, or a file containing one name per line.",
+)

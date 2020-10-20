@@ -3,7 +3,7 @@ from ...modules import describe
 from ..parameters import arg_data, arg_output
 
 
-@click.group(name='describe')
+@click.group(name="describe")
 def describe_cli():
     pass
 
@@ -11,17 +11,25 @@ def describe_cli():
 @describe_cli.command(help="Report top correlations between variables")
 @arg_data
 @arg_output
-@click.option('-t', '--threshold', default=0.75, help="Report correlations with R >= this value")
+@click.option(
+    "-t", "--threshold", default=0.75, help="Report correlations with R >= this value"
+)
 def correlations(data, output, threshold):
     # Describe
     results = describe.correlations(data.df, threshold)
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
-    click.echo(click.style(f"Done: Saved {len(results):,} correlations to {output}", fg='green'))
+    click.echo(
+        click.style(
+            f"Done: Saved {len(results):,} correlations to {output}", fg="green"
+        )
+    )
 
 
-@describe_cli.command(help="Report the number of occurences of each value for each variable")
+@describe_cli.command(
+    help="Report the number of occurences of each value for each variable"
+)
 @arg_data
 @arg_output
 def freq_table(data, output):
@@ -30,14 +38,21 @@ def freq_table(data, output):
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
-    processed = results.loc[results['value'] != '<Non-Categorical Values>', ]
+    processed = results.loc[
+        results["value"] != "<Non-Categorical Values>",
+    ]
     if len(processed) > 0:
-        num_values = processed[['Variable', 'value']].nunique()
-        num_variables = processed['Variable'].nunique()
+        num_values = processed[["Variable", "value"]].nunique()
+        num_variables = processed["Variable"].nunique()
     else:
         num_values = 0
         num_variables = 0
-    click.echo(click.style(f"Done: Saved {num_values:,} unique value counts for {num_variables:,} non-continuous variables to {output}", fg='green'))
+    click.echo(
+        click.style(
+            f"Done: Saved {num_values:,} unique value counts for {num_variables:,} non-continuous variables to {output}",
+            fg="green",
+        )
+    )
 
 
 @describe_cli.command(help="Get the type of each variable")
@@ -49,10 +64,16 @@ def get_types(data, output):
     # Save results
     results.to_csv(output, sep="\t", header=False)
     # Log
-    click.echo(click.style(f"Done: Saved types of {len(results)} variables to {output}", fg='green'))
+    click.echo(
+        click.style(
+            f"Done: Saved types of {len(results)} variables to {output}", fg="green"
+        )
+    )
 
 
-@describe_cli.command(help="Report the percent of observations that are NA for each variable")
+@describe_cli.command(
+    help="Report the percent of observations that are NA for each variable"
+)
 @arg_data
 @arg_output
 def percent_na(data, output):
@@ -61,17 +82,29 @@ def percent_na(data, output):
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
-    click.echo(click.style(f"Done: Saved results for {len(results):,} variables to {output}", fg='green'))
+    click.echo(
+        click.style(
+            f"Done: Saved results for {len(results):,} variables to {output}",
+            fg="green",
+        )
+    )
 
 
 @describe_cli.command(help="Report and test the skewness for each continuous variable")
 @arg_data
 @arg_output
-@click.option('--dropna/--keepna', default=False, help="Omit NA values before calculating skew")
+@click.option(
+    "--dropna/--keepna", default=False, help="Omit NA values before calculating skew"
+)
 def skewness(data, output, dropna):
     # Describe
     results = describe.skewness(data.df, dropna)
     # Save results
     results.to_csv(output, sep="\t", index=False)
     # Log
-    click.echo(click.style(f"Done: Saved results for {len(results):,} variables to {output}", fg='green'))
+    click.echo(
+        click.style(
+            f"Done: Saved results for {len(results):,} variables to {output}",
+            fg="green",
+        )
+    )

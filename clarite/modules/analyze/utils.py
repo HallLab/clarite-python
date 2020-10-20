@@ -5,9 +5,9 @@ import pandas as pd
 from statsmodels.stats.multitest import multipletests
 
 
-def add_corrected_pvalues(data: pd.DataFrame,
-                          pvalue: str = 'pvalue',
-                          groupby: Optional[str] = None):
+def add_corrected_pvalues(
+    data: pd.DataFrame, pvalue: str = "pvalue", groupby: Optional[str] = None
+):
     """
     Calculate bonferroni and FDR pvalues and sort by increasing FDR (in-place).
     Rows with a missing pvalue are not counted as a test.
@@ -56,21 +56,29 @@ def add_corrected_pvalues(data: pd.DataFrame,
         data[bonf_name] = np.nan
         data[fdr_name] = np.nan
         # Calculate values, ignoring NA pvalues
-        data.loc[~data[pvalue].isna(), bonf_name] = \
-            multipletests(data.loc[~data[pvalue].isna(), pvalue], method="bonferroni")[1]
-        data.loc[~data[pvalue].isna(), fdr_name] = \
-            multipletests(data.loc[~data[pvalue].isna(), pvalue], method="fdr_bh")[1]
+        data.loc[~data[pvalue].isna(), bonf_name] = multipletests(
+            data.loc[~data[pvalue].isna(), pvalue], method="bonferroni"
+        )[1]
+        data.loc[~data[pvalue].isna(), fdr_name] = multipletests(
+            data.loc[~data[pvalue].isna(), pvalue], method="fdr_bh"
+        )[1]
         # Sort
         data.sort_values(by=[fdr_name, bonf_name], inplace=True)
     elif groupby is not None:
         # Get the first value from each
-        first = ~data.duplicated(subset=groupby, keep='first')
+        first = ~data.duplicated(subset=groupby, keep="first")
         bonf_result = pd.Series(
-            multipletests(data.loc[first & ~data[pvalue].isna(), pvalue], method="bonferroni")[1],
-            index=data[first][groupby]).to_dict()
+            multipletests(
+                data.loc[first & ~data[pvalue].isna(), pvalue], method="bonferroni"
+            )[1],
+            index=data[first][groupby],
+        ).to_dict()
         fdr_result = pd.Series(
-            multipletests(data.loc[first & ~data[pvalue].isna(), pvalue], method="fdr_bh")[1],
-            index=data[first][groupby]).to_dict()
+            multipletests(
+                data.loc[first & ~data[pvalue].isna(), pvalue], method="fdr_bh"
+            )[1],
+            index=data[first][groupby],
+        ).to_dict()
         # Expand results to duplicated rows
         data[bonf_name] = data[groupby].apply(lambda g: bonf_result.get(g, np.nan))
         data[fdr_name] = data[groupby].apply(lambda g: fdr_result.get(g, np.nan))

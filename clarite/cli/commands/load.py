@@ -5,15 +5,22 @@ from ..parameters import INPUT_FILE, arg_output, option_skip, option_only
 from ..custom_types import ClariteData, save_clarite_data
 
 
-@click.group(name='load')
+@click.group(name="load")
 def load_cli():
     pass
 
 
-@load_cli.command(help="Load data from a tab-separated file and save it in the standard format")
-@click.argument('input', type=INPUT_FILE)
+@load_cli.command(
+    help="Load data from a tab-separated file and save it in the standard format"
+)
+@click.argument("input", type=INPUT_FILE)
 @arg_output
-@click.option('--index', '-i', type=click.STRING, help="Name of the column to use as the index.  Default is the first column.")
+@click.option(
+    "--index",
+    "-i",
+    type=click.STRING,
+    help="Name of the column to use as the index.  Default is the first column.",
+)
 @option_skip
 @option_only
 def from_tsv(input, output, index, skip, only):
@@ -34,10 +41,17 @@ def from_tsv(input, output, index, skip, only):
     save_clarite_data(data, output)
 
 
-@load_cli.command(help="Load data from a comma-separated file and save it in the standard format")
-@click.argument('input', type=INPUT_FILE)
+@load_cli.command(
+    help="Load data from a comma-separated file and save it in the standard format"
+)
+@click.argument("input", type=INPUT_FILE)
 @arg_output
-@click.option('--index', '-i', type=click.STRING, help="Name of the column to use as the index.  Default is the first column.")
+@click.option(
+    "--index",
+    "-i",
+    type=click.STRING,
+    help="Name of the column to use as the index.  Default is the first column.",
+)
 @option_skip
 @option_only
 def from_csv(input, output, index, skip, only):

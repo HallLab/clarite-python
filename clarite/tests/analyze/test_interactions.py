@@ -137,7 +137,9 @@ def test_interactions_nhanes_weightXrace(data_NHANES):
     compare_result(loaded_result, python_result)
 
     # Betas
-    loaded_result = load_r_interaction_results(RESULT_PATH / "nhanes_weightXrace_withbetas.csv")
+    loaded_result = load_r_interaction_results(
+        RESULT_PATH / "nhanes_weightXrace_withbetas.csv"
+    )
     python_result = clarite.analyze.interactions(
         outcome_variable="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
@@ -147,7 +149,7 @@ def test_interactions_nhanes_weightXrace(data_NHANES):
     )
     # Remove brackets from index value to make comparison work
     python_result = python_result.reset_index(drop=False)
-    python_result["Interaction"] = python_result['Interaction'].apply(
+    python_result["Interaction"] = python_result["Interaction"].apply(
         lambda s: s.replace("[", "").replace("]", "")
     )
     python_result = python_result.set_index(["Interaction", "Outcome"])

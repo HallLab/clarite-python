@@ -4,7 +4,7 @@ import clarite
 import pytest
 
 TESTS_PATH = Path(__file__).parent.parent
-DATA_PATH = TESTS_PATH / 'test_data_files'
+DATA_PATH = TESTS_PATH / "test_data_files"
 
 
 # Dataset fixtures

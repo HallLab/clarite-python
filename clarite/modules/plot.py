@@ -38,12 +38,12 @@ clarite_version = get_versions()
 
 
 def histogram(
-        data,
-        column: str,
-        figsize: Tuple[int, int] = (12, 5),
-        title: Optional[str] = None,
-        figure: Optional[plt.figure] = None,
-        **kwargs,
+    data,
+    column: str,
+    figsize: Tuple[int, int] = (12, 5),
+    title: Optional[str] = None,
+    figure: Optional[plt.figure] = None,
+    **kwargs,
 ):
     """
     Plot a histogram of the values in the given column.  Takes kwargs for seaborn's distplot.
@@ -89,14 +89,14 @@ def histogram(
 
 
 def distributions(
-        data,
-        filename: str,
-        continuous_kind: str = "count",
-        nrows: int = 4,
-        ncols: int = 3,
-        quality: str = "medium",
-        variables: Optional[List[str]] = None,
-        sort: bool = True,
+    data,
+    filename: str,
+    continuous_kind: str = "count",
+    nrows: int = 4,
+    ncols: int = 3,
+    quality: str = "medium",
+    variables: Optional[List[str]] = None,
+    sort: bool = True,
 ):
     """
     Create a pdf containing histograms for each binary or categorical variable, and one of several types of plots for each continuous variable.
@@ -170,7 +170,9 @@ def distributions(
         # Determine the number of pages
         plots_per_page = nrows * ncols
         total_pages = (len(data.columns) + (plots_per_page - 1)) // plots_per_page
-        click.echo(f"Generating a {total_pages} page PDF for {len(data.columns):,} variables")
+        click.echo(
+            f"Generating a {total_pages} page PDF for {len(data.columns):,} variables"
+        )
         # Starting plot space
         page_num = 1
         row_idx = 0
@@ -244,19 +246,21 @@ def distributions(
 
 
 def _plot_manhattan(
-        dfs: Dict[str, pd.DataFrame],
-        pval_column: str = 'pvalue',
-        categories: Dict[str, str] = dict(),
-        cutoffs: Optional[List[List[Tuple[str, float, str, str]]]] = None,  # One list of tuples for each df
-        num_labeled: int = 3,
-        label_vars: List[str] = list(),
-        figsize: Tuple[int, int] = (12, 6),
-        dpi: int = 300,
-        title: Optional[str] = None,
-        figure: Optional[plt.figure] = None,
-        colors: List[str] = ["#53868B", "#4D4D4D"],
-        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
-        filename: Optional[str] = None,
+    dfs: Dict[str, pd.DataFrame],
+    pval_column: str = "pvalue",
+    categories: Dict[str, str] = dict(),
+    cutoffs: Optional[
+        List[List[Tuple[str, float, str, str]]]
+    ] = None,  # One list of tuples for each df
+    num_labeled: int = 3,
+    label_vars: List[str] = list(),
+    figsize: Tuple[int, int] = (12, 6),
+    dpi: int = 300,
+    title: Optional[str] = None,
+    figure: Optional[plt.figure] = None,
+    colors: List[str] = ["#53868B", "#4D4D4D"],
+    background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+    filename: Optional[str] = None,
 ):
     """
     Create a manhattan plot.  Easier for the user to expose multiple functions with different specific parameters
@@ -273,15 +277,17 @@ def _plot_manhattan(
                 f"This plot may only be created for EWAS results with corrected p-values added. "
                 f"DataFrame {df_idx + 1} of {len(dfs)} was missing columns: {', '.join(missing_cols)}"
             )
-        if df.index.names != ['Variable', 'Phenotype']:
-            raise ValueError(f"The ewas result dataframes should have an index of ('Variable', 'Phenotype')."
-                             f"DataFrame {df_idx + 1} of {len(dfs)} had '{list(df.index.names)}'")
+        if df.index.names != ["Variable", "Phenotype"]:
+            raise ValueError(
+                f"The ewas result dataframes should have an index of ('Variable', 'Phenotype')."
+                f"DataFrame {df_idx + 1} of {len(dfs)} had '{list(df.index.names)}'"
+            )
 
     # Create a dataframe of pvalues indexed by variable name
     df = (
         pd.DataFrame.from_dict({k: v[pval_column] for k, v in dfs.items()})
-          .stack()
-          .reset_index()
+        .stack()
+        .reset_index()
     )
     df.columns = ("variable", "phenotype", "dataset", pval_column)
     df[["variable", "phenotype", "dataset"]] = df[
@@ -302,10 +308,10 @@ def _plot_manhattan(
 
     # Update index (actually x position) column by padding between each category
     df["category_x_offset"] = (
-            df.groupby("category").ngroup() * offset
+        df.groupby("category").ngroup() * offset
     )  # sorted category number, multiplied to pad between categories
     df["xpos"] = (
-            df.groupby(["category", "variable"]).ngroup() + df["category_x_offset"]
+        df.groupby(["category", "variable"]).ngroup() + df["category_x_offset"]
     )  # sorted category/variable number plus category offset
 
     # Create Plot and structures to hold category info
@@ -327,7 +333,7 @@ def _plot_manhattan(
     if len(categories) > 0:
         # Include category info
         for category_num, (category_name, category_data) in enumerate(
-                df.groupby("category")
+            df.groupby("category")
         ):
             # background bars
             left = category_data["xpos"].min() - (offset / 2) - 0.5
@@ -345,10 +351,10 @@ def _plot_manhattan(
             foreground_rectangles[category_num % len(colors)].append(rect)
             # plotted points
             for dataset_num, (dataset_name, dataset_data) in enumerate(
-                    category_data.groupby("dataset")
+                category_data.groupby("dataset")
             ):
                 if (
-                        len(dataset_data) > 0
+                    len(dataset_data) > 0
                 ):  # Sometimes a category has no variables in one dataset
                     dataset_data.plot(
                         kind="scatter",
@@ -380,7 +386,7 @@ def _plot_manhattan(
     else:
         # Just plot variables
         for dataset_num, (dataset_name, dataset_data) in enumerate(
-                df.groupby("dataset")
+            df.groupby("dataset")
         ):
             # Plot points
             dataset_data.plot(
@@ -439,7 +445,9 @@ def _plot_manhattan(
     # NOTE: cutoffs values should be in raw pvalue
     if cutoffs is not None:
         if len(cutoffs) != len(dfs):
-            raise ValueError("the cutoffs variable must be None or a list of length equal to dfs")
+            raise ValueError(
+                "the cutoffs variable must be None or a list of length equal to dfs"
+            )
         for df_idx, df_cutoffs in enumerate(cutoffs):
             ax = axes[df_idx]
             for (label, value, color, line_style) in df_cutoffs:
@@ -466,19 +474,19 @@ def _plot_manhattan(
 
 
 def manhattan(
-        dfs: Dict[str, pd.DataFrame],
-        categories: Dict[str, str] = dict(),
-        bonferroni: Optional[float] = 0.05,
-        fdr: Optional[float] = None,
-        num_labeled: int = 3,
-        label_vars: List[str] = list(),
-        figsize: Tuple[int, int] = (12, 6),
-        dpi: int = 300,
-        title: Optional[str] = None,
-        figure: Optional[plt.figure] = None,
-        colors: List[str] = ["#53868B", "#4D4D4D"],
-        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
-        filename: Optional[str] = None
+    dfs: Dict[str, pd.DataFrame],
+    categories: Dict[str, str] = dict(),
+    bonferroni: Optional[float] = 0.05,
+    fdr: Optional[float] = None,
+    num_labeled: int = 3,
+    label_vars: List[str] = list(),
+    figsize: Tuple[int, int] = (12, 6),
+    dpi: int = 300,
+    title: Optional[str] = None,
+    figure: Optional[plt.figure] = None,
+    colors: List[str] = ["#53868B", "#4D4D4D"],
+    background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+    filename: Optional[str] = None,
 ):
     """
     Create a Manhattan-like plot for a list of EWAS Results
@@ -530,24 +538,29 @@ def manhattan(
         # Bonferroni Line
         if bonferroni is not None:
             bonf_significance = bonferroni / num_tests
-            df_cutoffs.append((f"{bonferroni} Bonferroni with {num_tests} tests",
-                               bonf_significance,
-                               "red",
-                               "dashed"))
+            df_cutoffs.append(
+                (
+                    f"{bonferroni} Bonferroni with {num_tests} tests",
+                    bonf_significance,
+                    "red",
+                    "dashed",
+                )
+            )
         # FDR Line
         if fdr is not None:
             fdr_cutoff_value = 0
-            pvalues = dataset_data.loc[~dataset_data["pvalue"].isna(), "pvalue"].sort_values(ascending=True)
+            pvalues = dataset_data.loc[
+                ~dataset_data["pvalue"].isna(), "pvalue"
+            ].sort_values(ascending=True)
             for i, p in enumerate(pvalues):
                 q = ((i + 1) / num_tests) * fdr
                 if p < q:
                     fdr_cutoff_value = p
                 else:
                     continue
-            df_cutoffs.append((f"{fdr} FDR with {num_tests} tests",
-                               fdr_cutoff_value,
-                               "red",
-                               "dotted"))
+            df_cutoffs.append(
+                (f"{fdr} FDR with {num_tests} tests", fdr_cutoff_value, "red", "dotted")
+            )
         cutoffs.append(df_cutoffs)
 
     _plot_manhattan(
@@ -563,23 +576,23 @@ def manhattan(
         figure=figure,
         colors=colors,
         background_colors=background_colors,
-        filename=filename
+        filename=filename,
     )
 
 
 def manhattan_bonferroni(
-        dfs: Dict[str, pd.DataFrame],
-        categories: Dict[str, str] = dict(),
-        cutoff: Optional[float] = 0.05,
-        num_labeled: int = 3,
-        label_vars: List[str] = list(),
-        figsize: Tuple[int, int] = (12, 6),
-        dpi: int = 300,
-        title: Optional[str] = None,
-        figure: Optional[plt.figure] = None,
-        colors: List[str] = ["#53868B", "#4D4D4D"],
-        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
-        filename: Optional[str] = None
+    dfs: Dict[str, pd.DataFrame],
+    categories: Dict[str, str] = dict(),
+    cutoff: Optional[float] = 0.05,
+    num_labeled: int = 3,
+    label_vars: List[str] = list(),
+    figsize: Tuple[int, int] = (12, 6),
+    dpi: int = 300,
+    title: Optional[str] = None,
+    figure: Optional[plt.figure] = None,
+    colors: List[str] = ["#53868B", "#4D4D4D"],
+    background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+    filename: Optional[str] = None,
 ):
     """
     Create a Manhattan-like plot for a list of EWAS Results using Bonferroni significance
@@ -624,8 +637,10 @@ def manhattan_bonferroni(
     """
     # Ensure corrected values are present
     for name, df in dfs.items():
-        if 'pvalue_bonferroni' not in list(df):
-            raise ValueError(f"Missing Bonferroni-corrected Pvalues in {name}.  Run clarite.analyze.add_corrected_pvalues")
+        if "pvalue_bonferroni" not in list(df):
+            raise ValueError(
+                f"Missing Bonferroni-corrected Pvalues in {name}.  Run clarite.analyze.add_corrected_pvalues"
+            )
     # Create cutoff
     if cutoff is not None:
         cutoffs = [[(f"{cutoff} Bonferroni", cutoff, "red", "dashed")] for _ in dfs]
@@ -644,23 +659,23 @@ def manhattan_bonferroni(
         figure=figure,
         colors=colors,
         background_colors=background_colors,
-        filename=filename
+        filename=filename,
     )
 
 
 def manhattan_fdr(
-        dfs: Dict[str, pd.DataFrame],
-        categories: Dict[str, str] = dict(),
-        cutoff: Optional[float] = 0.05,
-        num_labeled: int = 3,
-        label_vars: List[str] = list(),
-        figsize: Tuple[int, int] = (12, 6),
-        dpi: int = 300,
-        title: Optional[str] = None,
-        figure: Optional[plt.figure] = None,
-        colors: List[str] = ["#53868B", "#4D4D4D"],
-        background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
-        filename: Optional[str] = None
+    dfs: Dict[str, pd.DataFrame],
+    categories: Dict[str, str] = dict(),
+    cutoff: Optional[float] = 0.05,
+    num_labeled: int = 3,
+    label_vars: List[str] = list(),
+    figsize: Tuple[int, int] = (12, 6),
+    dpi: int = 300,
+    title: Optional[str] = None,
+    figure: Optional[plt.figure] = None,
+    colors: List[str] = ["#53868B", "#4D4D4D"],
+    background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
+    filename: Optional[str] = None,
 ):
     """
     Create a Manhattan-like plot for a list of EWAS Results using FDR significance
@@ -705,8 +720,10 @@ def manhattan_fdr(
     """
     # Ensure corrected values are present
     for name, df in dfs.items():
-        if 'pvalue_fdr' not in list(df):
-            raise ValueError(f"Missing FDR-corrected Pvalues in {name}.  Run clarite.analyze.add_corrected_pvalues")
+        if "pvalue_fdr" not in list(df):
+            raise ValueError(
+                f"Missing FDR-corrected Pvalues in {name}.  Run clarite.analyze.add_corrected_pvalues"
+            )
     # Create cutoff
     if cutoff is not None:
         cutoffs = [[(f"{cutoff} FDR", cutoff, "red", "dashed")] for _ in dfs]
@@ -725,20 +742,20 @@ def manhattan_fdr(
         figure=figure,
         colors=colors,
         background_colors=background_colors,
-        filename=filename
+        filename=filename,
     )
 
 
 def top_results(
-        ewas_result: pd.DataFrame,
-        pvalue_name: str = "pvalue",
-        cutoff: Optional[float] = 0.05,
-        num_rows: int = 20,
-        figsize: Optional[Tuple[int, int]] = None,
-        dpi: int = 300,
-        title: Optional[str] = None,
-        figure: Optional[plt.figure] = None,
-        filename: Optional[str] = None
+    ewas_result: pd.DataFrame,
+    pvalue_name: str = "pvalue",
+    cutoff: Optional[float] = 0.05,
+    num_rows: int = 20,
+    figsize: Optional[Tuple[int, int]] = None,
+    dpi: int = 300,
+    title: Optional[str] = None,
+    figure: Optional[plt.figure] = None,
+    filename: Optional[str] = None,
 ):
     """
     Create a dotplot for EWAS Results showing pvalues and beta coefficients
@@ -780,34 +797,43 @@ def top_results(
     # Custom colors
     # Error if multiple phenotypes are present
     if len(ewas_result.reset_index(drop=False)["Phenotype"].unique()) > 1:
-        raise ValueError("The 'top_results' plot is limited to displaying results for a single phenotype at a time.")
+        raise ValueError(
+            "The 'top_results' plot is limited to displaying results for a single phenotype at a time."
+        )
 
     # Ensure corrected pvalues are present
-    if pvalue_name == 'pvalue_fdr' or pvalue_name == 'pvalue_bonferroni':
+    if pvalue_name == "pvalue_fdr" or pvalue_name == "pvalue_bonferroni":
         if pvalue_name not in list(ewas_result):
-            raise ValueError("Missing corrected pvalues in ewas result.  Run clarite.analyze.add_corrected_pvalues")
-    elif pvalue_name == 'pvalue':
+            raise ValueError(
+                "Missing corrected pvalues in ewas result.  Run clarite.analyze.add_corrected_pvalues"
+            )
+    elif pvalue_name == "pvalue":
         pass
     else:
-        raise ValueError("Incorrect value specified for 'pvalue_name': must be one of 'pvalue', 'pvalue_fdr',"
-                         " or 'pvalue_bonferroni'.")
+        raise ValueError(
+            "Incorrect value specified for 'pvalue_name': must be one of 'pvalue', 'pvalue_fdr',"
+            " or 'pvalue_bonferroni'."
+        )
 
     # Sort and filter data
-    df = ewas_result.sort_values(pvalue_name, ascending=True).head(num_rows).reset_index()
+    df = (
+        ewas_result.sort_values(pvalue_name, ascending=True)
+        .head(num_rows)
+        .reset_index()
+    )
 
     df["Beta"] = df["Beta"].fillna(0.0)  # Still want to show a point
 
     # Colors
     type_colors = {
-              "binary": "#53868B",  # Has beta (Python)
-              "continuous": "#53868B",  # Has beta (Both)
-              "categorical": "#4D4D4D",  # No beta (Python)
-              "categorical/binary": "#4D4D4D"  # No beta (R)
-          }
-    palette = df[["Variable", "Variable_type"]]\
-        .set_index("Variable")\
-        .squeeze()\
-        .str.lower()
+        "binary": "#53868B",  # Has beta (Python)
+        "continuous": "#53868B",  # Has beta (Both)
+        "categorical": "#4D4D4D",  # No beta (Python)
+        "categorical/binary": "#4D4D4D",  # No beta (R)
+    }
+    palette = (
+        df[["Variable", "Variable_type"]].set_index("Variable").squeeze().str.lower()
+    )
     palette = palette.to_dict()
     palette = {k: type_colors.get(v, "red") for k, v in palette.items()}
 
@@ -821,17 +847,35 @@ def top_results(
 
     # Draw vertical lines before plotting points
     if cutoff is not None:
-        axes[0].axvline(x=cutoff, ls='--', color='red')  # Significance cutoff
-    axes[0].axvline(x=1, ls='-', color='black')  # 1 Pvalue
-    axes[1].axvline(x=0, ls='-', color='black')  # 0 Beta
+        axes[0].axvline(x=cutoff, ls="--", color="red")  # Significance cutoff
+    axes[0].axvline(x=1, ls="-", color="black")  # 1 Pvalue
+    axes[1].axvline(x=0, ls="-", color="black")  # 0 Beta
 
     # Plot points
-    sns.stripplot(x=pvalue_name, y="Variable", data=df, ax=axes[0],
-                  size=10, orient='h', palette=palette,
-                  linewidth=1, edgecolor='w', jitter=False)
-    sns.stripplot(x='Beta', y="Variable", data=df, ax=axes[1],
-                  size=10, orient='h', palette=palette,
-                  linewidth=1, edgecolor='w', jitter=False)
+    sns.stripplot(
+        x=pvalue_name,
+        y="Variable",
+        data=df,
+        ax=axes[0],
+        size=10,
+        orient="h",
+        palette=palette,
+        linewidth=1,
+        edgecolor="w",
+        jitter=False,
+    )
+    sns.stripplot(
+        x="Beta",
+        y="Variable",
+        data=df,
+        ax=axes[1],
+        size=10,
+        orient="h",
+        palette=palette,
+        linewidth=1,
+        edgecolor="w",
+        jitter=False,
+    )
 
     # Format
     for ax in axes:
@@ -844,7 +888,7 @@ def top_results(
     axes[1].set_yticklabels([])
     axes[1].set_ylabel("")
     # pvalue
-    axes[0].set_xscale('log')
+    axes[0].set_xscale("log")
     if cutoff is not None:
         xmin = min(df[pvalue_name].min(), cutoff)
         xlabel = f"{pvalue_name} (cutoff = {cutoff:.3f})"
@@ -854,7 +898,7 @@ def top_results(
     axes[0].set_xlim(0.1 * xmin, 1)
     axes[0].set_xlabel(xlabel)
     # Beta
-    max_beta = df['Beta'].abs().max()
+    max_beta = df["Beta"].abs().max()
     axes[1].set_xlim(-1.10 * max_beta, 1.1 * max_beta)  # max value +/- 10%
 
     # Title
@@ -865,10 +909,14 @@ def top_results(
     # legend
     legend_elements = []
     if cutoff is not None:
-        legend_elements.append(Line2D([0], [0], color='red', ls='--', label=f"Pvalue cutoff: {cutoff:.3f}"))
+        legend_elements.append(
+            Line2D([0], [0], color="red", ls="--", label=f"Pvalue cutoff: {cutoff:.3f}")
+        )
     for var_type in list(df["Variable_type"].unique()):
         color = type_colors.get(var_type)
-        legend_elements.append(Line2D([0], [0], marker='o', color=color, label=var_type, markersize=10))
+        legend_elements.append(
+            Line2D([0], [0], marker="o", color=color, label=var_type, markersize=10)
+        )
     axes[0].legend(handles=legend_elements, loc="lower left")
 
     # Format

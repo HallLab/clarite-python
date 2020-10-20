@@ -15,6 +15,7 @@ def print_wrap(func):
         result = func(*args, **kwargs)
         click.echo("=" * 80)
         return result
+
     return wrapped
 
 
@@ -29,7 +30,10 @@ def requires(package_name):
 
             @wraps(func)
             def wrapped(*args, **kwargs):
-                raise ImportError(f"Can't run '{func.__name__}' since '{package_name}' could not be imported")
+                raise ImportError(
+                    f"Can't run '{func.__name__}' since '{package_name}' could not be imported"
+                )
+
             return wrapped
 
         else:
@@ -39,9 +43,10 @@ def requires(package_name):
 
 
 def _validate_skip_only(
-        data: pd.DataFrame,
-        skip: Optional[Union[str, List[str]]] = None,
-        only: Optional[Union[str, List[str]]] = None):
+    data: pd.DataFrame,
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """Validate use of the 'skip' and 'only' parameters, returning a boolean series for the columns where True = use the column"""
     # Ensure that 'data' is a DataFrame and not a Series
     if type(data) != pd.DataFrame:
@@ -54,16 +59,22 @@ def _validate_skip_only(
         only = [only]
 
     if skip is not None and only is not None:
-        raise ValueError("It isn't possible to specify 'skip' and 'only' at the same time.")
+        raise ValueError(
+            "It isn't possible to specify 'skip' and 'only' at the same time."
+        )
     elif skip is not None and only is None:
         invalid_cols = set(skip) - set(list(data))
         if len(invalid_cols) > 0:
-            raise ValueError(f"Invalid columns passed to 'skip': {', '.join(invalid_cols)}")
+            raise ValueError(
+                f"Invalid columns passed to 'skip': {', '.join(invalid_cols)}"
+            )
         columns = pd.Series(~data.columns.isin(skip), index=data.columns)
     elif skip is None and only is not None:
         invalid_cols = set(only) - set(list(data))
         if len(invalid_cols) > 0:
-            raise ValueError(f"Invalid columns passed to 'only': {', '.join(invalid_cols)}")
+            raise ValueError(
+                f"Invalid columns passed to 'only': {', '.join(invalid_cols)}"
+            )
         columns = pd.Series(data.columns.isin(only), index=data.columns)
     else:
         columns = pd.Series(True, index=data.columns)
@@ -81,34 +92,39 @@ def _get_dtypes(data: pd.DataFrame):
         raise ValueError("The passed 'data' is not a Pandas DataFrame")
 
     # Start with all as unknown
-    dtypes = pd.Series('unknown', index=data.columns)
+    dtypes = pd.Series("unknown", index=data.columns)
 
     # Set binary and categorical
-    data_catbin = data.loc[:, data.dtypes == 'category']
+    data_catbin = data.loc[:, data.dtypes == "category"]
     if len(data_catbin.columns) > 0:
         # Constant
         constant_cols = data_catbin.apply(lambda col: len(col.cat.categories) == 1)
         constant_cols = constant_cols[constant_cols].index
-        dtypes.loc[constant_cols] = 'constant'
+        dtypes.loc[constant_cols] = "constant"
         # Binary
         bin_cols = data_catbin.apply(lambda col: len(col.cat.categories) == 2)
         bin_cols = bin_cols[bin_cols].index
-        dtypes.loc[bin_cols] = 'binary'
+        dtypes.loc[bin_cols] = "binary"
         # Categorical
         cat_cols = data_catbin.apply(lambda col: len(col.cat.categories) > 2)
         cat_cols = cat_cols[cat_cols].index
-        dtypes.loc[cat_cols] = 'categorical'
+        dtypes.loc[cat_cols] = "categorical"
 
     # Set continuous
     cont_cols = data.dtypes.apply(lambda dt: pd.api.types.is_numeric_dtype(dt))
     cont_cols = cont_cols[cont_cols].index
-    dtypes.loc[cont_cols] = 'continuous'
+    dtypes.loc[cont_cols] = "continuous"
 
     # Warn if there are any unknown types
-    data_unknown = dtypes == 'unknown'
+    data_unknown = dtypes == "unknown"
     unknown_num = data_unknown.sum()
     if unknown_num > 0:
-        click.echo(click.style(f"WARNING: {unknown_num:,} variables need to be categorized into a type manually", fg='yellow'))
+        click.echo(
+            click.style(
+                f"WARNING: {unknown_num:,} variables need to be categorized into a type manually",
+                fg="yellow",
+            )
+        )
 
     return dtypes
 
@@ -116,26 +132,28 @@ def _get_dtypes(data: pd.DataFrame):
 def _get_dtype(data: pd.Series):
     """Return the CLARITE dtype of a pandas series"""
     # Set binary and categorical
-    if data.dtype.name == 'category':
+    if data.dtype.name == "category":
         num_categories = len(data.cat.categories)
         if num_categories == 1:
-            return 'constant'
+            return "constant"
         elif num_categories == 2:
-            return 'binary'
+            return "binary"
         elif num_categories > 2:
-            return 'categorical'
+            return "categorical"
     elif pd.api.types.is_numeric_dtype(data.dtype):
-        return 'continuous'
+        return "continuous"
     else:
-        return 'unknown'
+        return "unknown"
 
 
-def _process_colfilter(data: pd.DataFrame,
-                       skip: Optional[Union[str, List[str]]],
-                       only: Optional[Union[str, List[str]]],
-                       fail_filter: pd.Series,  # Series mapping variable to a boolean of whether they failed the filter
-                       explanation: str,  # A string explaining what the filter did (including any parameter values)
-                       kinds: List[str]):  # Which variable types to apply the filter to
+def _process_colfilter(
+    data: pd.DataFrame,
+    skip: Optional[Union[str, List[str]]],
+    only: Optional[Union[str, List[str]]],
+    fail_filter: pd.Series,  # Series mapping variable to a boolean of whether they failed the filter
+    explanation: str,  # A string explaining what the filter did (including any parameter values)
+    kinds: List[str],
+):  # Which variable types to apply the filter to
     """
     Log filter results, apply them to the data, and return the result.
     Saves a lot of repetitive code in column filtering functions.
@@ -146,21 +164,27 @@ def _process_colfilter(data: pd.DataFrame,
     kept = pd.Series(True, index=columns.index)
 
     for kind in kinds:
-        is_kind = (dtypes == kind)
+        is_kind = dtypes == kind
         is_tested_kind = is_kind & columns
-        click.echo(f"Testing {is_tested_kind.sum():,} of {is_kind.sum():,} {kind} variables")
+        click.echo(
+            f"Testing {is_tested_kind.sum():,} of {is_kind.sum():,} {kind} variables"
+        )
         removed_kind = is_tested_kind & fail_filter
         if is_tested_kind.sum() > 0:
-            click.echo(f"\tRemoved {removed_kind.sum():,} ({removed_kind.sum()/is_tested_kind.sum():.2%}) "
-                       f"tested {kind} variables {explanation}")
+            click.echo(
+                f"\tRemoved {removed_kind.sum():,} ({removed_kind.sum()/is_tested_kind.sum():.2%}) "
+                f"tested {kind} variables {explanation}"
+            )
         kept = kept & ~removed_kind
 
     return kept
 
 
-def _remove_empty_categories(data: Union[pd.DataFrame, pd.Series],
-                             skip: Optional[Union[str, List[str]]] = None,
-                             only: Optional[Union[str, List[str]]] = None):
+def _remove_empty_categories(
+    data: Union[pd.DataFrame, pd.Series],
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
     """
     Remove categories from categorical types if there are no occurrences of that type.
     Updates the data in-place and returns a dict of variables:removed categories
@@ -169,15 +193,17 @@ def _remove_empty_categories(data: Union[pd.DataFrame, pd.Series],
     if type(data) == pd.DataFrame:
         columns = _validate_skip_only(data, skip, only)
         dtypes = data.loc[:, columns].dtypes
-        catvars = [v for v in dtypes[dtypes == 'category'].index]
+        catvars = [v for v in dtypes[dtypes == "category"].index]
         for var in catvars:
             counts = data[var].value_counts()
             keep_cats = list(counts[counts > 0].index)
             if len(keep_cats) < len(counts):
                 removed_cats[var] = set(counts.index) - set(keep_cats)
-                data[var].cat.set_categories(new_categories=keep_cats,
-                                             ordered=data[var].cat.ordered,
-                                             inplace=True)
+                data[var].cat.set_categories(
+                    new_categories=keep_cats,
+                    ordered=data[var].cat.ordered,
+                    inplace=True,
+                )
         return removed_cats
     elif type(data) == pd.Series:
         assert skip is None
@@ -186,7 +212,7 @@ def _remove_empty_categories(data: Union[pd.DataFrame, pd.Series],
         keep_cats = list(counts[counts > 0].index)
         if len(keep_cats) < len(counts):
             removed_cats[data.name] = set(counts.index) - set(keep_cats)
-            data.cat.set_categories(new_categories=keep_cats,
-                                    ordered=data.cat.ordered,
-                                    inplace=True)
+            data.cat.set_categories(
+                new_categories=keep_cats, ordered=data.cat.ordered, inplace=True
+            )
         return removed_cats

@@ -57,22 +57,27 @@ class WeightedGLMRegression(GLMRegression):
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
         Warning: `jackknife` is untested and may not be accurate
     """
-    def __init__(self,
-                 data: pd.DataFrame,
-                 outcome_variable: str,
-                 covariates: Optional[List[str]],
-                 survey_design_spec: Optional[SurveyDesignSpec] = None,
-                 min_n: int = 200,
-                 cov_method: Optional[str] = 'stata'):
+
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        outcome_variable: str,
+        covariates: Optional[List[str]],
+        survey_design_spec: Optional[SurveyDesignSpec] = None,
+        min_n: int = 200,
+        cov_method: Optional[str] = "stata",
+    ):
         # survey_design_spec should actually not be None, but is a keyword for convenience
         if survey_design_spec is None:
             raise ValueError("A 'survey_design_spec' must be provided")
 
         # Base class __init__
-        super().__init__(data=data,
-                         outcome_variable=outcome_variable,
-                         covariates=covariates,
-                         min_n=min_n)
+        super().__init__(
+            data=data,
+            outcome_variable=outcome_variable,
+            covariates=covariates,
+            min_n=min_n,
+        )
 
         # Custom init involving kwargs passed to this regression
         self.survey_design_spec = survey_design_spec
@@ -88,55 +93,73 @@ class WeightedGLMRegression(GLMRegression):
 
     @staticmethod
     def get_default_result_dict():
-        return {'Weight': "",
-                'Converged': False,
-                'N': np.nan,
-                'Beta': np.nan,
-                'SE': np.nan,
-                'Variable_pvalue': np.nan,
-                'LRT_pvalue': np.nan,
-                'Diff_AIC': np.nan,
-                'pvalue': np.nan}
+        return {
+            "Weight": "",
+            "Converged": False,
+            "N": np.nan,
+            "Beta": np.nan,
+            "SE": np.nan,
+            "Variable_pvalue": np.nan,
+            "LRT_pvalue": np.nan,
+            "Diff_AIC": np.nan,
+            "pvalue": np.nan,
+        }
 
     def run_continuous_weighted(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Get data based on the formula
-        y, X = patsy.dmatrices(formula, data, return_type='dataframe', NA_action='drop')
+        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
 
         # Get survey design
-        survey_design = self.survey_design_spec.get_survey_design(regression_variable, X.index)
+        survey_design = self.survey_design_spec.get_survey_design(
+            regression_variable, X.index
+        )
 
         # Create and fit the model
-        model = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                            init_args=dict(family=self.family),
-                            fit_args=dict(use_t=self.use_t))
+        model = SurveyModel(
+            design=survey_design,
+            model_class=sm.GLM,
+            cov_method=self.cov_method,
+            init_args=dict(family=self.family),
+            fit_args=dict(use_t=self.use_t),
+        )
         model.fit(y=y, X=X)
 
         # Save results if the regression converged
         if model.result.converged:
-            result['Converged'] = True
-            rv_idx_list = [i for i, n in enumerate(X.columns) if re.match(fr"^{regression_variable}(\[T\..*\])?$", n)]
+            result["Converged"] = True
+            rv_idx_list = [
+                i
+                for i, n in enumerate(X.columns)
+                if re.match(fr"^{regression_variable}(\[T\..*\])?$", n)
+            ]
             if len(rv_idx_list) != 1:
-                raise ValueError(f"Failed to find regression variable column in the results for {regression_variable}")
+                raise ValueError(
+                    f"Failed to find regression variable column in the results for {regression_variable}"
+                )
             else:
                 rv_idx = rv_idx_list[0]
-            result['Beta'] = model.params[rv_idx]
-            result['SE'] = model.stderr[rv_idx]
+            result["Beta"] = model.params[rv_idx]
+            result["SE"] = model.stderr[rv_idx]
             # Calculate pvalue using a Two-sided t-test
-            tval = np.abs(result['Beta'] / result['SE'])  # T statistic is the absolute value of beta / SE
+            tval = np.abs(
+                result["Beta"] / result["SE"]
+            )  # T statistic is the absolute value of beta / SE
             dof = survey_design.get_dof(X)
             # Change SE to infinite and pvalue to 1 when dof < 1
             if dof < 1:
-                result['SE'] = np.inf
-                result['Variable_pvalue'] = 1.0
-                result['pvalue'] = 1.0
+                result["SE"] = np.inf
+                result["Variable_pvalue"] = 1.0
+                result["pvalue"] = 1.0
             else:
-                result['Variable_pvalue'] = scipy.stats.t.sf(tval, df=dof)*2
-                result['pvalue'] = result['Variable_pvalue']
+                result["Variable_pvalue"] = scipy.stats.t.sf(tval, df=dof) * 2
+                result["pvalue"] = result["Variable_pvalue"]
 
         return result
 
-    def run_categorical_weighted(self, data, regression_variable, formula, formula_restricted) -> Dict:
+    def run_categorical_weighted(
+        self, data, regression_variable, formula, formula_restricted
+    ) -> Dict:
         """
         See:
         Lumley, Thomas, and Alastair Scott. "Tests for regression models fitted to survey data."
@@ -145,31 +168,46 @@ class WeightedGLMRegression(GLMRegression):
         result = dict()
 
         # Regress full model
-        y, X = patsy.dmatrices(formula, data,
-                               return_type='dataframe', NA_action='drop')
+        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
         # Get survey design
-        survey_design = self.survey_design_spec.get_survey_design(regression_variable, X.index)
-        model = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                            init_args=dict(family=self.family),
-                            fit_args=dict(use_t=self.use_t))
+        survey_design = self.survey_design_spec.get_survey_design(
+            regression_variable, X.index
+        )
+        model = SurveyModel(
+            design=survey_design,
+            model_class=sm.GLM,
+            cov_method=self.cov_method,
+            init_args=dict(family=self.family),
+            fit_args=dict(use_t=self.use_t),
+        )
         model.fit(y=y, X=X)
 
         # Regress restricted model
-        y_restricted, X_restricted = patsy.dmatrices(formula_restricted, data,
-                                                     return_type='dataframe', NA_action='drop')
-        model_restricted = SurveyModel(design=survey_design, model_class=sm.GLM, cov_method=self.cov_method,
-                                       init_args=dict(family=self.family),
-                                       fit_args=dict(use_t=self.use_t))
+        y_restricted, X_restricted = patsy.dmatrices(
+            formula_restricted, data, return_type="dataframe", NA_action="drop"
+        )
+        model_restricted = SurveyModel(
+            design=survey_design,
+            model_class=sm.GLM,
+            cov_method=self.cov_method,
+            init_args=dict(family=self.family),
+            fit_args=dict(use_t=self.use_t),
+        )
         model_restricted.fit(y=y_restricted, X=X_restricted)
 
         # Save results if the regression converged
         if model.result.converged & model_restricted.result.converged:
-            result['Converged'] = True
+            result["Converged"] = True
             dof = survey_design.get_dof(X)
-            lr_pvalue = regTermTest(full_model=model, restricted_model=model_restricted,
-                                    ddf=dof, X_names=X.columns, var_name=regression_variable)
-            result['LRT_pvalue'] = lr_pvalue
-            result['pvalue'] = result['LRT_pvalue']
+            lr_pvalue = regTermTest(
+                full_model=model,
+                restricted_model=model_restricted,
+                ddf=dof,
+                X_names=X.columns,
+                var_name=regression_variable,
+            )
+            result["LRT_pvalue"] = lr_pvalue
+            result["pvalue"] = result["LRT_pvalue"]
             # Don't report AIC values for weighted categorical analysis since they may be incorrect
 
         return result
@@ -177,12 +215,16 @@ class WeightedGLMRegression(GLMRegression):
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
         for rv_type, rv_list in self.regression_variables.items():
-            click.echo(click.style(f"Running {len(rv_list):,} {rv_type} variables...", fg='green'))
+            click.echo(
+                click.style(
+                    f"Running {len(rv_list):,} {rv_type} variables...", fg="green"
+                )
+            )
             # TODO: Parallelize this loop
             for rv in rv_list:
                 # Initialize result with placeholders
                 self.results[rv] = self.get_default_result_dict()
-                self.results[rv]['Variable_type'] = rv_type
+                self.results[rv]["Variable_type"] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
                     # Take a copy of the data (ignoring other RVs) and create a keep_rows mask
@@ -190,29 +232,43 @@ class WeightedGLMRegression(GLMRegression):
                     data = self.data[keep_columns]
 
                     # Get missing weight mask
-                    weight_name, missing_weight_mask, warning = self.survey_design_spec.check_missing_weights(data, rv)
+                    (
+                        weight_name,
+                        missing_weight_mask,
+                        warning,
+                    ) = self.survey_design_spec.check_missing_weights(data, rv)
                     if warning is not None:
                         self.warnings[rv].append(warning)
                     self.results[rv]["Weight"] = weight_name
 
                     # Get complete case mask
-                    complete_case_mask = self.get_complete_case_mask(data, rv)  # Complete cases
+                    complete_case_mask = self.get_complete_case_mask(
+                        data, rv
+                    )  # Complete cases
                     # If allowed (an error hasn't been raised) negate missing_weight_mask so True=keep to drop those
                     complete_case_mask = complete_case_mask & ~missing_weight_mask
 
                     # Count restricted rows
-                    restricted_rows = self.survey_design_spec.subset_array & complete_case_mask
+                    restricted_rows = (
+                        self.survey_design_spec.subset_array & complete_case_mask
+                    )
 
                     # Filter by min_n
                     N = (restricted_rows).sum()
-                    self.results[rv]['N'] = N
+                    self.results[rv]["N"] = N
                     if N < self.min_n:
-                        raise ValueError(f"too few complete observations (min_n filter: {N} < {self.min_n})")
+                        raise ValueError(
+                            f"too few complete observations (min_n filter: {N} < {self.min_n})"
+                        )
 
                     # Check for covariates that do not vary (they get ignored)
-                    varying_covars, warnings = self.check_covariate_values(restricted_rows)
+                    varying_covars, warnings = self.check_covariate_values(
+                        restricted_rows
+                    )
                     self.warnings[rv].extend(warnings)
-                    data = data[[rv, self.outcome_variable] + varying_covars]  # Drop any nonvarying covars
+                    data = data[
+                        [rv, self.outcome_variable] + varying_covars
+                    ]  # Drop any nonvarying covars
 
                     # Keep only restricted rows
                     data = data.loc[restricted_rows]
@@ -222,8 +278,10 @@ class WeightedGLMRegression(GLMRegression):
                     removed_cats = _remove_empty_categories(data)
                     if len(removed_cats) >= 1:
                         for extra_cat_var, extra_cats in removed_cats.items():
-                            warning = f"'{str(extra_cat_var)}' had categories with no occurrences " \
-                                      f"after removing observations with missing values"
+                            warning = (
+                                f"'{str(extra_cat_var)}' had categories with no occurrences "
+                                f"after removing observations with missing values"
+                            )
                             if self.survey_design_spec.subset_count > 0:
                                 warning += f" and applying the {self.survey_design_spec.subset_count} subset(s)"
                             warning += f": {', '.join([repr(c) for c in extra_cats])} "
@@ -233,12 +291,16 @@ class WeightedGLMRegression(GLMRegression):
                     formula_restricted, formula = self.get_formulas(rv, varying_covars)
 
                     # Run Regression
-                    if rv_type == 'continuous':
+                    if rv_type == "continuous":
                         result = self.run_continuous_weighted(data, rv, formula)
-                    elif rv_type == 'binary':  # The same calculation as for continuous variables
+                    elif (
+                        rv_type == "binary"
+                    ):  # The same calculation as for continuous variables
                         result = self.run_continuous_weighted(data, rv, formula)
-                    elif rv_type == 'categorical':
-                        result = self.run_categorical_weighted(data, rv, formula, formula_restricted)
+                    elif rv_type == "categorical":
+                        result = self.run_categorical_weighted(
+                            data, rv, formula, formula_restricted
+                        )
                     else:
                         result = dict()
                     self.results[rv].update(result)
@@ -246,5 +308,10 @@ class WeightedGLMRegression(GLMRegression):
                 except Exception as e:
                     self.errors[rv] = str(e)
 
-            click.echo(click.style(f"\tFinished Running {len(rv_list):,} {rv_type} variables", fg='green'))
+            click.echo(
+                click.style(
+                    f"\tFinished Running {len(rv_list):,} {rv_type} variables",
+                    fg="green",
+                )
+            )
         self.run_complete = True
