@@ -1,4 +1,4 @@
 "","Test_Number","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue"
-"RIAGENDR_X_agecat",1,TRUE,7846,"    NaN","    NaN",NA,3.51779430631649e-109
-"race_X_agecat",2,TRUE,7846,"    NaN","    NaN",NA,2.92131298397054e-98
-"RIAGENDR_X_race",3,TRUE,7846,"    NaN","    NaN",NA,6.1203932589893e-06
+"RIAGENDR_X_agecat",1,TRUE,7846,"    NaN","    NaN",NA,9.18778425031019e-08
+"race_X_agecat",2,TRUE,7846,"    NaN","    NaN",NA,0.598374388126561
+"RIAGENDR_X_race",3,TRUE,7846,"    NaN","    NaN",NA,0.00175509648518269

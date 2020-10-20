@@ -66,6 +66,9 @@ class InteractionRegression(Regression):
         self.min_n = min_n
         self.report_betas = report_betas
 
+        # Use a list of results instead of the default dict
+        self.results = []
+
         # Ensure the data output type is compatible
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
         if self.outcome_dtype == "categorical":
@@ -138,9 +141,10 @@ class InteractionRegression(Regression):
         self.description += f"\nProcessing {len(self.interactions):,} interactions"
 
     @staticmethod
-    def get_default_result_dict():
+    def get_default_result_dict(i1, i2):
         return {
-            "Test_Number": np.nan,
+            "Term1": i1,
+            "Term2": i2,
             "Converged": False,
             "N": np.nan,
             "Beta": np.nan,
@@ -182,13 +186,13 @@ class InteractionRegression(Regression):
         return varying_covars, warnings
 
     def get_formulas(self, i1, i2, varying_covars) -> Tuple[str, str]:
-        # Restricted Formula, just outcome and covariates
-        formula_restricted = f"{self.outcome_variable} ~ 1"
+        # Restricted Formula - covariates and main effects
+        formula_restricted = f"{self.outcome_variable} ~ 1 + {i1} + {i2}"
         if len(varying_covars) > 0:
             formula_restricted += " + "
             formula_restricted += " + ".join(varying_covars)
 
-        # Full Formula, adding the regression variable to the restricted formula
+        # Full Formula - restricted plus interactions
         formula = formula_restricted + f" + {i1}:{i2}"
 
         return formula_restricted, formula
@@ -202,7 +206,8 @@ class InteractionRegression(Regression):
         result: pd.DataFrame
             Results DataFrame with these columns:
             ['Test_Number', 'Converged', 'N', 'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue']
-            indexed by "Interaction"
+            indexed by "Term1" and "Term2"
+            also indexed by "Parameter" if betas are reported
         """
         if not self.run_complete:
             raise ValueError(
@@ -235,17 +240,21 @@ class InteractionRegression(Regression):
                     click.echo(click.style(f"\t{warning}", fg="yellow"))
 
         result = (
-            pd.DataFrame.from_dict(self.results, orient="index")
-            .reset_index(drop=False)
-            .rename(columns={"index": "Interaction"})
+            pd.DataFrame(self.results)
             .astype({"N": pd.Int64Dtype()})
         )  # b/c N isn't checked when weights are missing
+
+        # Set index
+        if self.report_betas:
+            result = result.set_index(['Term1', 'Term2', 'Parameter'])
+        else:
+            result = result.set_index(['Term1', 'Term2'])
 
         return result
 
     def run_interaction(
-        self, i1, i2, data, formula, formula_restricted
-    ) -> Tuple[str, Dict]:
+        self, data, formula, formula_restricted
+    ) -> Dict:
         # Regress both models
         est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
         est_restricted = smf.glm(formula_restricted, data=data, family=self.family).fit(
@@ -260,33 +269,22 @@ class InteractionRegression(Regression):
                 # Get beta, SE, and pvalue from interaction terms, using specific terms as "Interaction"
                 # Interaction terms are listed like agecat[T.(19,39]]:RIAGENDR[1] for binary/categorical
                 # Where categoricals have 'T.' and binary do not
-                # There are also singular terms like `RIAGENDR[1]` which refers to the interaction between
-                # the reference level of the first term and the non-reference levels of the second
-                interaction_idx = [
-                    n
-                    for n in est.bse.index
-                    if (
-                        re.match(fr"^{i1}(\[(T\.)?.*\])?\:{i2}(\[(T\.)?.*\])?$", n)
-                        or re.match(fr"^{i2}(\[(T\.)?.*\])?$", n)
-                    )
-                ]
-                for interaction_name in interaction_idx:
-                    result = dict()
-                    result["Converged"] = True
-                    result["Beta"] = est.params[interaction_name]
-                    result["SE"] = est.bse[interaction_name]
-                    result["Beta_pvalue"] = est.pvalues[interaction_name]
-                    result["LRT_pvalue"] = lr_pvalue
-                    yield interaction_name, result
+                # Return all terms
+                param_names = est.bse.index
+                for param_name in param_names:
+                    yield {"Converged": True,
+                           "Parameter": param_name,
+                           "Beta": est.params[param_name],
+                           "SE": est.bse[param_name],
+                           "Beta_pvalue": est.pvalues[param_name],
+                           "LRT_pvalue": lr_pvalue}
             else:
-                # Only return the LRT result, using the original "Interaction" name
-                result = dict()
-                result["Converged"] = True
-                result["LRT_pvalue"] = lr_pvalue
-                yield f"{i1}_X_{i2}", result
+                # Only return the LRT result
+                yield {"Converged": True,
+                       "LRT_pvalue": lr_pvalue}
         else:
-            # Did not converge
-            yield f"{i1}_X_{i2}", dict()
+            # Did not converge - nothing to update
+            yield dict()
 
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
@@ -300,7 +298,7 @@ class InteractionRegression(Regression):
                         fg="green",
                     )
                 )
-            interaction_str = f"{i1}_X_{i2}"
+            interaction_str = f"{i1}:{i2}"
             # Run in a try/except block to catch any errors specific to a regression variable
             try:
                 # Take a copy of the data (ignoring other RVs)
@@ -339,17 +337,16 @@ class InteractionRegression(Regression):
                 data = data.loc[complete_case_mask]
 
                 # Run Regression LRT Test
-                for interaction_name, result in self.run_interaction(
-                    i1, i2, data, formula, formula_restricted
-                ):
-                    self.results[interaction_name] = self.get_default_result_dict()
-                    self.results[interaction_name]["N"] = N
-                    self.results[interaction_name]["Test_Number"] = interaction_num
-                    self.results[interaction_name].update(result)
+                for regression_result in self.run_interaction(data, formula, formula_restricted):
+                    result = self.get_default_result_dict(i1, i2)
+                    result["N"] = N
+                    result.update(regression_result)
+                    self.results.append(result)
 
             except Exception as e:
                 self.errors[interaction_str] = str(e)
-                self.results[interaction_str] = self.get_default_result_dict()
-                self.results[interaction_str]["N"] = N
-                self.results[interaction_str]["Test_Number"] = interaction_num
+                result = self.get_default_result_dict(i1, i2)
+                result["N"] = N
+                self.results.append(result)
+
         self.run_complete = True

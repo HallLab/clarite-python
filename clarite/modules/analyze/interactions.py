@@ -32,9 +32,11 @@ def interactions(
     min_n: int or None
         Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
         Defaults to 200
-    interactions: list(tuple(strings)) or None
-        A list of tuples of variable names to be tested as interactions.  If not specified, all pairwise interactions
-        will be tested for any variables in the data that are not the outcome or covariates.
+    interactions: list(tuple(strings)), str, or None
+        Valid variables are those in the data that are not the outcome variable or a covariate.
+        None: Test all pairwise interactions between valid variables
+        String: Test all interactions of this valid variable with other valid variables
+        List of tuples: Test specific interactions of valid variables
     report_betas: boolean
         False by default.
           If True, the results will contain one row for each interaction term and will include the beta value,
@@ -50,8 +52,7 @@ def interactions(
 
     Examples
     --------
-    >>> ewas_discovery = clarite.analyze.test_interactions("logBMI", covariates, nhanes_discovery)
-    Running EWAS on a continuous variable
+    >>> ewas_discovery = clarite.analyze.interactions("logBMI", covariates, nhanes_discovery)
     """
     # Copy data to avoid modifying the original, in case it is changed
     data = data.copy(deep=True)
@@ -74,10 +75,8 @@ def interactions(
     # Process Results
     result["Outcome"] = outcome_variable
     result = result.sort_values(["LRT_pvalue", "Beta_pvalue"]).set_index(
-        ["Interaction", "Outcome"]
-    )  # Sort and set index
+        ["Outcome"], append=True)  # Sort and set index
     column_order = [
-        "Test_Number",
         "Converged",
         "N",
         "Beta",

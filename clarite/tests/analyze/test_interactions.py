@@ -21,13 +21,6 @@ def load_r_interaction_results(filename):
 
 def compare_result(loaded_result, python_result, atol=0, rtol=1e-04):
     """Compare loaded results to CLARITE results, with optional tolerances"""
-    # Remove "Phenotype" from the index in calculated results
-    python_result = (
-        python_result.reset_index(drop=False)
-        .set_index("Interaction")
-        .drop(columns=["Outcome"])
-    )
-
     # Convert 'N' from IntegerArray to float
     python_result = python_result.astype({"N": "float"})
 

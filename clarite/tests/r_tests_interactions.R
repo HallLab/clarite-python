@@ -85,8 +85,8 @@ result_nobeta <- get_interaction_result(1,
                                         "agecat_X_RIAGENDR",
                                         data,
                                         family=binomial(link="logit"),
-                                        HI_CHOL~race+agecat:RIAGENDR,
-                                        HI_CHOL~race)
+                                        HI_CHOL~race+agecat+RIAGENDR+agecat:RIAGENDR,
+                                        HI_CHOL~race+agecat+RIAGENDR)
 write_result(result_nobeta, "nhanes_ageXgender.csv")
 
 # test_interaction_weightXrace
@@ -94,16 +94,16 @@ result_nobeta <- get_interaction_result(1,
                                         "WTMEC2YR_X_race",
                                         data,
                                         family=binomial(link="logit"),
-                                        HI_CHOL~agecat+RIAGENDR+WTMEC2YR:race,
-                                        HI_CHOL~agecat+RIAGENDR)
+                                        HI_CHOL~agecat+RIAGENDR+WTMEC2YR+race+WTMEC2YR:race,
+                                        HI_CHOL~agecat+RIAGENDR+WTMEC2YR+race)
 write_result(result_nobeta, "nhanes_weightXrace.csv")
 
 result <- get_interaction_result(1,
                                  "WTMEC2YR_X_race",
                                  data,
                                  family=binomial(link="logit"),
-                                 HI_CHOL~agecat+RIAGENDR+WTMEC2YR:race,
-                                 HI_CHOL~agecat+RIAGENDR,
+                                 HI_CHOL~agecat+RIAGENDR+WTMEC2YR+race+WTMEC2YR:race,
+                                 HI_CHOL~agecat+RIAGENDR+WTMEC2YR+race,
                                  report_betas = TRUE)
 write_result(result, "nhanes_weightXrace_withbetas.csv")
 
@@ -115,19 +115,19 @@ result_nobeta <- rbind(
                          "RIAGENDR_X_agecat",
                          data,
                          family=binomial(link="logit"),
-                         HI_CHOL~RIAGENDR:agecat,
-                         HI_CHOL~1),
+                         HI_CHOL~RIAGENDR+agecat+RIAGENDR:agecat,
+                         HI_CHOL~RIAGENDR+agecat),
   get_interaction_result(2,
                          "race_X_agecat",
                          data,
                          family=binomial(link="logit"),
-                         HI_CHOL~race:agecat,
-                         HI_CHOL~1),
+                         HI_CHOL~race+agecat+race:agecat,
+                         HI_CHOL~race+agecat),
   get_interaction_result(3,
                          "RIAGENDR_X_race",
                          data,
                          family=binomial(link="logit"),
-                         HI_CHOL~RIAGENDR:race,
-                         HI_CHOL~1)
+                         HI_CHOL~RIAGENDR+race+RIAGENDR:race,
+                         HI_CHOL~RIAGENDR+race)
 )
 write_result(result_nobeta, "nhanes_pairwise.csv")
