@@ -22,7 +22,7 @@ write_result <- function(data, filename) {
   write.csv(data, file.path("r_test_output/interactions", filename), row.names=TRUE)
 }
 
-get_interaction_result <- function(test_num, test_name, data, family, formula_full, formula_restricted, report_betas) {
+get_interaction_result <- function(test_num, test_name, data, family, formula_full, formula_restricted, report_betas=FALSE) {
   glm_full <- glm(formula_full, data=data, family=family, na.action=na.omit)
   glm_restricted <- glm(formula_restricted, data=data, family=family, na.action=na.omit)
   if (!(glm_full$converged) | !(glm_restricted$converged)){
@@ -34,7 +34,7 @@ get_interaction_result <- function(test_num, test_name, data, family, formula_fu
                       "Beta_pvalue"=NaN,
                       "LRT_pvalue"=NaN))
   } else {
-
+    
   }
   if(report_betas){
     lrt <-  anova(glm_full, glm_restricted, test="LRT")
@@ -56,12 +56,12 @@ get_interaction_result <- function(test_num, test_name, data, family, formula_fu
     lrt <-  anova(glm_full, glm_restricted, test="LRT")
     pval <- lrt$`Pr(>Chi)`[2]
     result<- data.frame("Test_Number"=test_num,
-                      "Converged"=TRUE,
-                      "N"=nobs(glm_full),
-                      "Beta"=NaN,
-                      "SE"=NaN,
-                      "Beta_pvalue"=NaN,
-                      "LRT_pvalue"=pval)
+                        "Converged"=TRUE,
+                        "N"=nobs(glm_full),
+                        "Beta"=NaN,
+                        "SE"=NaN,
+                        "Beta_pvalue"=NaN,
+                        "LRT_pvalue"=pval)
     rownames(result) <- test_name
     return(result)
   }
@@ -77,73 +77,57 @@ nhanes$race <- as.factor(nhanes$race)
 nhanes$agecat <- as.factor(nhanes$agecat)
 nhanes$RIAGENDR <- as.factor(nhanes$RIAGENDR)
 
-#test_interactions_nhanes_ageXgender
+# Use HI_CHOL as output, dropping NA values
 data <- nhanes[!is.na(nhanes$HI_CHOL), ]
+
+# test_interaction_agecatXRIAGENDR
 result_nobeta <- get_interaction_result(1,
-                                        "agecat:RIAGENDR",
+                                        "agecat_X_RIAGENDR",
                                         data,
                                         family=binomial(link="logit"),
                                         HI_CHOL~race+agecat:RIAGENDR,
-                                        HI_CHOL~race,
-                                        FALSE)
-write_result(result_nobeta, "nhanes_ageXgender_nobetas.csv")
+                                        HI_CHOL~race)
+write_result(result_nobeta, "nhanes_ageXgender.csv")
+
+# test_interaction_weightXrace
+result_nobeta <- get_interaction_result(1,
+                                        "WTMEC2YR_X_race",
+                                        data,
+                                        family=binomial(link="logit"),
+                                        HI_CHOL~agecat+RIAGENDR+WTMEC2YR:race,
+                                        HI_CHOL~agecat+RIAGENDR)
+write_result(result_nobeta, "nhanes_weightXrace.csv")
+
 result <- get_interaction_result(1,
-                                 "agecat:RIAGENDR",
+                                 "WTMEC2YR_X_race",
                                  data,
                                  family=binomial(link="logit"),
-                                 HI_CHOL~race+agecat:RIAGENDR,
-                                 HI_CHOL~race,
-                                 TRUE)
-write_result(result, "nhanes_ageXgender.csv")
+                                 HI_CHOL~agecat+RIAGENDR+WTMEC2YR:race,
+                                 HI_CHOL~agecat+RIAGENDR,
+                                 report_betas = TRUE)
+write_result(result, "nhanes_weightXrace_withbetas.csv")
 
 
 #test_interactions_nhanes_pairwise
-data <- nhanes[!is.na(nhanes$HI_CHOL), ]
+
 result_nobeta <- rbind(
   get_interaction_result(1,
-                         "agecat:RIAGENDR",
+                         "RIAGENDR_X_agecat",
                          data,
                          family=binomial(link="logit"),
-                         HI_CHOL~agecat:RIAGENDR,
-                         HI_CHOL~1,
-                         FALSE),
+                         HI_CHOL~RIAGENDR:agecat,
+                         HI_CHOL~1),
   get_interaction_result(2,
-                         "race:agecat",
+                         "race_X_agecat",
                          data,
                          family=binomial(link="logit"),
                          HI_CHOL~race:agecat,
-                         HI_CHOL~1,
-                         FALSE),
+                         HI_CHOL~1),
   get_interaction_result(3,
-                         "RIAGENDR:race",
+                         "RIAGENDR_X_race",
                          data,
                          family=binomial(link="logit"),
                          HI_CHOL~RIAGENDR:race,
-                         HI_CHOL~1,
-                         FALSE)
+                         HI_CHOL~1)
 )
-write_result(result_nobeta, "nhanes_pairwise_nobetas.csv")
-result <- rbind(
-  get_interaction_result(1,
-                         "agecat:RIAGENDR",
-                         data,
-                         family=binomial(link="logit"),
-                         HI_CHOL~agecat:RIAGENDR,
-                         HI_CHOL~1,
-                         TRUE),
-  get_interaction_result(2,
-                         "race:agecat",
-                         data,
-                         family=binomial(link="logit"),
-                         HI_CHOL~race:agecat,
-                         HI_CHOL~1,
-                         TRUE),
-  get_interaction_result(3,
-                         "RIAGENDR:race",
-                         data,
-                         family=binomial(link="logit"),
-                         HI_CHOL~RIAGENDR:race,
-                         HI_CHOL~1,
-                         TRUE)
-)
-write_result(result, "nhanes_pairwise.csv")
+write_result(result_nobeta, "nhanes_pairwise.csv")
