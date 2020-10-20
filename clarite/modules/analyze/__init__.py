@@ -9,7 +9,6 @@ Functions used for analyses such as EWAS
 
      ewas
      interactions
-     regression
      add_corrected_pvalues
 
 """
