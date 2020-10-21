@@ -14,9 +14,10 @@ def interaction_test(
     interactions: Optional[Union[List[Tuple[str, str]], str]] = None,
     report_betas: bool = False,
 ):
-    """
-    Run an Environment-Wide Association Study
+    """Perform LRT tests comparing a model with interaction terms to one without.
 
+    An intercept, covariates, and main effects of the variables used in the interactiona are included in both the full
+    and restricted models.
     All variables in `data` other than the outcome and covariates are potential interaction variables.
     All pairwise interactions are tested unless specific
     Results are sorted in order of increasing `pvalue`
@@ -24,13 +25,13 @@ def interaction_test(
     Parameters
     ----------
     data: pd.DataFrame
-        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable: string
         The variable to be used as the output (y) of the regression
     covariates: list (strings),
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     min_n: int or None
-        Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
+        Minimum number of complete-case observations (no NA values for outcome, covariates, or variable)
         Defaults to 200
     interactions: list(tuple(strings)), str, or None
         Valid variables are those in the data that are not the outcome variable or a covariate.
@@ -48,7 +49,7 @@ def interaction_test(
     -------
     df: pd.DataFrame
         DataFrame with these columns: ['Test_Number', 'Converged', 'N', 'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue']
-        indexed by the interaction and the outcome
+        indexed by the interaction terms ("Term1", "Term2") and the outcome variable ("Outcome")
 
     Examples
     --------

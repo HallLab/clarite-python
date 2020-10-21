@@ -29,13 +29,13 @@ get_varying_covariates <- function(df, covariates, variable, allowed_nonvarying)
 }
 
 ###Continuous###
-regress_cont <- function(data, varying_covariates, phenotype, var_name, regression_family){
+regress_cont <- function(data, varying_covariates, outcome, var_name, regression_family){
 
   # Create a regression formula
   if(length(varying_covariates)>0){
-    fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
+    fmla <- paste(outcome, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
   } else {
-    fmla <- paste(phenotype, "~", var_name, sep="")
+    fmla <- paste(outcome, "~", var_name, sep="")
   }
 
   var_result <- tryCatch(glm(stats::as.formula(fmla),
@@ -65,7 +65,7 @@ regress_cont <- function(data, varying_covariates, phenotype, var_name, regressi
   }
 }
 
-regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, regression_family,
+regress_cont_survey <- function(data, varying_covariates, outcome, var_name, regression_family,
                                 weight_values, strata_values, fpc_values, id_values, subset_array, ...){
 
   # Create survey design
@@ -88,9 +88,9 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
 
   # Create a regression formula
   if(length(varying_covariates)>0){
-    fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
+    fmla <- paste(outcome, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
   } else {
-    fmla <- paste(phenotype, "~", var_name, sep="")
+    fmla <- paste(outcome, "~", var_name, sep="")
   }
 
   var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), survey_design, family=regression_family, na.action=na.omit),
@@ -126,15 +126,15 @@ regress_cont_survey <- function(data, varying_covariates, phenotype, var_name, r
 }
 
 ###Categorical###
-regress_cat <- function(data, varying_covariates, phenotype, var_name, regression_family){
+regress_cat <- function(data, varying_covariates, outcome, var_name, regression_family){
 
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
-    fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
-    fmla_restricted <- paste(phenotype, "~", paste(varying_covariates, collapse="+"), sep="")
+    fmla <- paste(outcome, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
+    fmla_restricted <- paste(outcome, "~", paste(varying_covariates, collapse="+"), sep="")
   } else {
-    fmla <- paste(phenotype, "~", var_name, sep="")
-    fmla_restricted <- paste(phenotype, "~1", sep="")
+    fmla <- paste(outcome, "~", var_name, sep="")
+    fmla_restricted <- paste(outcome, "~1", sep="")
   }
 
   # Run GLM Functions
@@ -165,7 +165,7 @@ regress_cat <- function(data, varying_covariates, phenotype, var_name, regressio
 }
 
 
-regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, regression_family,
+regress_cat_survey <- function(data, varying_covariates, outcome, var_name, regression_family,
                                weight_values, strata_values, fpc_values, id_values, subset_array, ...) {
 
   # Create survey design
@@ -188,11 +188,11 @@ regress_cat_survey <- function(data, varying_covariates, phenotype, var_name, re
 
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
-    fmla <- paste(phenotype, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
-    fmla_restricted <- paste(phenotype, "~", paste(varying_covariates, collapse="+"), sep="")
+    fmla <- paste(outcome, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
+    fmla_restricted <- paste(outcome, "~", paste(varying_covariates, collapse="+"), sep="")
   } else {
-    fmla <- paste(phenotype, "~", var_name, sep="")
-    fmla_restricted <- paste(phenotype, "~1", sep="")
+    fmla <- paste(outcome, "~", var_name, sep="")
+    fmla_restricted <- paste(outcome, "~1", sep="")
   }
 
   # Results using surveyglm
@@ -315,23 +315,23 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
   # Run Regression for the single variable
   if(!use_survey){
     if(var_type == 'bin'){
-      regression_result <- regress_cont(data, varying_covariates, phenotype=y, var_name, regression_family)
+      regression_result <- regress_cont(data, varying_covariates, outcome=y, var_name, regression_family)
     } else if(var_type == 'cat'){
-      regression_result <- regress_cat(data, varying_covariates, phenotype=y, var_name, regression_family)
+      regression_result <- regress_cat(data, varying_covariates, outcome=y, var_name, regression_family)
     } else if(var_type == 'cont'){
-      regression_result <- regress_cont(data, varying_covariates, phenotype=y, var_name, regression_family)
+      regression_result <- regress_cont(data, varying_covariates, outcome=y, var_name, regression_family)
     }
   } else {
     if(var_type == 'bin'){
-      regression_result <- regress_cont_survey(data, varying_covariates, phenotype=y, var_name, regression_family,
+      regression_result <- regress_cont_survey(data, varying_covariates, outcome=y, var_name, regression_family,
                                                weight_values, strata_values, fpc_values, id_values,
                                                subset_array, ...)
     } else if(var_type == 'cat'){
-      regression_result <- regress_cat_survey(data, varying_covariates, phenotype=y, var_name, regression_family,
+      regression_result <- regress_cat_survey(data, varying_covariates, outcome=y, var_name, regression_family,
                                               weight_values, strata_values, fpc_values, id_values,
                                               subset_array, ...)
     } else if(var_type == 'cont'){
-      regression_result <- regress_cont_survey(data, varying_covariates, phenotype=y, var_name, regression_family,
+      regression_result <- regress_cont_survey(data, varying_covariates, outcome=y, var_name, regression_family,
                                                weight_values, strata_values, fpc_values, id_values,
                                                subset_array, ...)
     }
@@ -372,7 +372,7 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
 #' @param fpc NULL by default (for no fpc).  May be set to a string name of a column in the data which provides fpc values.
 #' @param subset_array NULL by default (for no subset).  May be set to a boolean array used to subset the data after creating the design
 #' @param ... other arguments passed to svydesign which are ignored if 'weights' is NULL
-#' @return data frame containing following fields Variable, Sample Size, Converged, SE, Beta, Variable p-value, LRT, AIC, pval, phenotype, weight
+#' @return data frame containing following fields Variable, Sample Size, Converged, SE, Beta, Variable p-value, LRT, AIC, pval, outcome, weight
 #' @export
 #' @family analysis functions
 #' @examples
@@ -431,12 +431,12 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
     warning("PSU IDs were specified without strata or fpc, preventing calculation of standard error")
   }
 
-  # Ignore the covariates, phenotype, and ID if they were included in the variable lists
+  # Ignore the covariates, outcome, and ID if they were included in the variable lists
   remove <- c(y, bin_covars, cat_covars, cont_covars, "ID")
   bin_vars <- setdiff(bin_vars, remove)
   cat_vars <- setdiff(cat_vars, remove)
   cont_vars <- setdiff(cont_vars, remove)
-  # Ignore the phenotype, and ID if they were included in the covariates lists
+  # Ignore the outcome, and ID if they were included in the covariates lists
   remove <- c(y, "ID")
   bin_covars <- setdiff(bin_covars, remove)
   cat_covars <- setdiff(cat_covars, remove)
@@ -510,7 +510,7 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
                                LRT_pvalue = numeric(n),
                                Diff_AIC = numeric(n),
                                pval = numeric(n),
-                               phenotype = character(n),
+                               outcome = character(n),
                                weight = character(n),
                                stringsAsFactors = FALSE)
   ewas_result_df[] <- NA  # Fill df with NA values
@@ -522,9 +522,9 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   for(var_name in bin_vars){
     # Get new row in the results
     i <- i + 1
-    # Update var name and phenotype
+    # Update var name and outcome
     ewas_result_df$Variable[i] <- var_name
-    ewas_result_df$phenotype[i] <- y
+    ewas_result_df$outcome[i] <- y
     ewas_result_df$Variable_type[i] <- "binary"
 
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="bin",
@@ -541,9 +541,9 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   for(var_name in cat_vars){
     # Get new row in the results
     i <- i + 1
-    # Update var name and phenotype
+    # Update var name and outcome
     ewas_result_df$Variable[i] <- var_name
-    ewas_result_df$phenotype[i] <- y
+    ewas_result_df$outcome[i] <- y
     ewas_result_df$Variable_type[i] <- "categorical"
 
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="cat",
@@ -560,9 +560,9 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   for(var_name in cont_vars){
     # Get new row in the results
     i <- i + 1
-    # Update var name and phenotype
+    # Update var name and outcome
     ewas_result_df$Variable[i] <- var_name
-    ewas_result_df$phenotype[i] <- y
+    ewas_result_df$outcome[i] <- y
     ewas_result_df$Variable_type[i] <- "continuous"
 
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="cont",

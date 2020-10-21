@@ -25,13 +25,13 @@ class InteractionRegression(GLMRegression):
     Parameters
     ----------
     data: pd.DataFrame
-        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable: string
         The variable to be used as the output (y) of the regression
     covariates: list (strings),
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     min_n: int or None
-        Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
+        Minimum number of complete-case observations (no NA values for outcome, covariates, or variable)
         Defaults to 200
     interactions: list(tuple(strings)), str, or None
         Valid variables are those in the data that are not the outcome variable or a covariate.
@@ -153,13 +153,13 @@ class InteractionRegression(GLMRegression):
             )
         self._log_errors_and_warnings()
         result = pd.DataFrame(self.results).astype({"N": pd.Int64Dtype()})
-        result["Phenotype"] = self.outcome_variable
+        result["Outcome"] = self.outcome_variable
         if self.report_betas:
             return result.set_index(
-                ["Term1", "Term2", "Phenotype", "Parameter"]
+                ["Term1", "Term2", "Outcome", "Parameter"]
             ).sort_values(["LRT_pvalue", "Beta_pvalue"])
         else:
-            return result.set_index(["Term1", "Term2", "Phenotype"]).sort_values(
+            return result.set_index(["Term1", "Term2", "Outcome"]).sort_values(
                 ["LRT_pvalue"]
             )
 

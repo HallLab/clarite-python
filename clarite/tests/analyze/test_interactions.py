@@ -16,9 +16,9 @@ def load_r_interaction_results(filename):
         ["Beta", "SE", "Beta_pvalue", "LRT_pvalue", "N"]
     ].astype("float64")
     if "Parameter" in r_result.columns:
-        r_result = r_result.set_index(["Term1", "Term2", "Parameter", "Phenotype"])
+        r_result = r_result.set_index(["Term1", "Term2", "Parameter", "Outcome"])
     else:
-        r_result = r_result.set_index(["Term1", "Term2", "Phenotype"])
+        r_result = r_result.set_index(["Term1", "Term2", "Outcome"])
     return r_result
 
 
@@ -38,7 +38,7 @@ def compare_result(loaded_result, python_result, atol=0, rtol=1e-04):
         python_result = python_result.reset_index(drop=False)
         python_result["Parameter"] = python_result["Parameter"].apply(fix_python_param)
         python_result = python_result.set_index(
-            ["Term1", "Term2", "Phenotype", "Parameter"]
+            ["Term1", "Term2", "Outcome", "Parameter"]
         )
 
     # Merge and ensure no rows are dropped
@@ -215,12 +215,12 @@ def test_interactions_nhanes_pairwise(data_NHANES):
     # Ensure grouped pvalue corrections match
     grouped_bonf = (
         python_result.reset_index(drop=False)
-        .groupby(["Term1", "Term2", "Phenotype"])["LRT_pvalue_bonferroni"]
+        .groupby(["Term1", "Term2", "Outcome"])["LRT_pvalue_bonferroni"]
         .first()
     )
     grouped_fdr = (
         python_result.reset_index(drop=False)
-        .groupby(["Term1", "Term2", "Phenotype"])["LRT_pvalue_fdr"]
+        .groupby(["Term1", "Term2", "Outcome"])["LRT_pvalue_fdr"]
         .first()
     )
     assert (grouped_bonf == python_result_nobeta["LRT_pvalue_bonferroni"]).all()

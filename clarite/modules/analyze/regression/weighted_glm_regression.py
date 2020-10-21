@@ -43,7 +43,7 @@ class WeightedGLMRegression(GLMRegression):
     Parameters
     ----------
     data:
-        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable:
         The variable to be used as the output (y) of the regression
     covariates:
@@ -51,7 +51,7 @@ class WeightedGLMRegression(GLMRegression):
     survey_design_spec:
         A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
     min_n:
-        Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
+        Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
         Defaults to 200
     cov_method:
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.

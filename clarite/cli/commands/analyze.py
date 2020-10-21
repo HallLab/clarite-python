@@ -13,7 +13,7 @@ def analyze_cli():
 
 
 @analyze_cli.command(help="Run an EWAS analysis")
-@click.argument("phenotype", type=click.STRING)
+@click.argument("outcome", type=click.STRING)
 @arg_data
 @arg_output
 @click.option("--covariate", "-c", multiple=True, help="Covariates")
@@ -74,7 +74,7 @@ def analyze_cli():
     help="How to handle singular clusters",
 )
 def ewas(
-    phenotype,
+    outcome,
     data,
     output,
     covariate,
@@ -127,7 +127,7 @@ def ewas(
     # Remove variables with missing weights
     if type(weights) == dict:
         missing_weights = (
-            set(list(data)) - set([phenotype] + covariates) - set(weights.keys())
+            set(list(data)) - set([outcome] + covariates) - set(weights.keys())
         )
         for v in missing_weights:
             click.echo(
@@ -139,7 +139,7 @@ def ewas(
             data = data.drop(v, axis="columns")
     # Run ewas
     result = analyze.ewas(
-        phenotype=phenotype,
+        outcome=outcome,
         covariates=covariates,
         data=data,
         survey_design_spec=sd,
@@ -151,7 +151,7 @@ def ewas(
 
 
 @analyze_cli.command(help="Run an EWAS analysis using R")
-@click.argument("phenotype", type=click.STRING)
+@click.argument("outcome", type=click.STRING)
 @arg_data
 @arg_output
 @click.option("--covariate", "-c", multiple=True, help="Covariates")
@@ -212,7 +212,7 @@ def ewas(
     help="How to handle singular clusters",
 )
 def ewas_r(
-    phenotype,
+    outcome,
     data,
     output,
     covariate,
@@ -265,7 +265,7 @@ def ewas_r(
     # Remove variables with missing weights
     if type(weights) == dict:
         missing_weights = (
-            set(list(data)) - set([phenotype] + covariates) - set(weights.keys())
+            set(list(data)) - set([outcome] + covariates) - set(weights.keys())
         )
         for v in missing_weights:
             click.echo(
@@ -277,7 +277,7 @@ def ewas_r(
             data = data.drop(v, axis="columns")
     # Run ewas
     result = analyze.ewas_r(
-        phenotype=phenotype,
+        outcome=outcome,
         covariates=covariates,
         data=data,
         survey_design_spec=sd,

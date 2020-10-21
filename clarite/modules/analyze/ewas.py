@@ -12,7 +12,7 @@ builtin_regression_kinds = {
 
 
 def ewas(
-    phenotype: str,
+    outcome: str,
     covariates: List[str],
     data: Any,
     regression_kind: Optional[Union[str, Type[regression.Regression]]] = None,
@@ -21,18 +21,18 @@ def ewas(
     """
     Run an Environment-Wide Association Study
 
-    All variables in `data` other than the phenotype (outcome) and covariates are tested individually.
+    All variables in `data` other than the outcome (outcome) and covariates are tested individually.
     Individual regression classes selected with `regression_kind` may work slightly differently.
     Results are sorted in order of increasing `pvalue`
 
     Parameters
     ----------
-    phenotype: string
+    outcome: string
         The variable to be used as the output of the regressions
     covariates: list (strings),
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     data: Any, usually pd.DataFrame
-        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     regression_kind: str or subclass of Regression
         This can be 'glm', 'glm_weighted', or 'r_survey' for built-in Regression types,
         or a custom subclass of Regression
@@ -43,7 +43,7 @@ def ewas(
     -------
     df: pd.DataFrame
         EWAS results DataFrame with at least these columns: ['N', 'pvalue', 'error', 'warnings']
-        indexed by the phenotype/outcome and the variable being assessed in each row
+        indexed by the outcome and the variable being assessed in each row
 
     Examples
     --------
@@ -76,7 +76,7 @@ def ewas(
     # Initialize the regression and print details
     print(kwargs)
     regression = regression_cls(
-        data=data, outcome_variable=phenotype, covariates=covariates, **kwargs
+        data=data, outcome_variable=outcome, covariates=covariates, **kwargs
     )
     print(regression)
 

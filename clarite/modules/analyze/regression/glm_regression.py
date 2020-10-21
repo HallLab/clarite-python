@@ -36,13 +36,13 @@ class GLMRegression(Regression):
     Parameters
     ----------
     data:
-        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable:
         The variable to be used as the output (y) of the regression
     covariates:
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     min_n:
-        Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
+        Minimum number of complete-case observations (no NA values for outcome, covariates, or variable)
         Defaults to 200
     """
 
@@ -78,7 +78,7 @@ class GLMRegression(Regression):
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
         if self.outcome_dtype == "categorical":
             raise NotImplementedError(
-                "Categorical Phenotypes are not yet supported for this type of regression."
+                "Categorical Outcomes are not yet supported for this type of regression."
             )
         elif self.outcome_dtype == "continuous":
             self.description += (
@@ -159,9 +159,9 @@ class GLMRegression(Regression):
         self._log_errors_and_warnings()
         result = pd.DataFrame(self.results).astype({"N": pd.Int64Dtype()})
 
-        # Add "Phenotype" and set the index
-        result["Phenotype"] = self.outcome_variable
-        result = result.set_index(["Variable", "Phenotype"])
+        # Add "Outcome" and set the index
+        result["Outcome"] = self.outcome_variable
+        result = result.set_index(["Variable", "Outcome"])
 
         # Order columns
         column_order = [

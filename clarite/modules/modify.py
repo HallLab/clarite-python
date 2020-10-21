@@ -765,7 +765,7 @@ def rowfilter_incomplete_obs(
     Examples
     --------
     >>> import clarite
-    >>> nhanes_filtered = clarite.modify.rowfilter_incomplete_obs(nhanes, only=[phenotype] + covariates)
+    >>> nhanes_filtered = clarite.modify.rowfilter_incomplete_obs(nhanes, only=[outcome] + covariates)
     ================================================================================
     Running rowfilter_incomplete_obs
     --------------------------------------------------------------------------------

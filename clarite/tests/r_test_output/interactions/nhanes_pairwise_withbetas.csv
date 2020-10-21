@@ -1,4 +1,4 @@
-"Term1","Term2","Parameter","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue","Phenotype"
+"Term1","Term2","Parameter","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue","Outcome"
 "RIAGENDR","agecat","RIAGENDR2:agecat(19,39]",TRUE,7846,"8.829716e-03","5.444163e-01",0.987059928214244,9.18778425031019e-08,"HI_CHOL"
 "RIAGENDR","agecat","RIAGENDR2:agecat(39,59]",TRUE,7846,"3.512447e-01","5.317399e-01",0.508896301353742,9.18778425031019e-08,"HI_CHOL"
 "RIAGENDR","agecat","RIAGENDR2:agecat(59,Inf]",TRUE,7846,"1.168434e+00","5.360221e-01",0.0292704713199065,9.18778425031019e-08,"HI_CHOL"

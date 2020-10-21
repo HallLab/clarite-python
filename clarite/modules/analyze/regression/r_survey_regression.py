@@ -18,7 +18,7 @@ class RSurveyRegression(Regression):
     Parameters
     ----------
     data:
-      The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+      The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable:
       The variable to be used as the output (y) of the regression
     covariates:
@@ -27,7 +27,7 @@ class RSurveyRegression(Regression):
         A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
         Use None if unweighted regression is desired.
     min-n:
-      Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
+      Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
       Defaults to 200
     """
 
@@ -60,7 +60,7 @@ class RSurveyRegression(Regression):
         # Ensure the data output type is compatible
         if self.outcome_dtype == "categorical":
             raise NotImplementedError(
-                "Categorical Phenotypes are not yet supported for this type of regression."
+                "Categorical Outcomes are not yet supported for this type of regression."
             )
         elif self.outcome_dtype == "continuous":
             self.description += (
@@ -105,7 +105,7 @@ class RSurveyRegression(Regression):
         -------
         pd.DataFrame
             Results DataFrame with these columns:
-            ['Variable', 'Phenotype', 'Variable_type', 'N', 'Converged',
+            ['Variable', 'Outcome', 'Variable_type', 'N', 'Converged',
             'Beta', 'SE', 'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue', Weight]
         """
         if not self.run_complete:
@@ -113,7 +113,7 @@ class RSurveyRegression(Regression):
                 "No results: either the 'run' method was not called, or there was a problem running"
             )
 
-        result = self.result.set_index(["Variable", "Phenotype"]).sort_values("pvalue")
+        result = self.result.set_index(["Variable", "Outcome"]).sort_values("pvalue")
 
         # Order columns
         column_order = [

@@ -9,7 +9,7 @@ if (!require('survey')) install.packages('survey', repos = "http://cran.us.r-pro
 # Useful Functions #
 ####################
 
-write_result <- function(data, filename, phenotype="HI_CHOL") {
+write_result <- function(data, filename, outcome="HI_CHOL") {
   # Round numeric columns to limit precision
   if(is.numeric(data$Beta)){data$Beta <- formatC(data$Beta, format = "e", digits = 6)}
   if(is.numeric(data$SE)){data$SE <- formatC(as.numeric(data$SE), format = "e", digits = 6)}
@@ -19,8 +19,8 @@ write_result <- function(data, filename, phenotype="HI_CHOL") {
   # Fix where "NA" was modified by the above
   data <- replace(data, data=="     NA", "NA")
 
-  # Add phenotype
-  data$Phenotype <- phenotype
+  # Add outcome
+  data$Outcome <- outcome
   
   # Save
   write.csv(data, file.path("r_test_output/interactions", filename), row.names=FALSE)
