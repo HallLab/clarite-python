@@ -10,11 +10,12 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
 from clarite.internal.utilities import _remove_empty_categories
+from . import GLMRegression
 
 from .base import Regression
 
 
-class InteractionRegression(Regression):
+class InteractionRegression(GLMRegression):
     """
     Statsmodels GLM Regression.
     This class handles running regressions and calculating LRT pvalues based on including interaction terms
@@ -36,9 +37,11 @@ class InteractionRegression(Regression):
     min_n: int or None
         Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
         Defaults to 200
-    interactions: list(tuple(strings)) or None
-        A list of tuples of variable names to be tested as interactions.  If not specified, all pairwise interactions
-        will be tested for any variables in the data that are not the outcome or covariates.
+    interactions: list(tuple(strings)), str, or None
+        Valid variables are those in the data that are not the outcome variable or a covariate.
+        None: Test all pairwise interactions between valid variables
+        String: Test all interactions of this valid variable with other valid variables
+        List of tuples: Test specific interactions of valid variables
     report_betas: boolean
         False by default.
           If True, the results will contain one row for each interaction term and will include the beta value
@@ -59,63 +62,38 @@ class InteractionRegression(Regression):
         # This takes in minimal regression params (data, outcome_variable, covariates) and
         # initializes additional parameters (outcome dtype, regression variables, error, and warnings)
         super().__init__(
-            data=data, outcome_variable=outcome_variable, covariates=covariates
+            data=data,
+            outcome_variable=outcome_variable,
+            covariates=covariates,
+            min_n=min_n,
         )
 
         # Custom init involving kwargs passed to this regression
-        self.min_n = min_n
         self.report_betas = report_betas
+        self._process_interactions(interactions)
 
         # Use a list of results instead of the default dict
         self.results = []
 
-        # Ensure the data output type is compatible
-        # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
-        if self.outcome_dtype == "categorical":
-            raise NotImplementedError(
-                "Categorical Phenotypes are not yet supported for this type of regression."
-            )
-        elif self.outcome_dtype == "continuous":
-            self.description += (
-                f"Continuous Outcome (family = Gaussian): '{self.outcome_variable}'"
-            )
-            self.family = sm.families.Gaussian(link=sm.families.links.identity())
-            self.use_t = True
-        elif self.outcome_dtype == "binary":
-            # Use the order according to the categorical
-            counts = self.data[self.outcome_variable].value_counts().to_dict()
-            categories = self.data[self.outcome_variable].cat.categories
-            codes, categories = zip(*enumerate(categories))
-            self.data[self.outcome_variable].replace(categories, codes, inplace=True)
-            self.description += (
-                f"Binary Outcome (family = Binomial): '{self.outcome_variable}'\n"
-                f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as 0\n"
-                f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as 1"
-            )
-            self.family = sm.families.Binomial(link=sm.families.links.logit())
-            self.use_t = False
-        else:
-            raise ValueError(
-                "The outcome variable's type could not be determined.  Please report this error."
-            )
-
-        # Log missing outcome values
-        na_outcome_count = self.data[self.outcome_variable].isna().sum()
-        self.description += f"\nUsing {len(self.data) - na_outcome_count:,} of {len(self.data):,} observations"
-        if na_outcome_count > 0:
-            self.description += (
-                f"\n\t{na_outcome_count:,} are missing a value for the outcome variable"
-            )
-
-        # Process interactions
+    def _process_interactions(self, interactions):
+        """Validate the interactions parameter and save it as a list of string tuples"""
         regression_var_list = (
             self.regression_variables["binary"]
             + self.regression_variables["categorical"]
             + self.regression_variables["continuous"]
         )
-
+        if len(regression_var_list) < 2:
+            raise ValueError(
+                f"Not enough valid variables for running interactions: {len(regression_var_list)} variables"
+            )
         if interactions is None:
             self.interactions = [c for c in combinations(regression_var_list, r=2)]
+        elif type(interactions) == str:
+            if interactions not in regression_var_list:
+                raise ValueError(
+                    f"'{interactions}' was passed as the value for 'interactions' "
+                    f"but is not a valid variable"
+                )
         else:
             # Check all interactions include two variables that are present
             errors = []
@@ -141,7 +119,7 @@ class InteractionRegression(Regression):
         self.description += f"\nProcessing {len(self.interactions):,} interactions"
 
     @staticmethod
-    def get_default_result_dict(i1, i2):
+    def _get_default_result_dict(i1, i2):
         return {
             "Term1": i1,
             "Term2": i2,
@@ -153,39 +131,7 @@ class InteractionRegression(Regression):
             "LRT_pvalue": np.nan,
         }
 
-    def get_complete_case_mask(self, data, i1, i2):
-        """
-        Get boolean mask of observations that are not missing in the test interaction variables,
-         the outcome variable, and covariates
-
-        Parameters
-        ----------
-        data
-        i1
-        i2
-
-        Returns
-        -------
-        Pd.Series
-            Boolean series with True = complete case and False = missing one or more values
-        """
-        return (
-            ~data[[i1, i2, self.outcome_variable] + self.covariates].isna().any(axis=1)
-        )
-
-    def check_covariate_values(self, keep_row_mask) -> Tuple[List[str], List[str]]:
-        """Remove covariates that do not vary, warning when this occurs"""
-        warnings = []
-        unique_values = self.data.loc[keep_row_mask, self.covariates].nunique()
-        varying_covars = list(unique_values[unique_values > 1].index.values)
-        non_varying_covars = list(unique_values[unique_values <= 1].index.values)
-        if len(non_varying_covars) > 0:
-            warnings.append(
-                f"non-varying covariates(s): {', '.join(non_varying_covars)}"
-            )
-        return varying_covars, warnings
-
-    def get_formulas(self, i1, i2, varying_covars) -> Tuple[str, str]:
+    def _get_formulas(self, i1, i2, varying_covars) -> Tuple[str, str]:
         # Restricted Formula - covariates and main effects
         formula_restricted = f"{self.outcome_variable} ~ 1 + {i1} + {i2}"
         if len(varying_covars) > 0:
@@ -204,57 +150,24 @@ class InteractionRegression(Regression):
         Returns
         -------
         result: pd.DataFrame
-            Results DataFrame with these columns:
-            ['Test_Number', 'Converged', 'N', 'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue']
-            indexed by "Term1" and "Term2"
-            also indexed by "Parameter" if betas are reported
         """
         if not self.run_complete:
             raise ValueError(
                 "No results: either the 'run' method was not called, or there was a problem running"
             )
-
-        # Log errors
-        if len(self.errors) == 0:
-            click.echo(click.style("0 interaction tests had an error", fg="green"))
-        elif len(self.errors) > 0:
-            click.echo(
-                click.style(
-                    f"{len(self.errors):,} interaction tests had an error", fg="red"
-                )
-            )
-            for interaction_name, error in self.errors.items():
-                click.echo(
-                    click.style(
-                        f"\t{interaction_name} = NULL due to: {error}", fg="red"
-                    )
-                )
-
-        # Log warnings
-        for interaction_name, warning_list in self.warnings.items():
-            if len(warning_list) > 0:
-                click.echo(
-                    click.style(f"{interaction_name} had warnings:", fg="yellow")
-                )
-                for warning in warning_list:
-                    click.echo(click.style(f"\t{warning}", fg="yellow"))
-
-        result = (
-            pd.DataFrame(self.results)
-            .astype({"N": pd.Int64Dtype()})
-        )  # b/c N isn't checked when weights are missing
-
-        # Set index
+        self._log_errors_and_warnings()
+        result = pd.DataFrame(self.results).astype({"N": pd.Int64Dtype()})
+        result["Phenotype"] = self.outcome_variable
         if self.report_betas:
-            result = result.set_index(['Term1', 'Term2', 'Parameter'])
+            return result.set_index(
+                ["Term1", "Term2", "Phenotype", "Parameter"]
+            ).sort_values(["LRT_pvalue", "Beta_pvalue"])
         else:
-            result = result.set_index(['Term1', 'Term2'])
+            return result.set_index(["Term1", "Term2", "Phenotype"]).sort_values(
+                ["LRT_pvalue"]
+            )
 
-        return result
-
-    def run_interaction(
-        self, data, formula, formula_restricted
-    ) -> Dict:
+    def _run_interaction(self, data, formula, formula_restricted) -> Dict:
         # Regress both models
         est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
         est_restricted = smf.glm(formula_restricted, data=data, family=self.family).fit(
@@ -266,22 +179,24 @@ class InteractionRegression(Regression):
             lrstat = -2 * (est_restricted.llf - est.llf)
             lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
             if self.report_betas:
-                # Get beta, SE, and pvalue from interaction terms, using specific terms as "Interaction"
-                # Interaction terms are listed like agecat[T.(19,39]]:RIAGENDR[1] for binary/categorical
-                # Where categoricals have 'T.' and binary do not
+                # Get beta, SE, and pvalue from interaction terms
+                # Where interaction terms are those appearing in the full model and not in the reduced model
                 # Return all terms
-                param_names = est.bse.index
+                param_names = set(est.bse.index) - set(est_restricted.bse.index)
+                # The restricted model shouldn't have extra terms, unless there is some case we have overlooked
+                assert len(set(est_restricted.bse.index) - set(est.bse.index)) == 0
                 for param_name in param_names:
-                    yield {"Converged": True,
-                           "Parameter": param_name,
-                           "Beta": est.params[param_name],
-                           "SE": est.bse[param_name],
-                           "Beta_pvalue": est.pvalues[param_name],
-                           "LRT_pvalue": lr_pvalue}
+                    yield {
+                        "Converged": True,
+                        "Parameter": param_name,
+                        "Beta": est.params[param_name],
+                        "SE": est.bse[param_name],
+                        "Beta_pvalue": est.pvalues[param_name],
+                        "LRT_pvalue": lr_pvalue,
+                    }
             else:
                 # Only return the LRT result
-                yield {"Converged": True,
-                       "LRT_pvalue": lr_pvalue}
+                yield {"Converged": True, "LRT_pvalue": lr_pvalue}
         else:
             # Did not converge - nothing to update
             yield dict()
@@ -306,7 +221,11 @@ class InteractionRegression(Regression):
                 data = self.data[keep_columns]
 
                 # Get complete case mask and filter by min_n
-                complete_case_mask = self.get_complete_case_mask(data, i1, i2)
+                complete_case_mask = (
+                    ~data[[i1, i2, self.outcome_variable] + self.covariates]
+                    .isna()
+                    .any(axis=1)
+                )
                 N = complete_case_mask.sum()
                 if N < self.min_n:
                     raise ValueError(
@@ -314,7 +233,7 @@ class InteractionRegression(Regression):
                     )
 
                 # Check for covariates that do not vary (they get ignored)
-                varying_covars, warnings = self.check_covariate_values(
+                varying_covars, warnings = self._check_covariate_values(
                     complete_case_mask
                 )
                 self.warnings[interaction_str].extend(warnings)
@@ -331,21 +250,23 @@ class InteractionRegression(Regression):
                         )
 
                 # Get the formulas
-                formula_restricted, formula = self.get_formulas(i1, i2, varying_covars)
+                formula_restricted, formula = self._get_formulas(i1, i2, varying_covars)
 
                 # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
                 data = data.loc[complete_case_mask]
 
                 # Run Regression LRT Test
-                for regression_result in self.run_interaction(data, formula, formula_restricted):
-                    result = self.get_default_result_dict(i1, i2)
+                for regression_result in self._run_interaction(
+                    data, formula, formula_restricted
+                ):
+                    result = self._get_default_result_dict(i1, i2)
                     result["N"] = N
                     result.update(regression_result)
                     self.results.append(result)
 
             except Exception as e:
                 self.errors[interaction_str] = str(e)
-                result = self.get_default_result_dict(i1, i2)
+                result = self._get_default_result_dict(i1, i2)
                 result["N"] = N
                 self.results.append(result)
 

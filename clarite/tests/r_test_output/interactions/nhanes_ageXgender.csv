@@ -1,2 +1,2 @@
-"","Test_Number","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue"
-"agecat_X_RIAGENDR",1,TRUE,7846,"    NaN","    NaN",NA,1.06427428567699e-07
+"Term1","Term2","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue","Phenotype"
+"agecat","RIAGENDR",TRUE,7846,"    NaN","    NaN",NA,1.06427428567699e-07,"HI_CHOL"

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Union
 
 import numpy as np
 import pandas as pd
@@ -6,7 +6,9 @@ from statsmodels.stats.multitest import multipletests
 
 
 def add_corrected_pvalues(
-    data: pd.DataFrame, pvalue: str = "pvalue", groupby: Optional[str] = None
+    data: pd.DataFrame,
+    pvalue: str = "pvalue",
+    groupby: Optional[Union[str, List[str]]] = None,
 ):
     """
     Calculate bonferroni and FDR pvalues and sort by increasing FDR (in-place).
@@ -14,14 +16,16 @@ def add_corrected_pvalues(
 
     Parameters
     ----------
-    data: pd.DataFrame
+    data:
         A dataframe that will be modified in-place to add corrected pvalues
-    pvalue: str
+    pvalue:
         Name of a column in data that the calculations will be based on.
-    groupby: str
-        Name of a column in data that will be used to group before performing calculations.
+    groupby:
+        One column name in data (or a list of names) that will be used to group before performing calculations.
         Meant to be used when multiple rows are present with repeated pvalues based on the same test.
-        This will reduce the number of tests.  For example, the 'Test_Number' column in interaction results
+        This will reduce the number of tests.  For example, grouping by ["Term1", "Term2"] in interaction results
+        to apply corrections to the LRT_pvalue when betas are reported (which creates more rows than the number of
+        tests)
 
     Returns
     -------
@@ -33,14 +37,19 @@ def add_corrected_pvalues(
 
     >>> clarite.analyze.add_corrected_pvalues(interaction_result, pvalue='Beta_pvalue')
 
-    >>> clarite.analyze.add_corrected_pvalues(interaction_result, pvalue='LRT_pvalue', groupby="Test_Number")
+    >>> clarite.analyze.add_corrected_pvalues(interaction_result, pvalue='LRT_pvalue', groupby=["Term1", "Term2"])
     """
     # Test specifications
     if pvalue not in data.columns:
         raise ValueError(f"'{pvalue}' is not a column in the passed data")
     if groupby is not None:
-        if groupby not in data.columns:
-            raise ValueError(f"'{groupby}' is not a column in the passed data")
+        if type(groupby) == str:
+            if (groupby not in data.columns) and (groupby not in data.index.names):
+                raise ValueError(f"'{groupby}' is not a column in the passed data")
+        elif type(groupby) == list:
+            for g in groupby:
+                if (g not in data.columns) and (g not in data.index.names):
+                    raise ValueError(f"'{g}' is not a column in the passed data")
 
     # NA by default
     bonf_name = f"{pvalue}_bonferroni"
@@ -65,6 +74,10 @@ def add_corrected_pvalues(
         # Sort
         data.sort_values(by=[fdr_name, bonf_name], inplace=True)
     elif groupby is not None:
+        # Reset index in case groupby columns are in the index
+        index_cols = data.index.names
+        data.reset_index(drop=False, inplace=True)
+
         # Get the first value from each
         first = ~data.duplicated(subset=groupby, keep="first")
         bonf_result = pd.Series(
@@ -80,7 +93,20 @@ def add_corrected_pvalues(
             index=data[first][groupby],
         ).to_dict()
         # Expand results to duplicated rows
-        data[bonf_name] = data[groupby].apply(lambda g: bonf_result.get(g, np.nan))
-        data[fdr_name] = data[groupby].apply(lambda g: fdr_result.get(g, np.nan))
+        data[bonf_name] = data[groupby].apply(
+            lambda g: bonf_result.get(g, np.nan)
+            if type(g) == str
+            else bonf_result.get(tuple(g.values), np.nan),
+            axis=1,
+        )
+        data[fdr_name] = data[groupby].apply(
+            lambda g: bonf_result.get(g, np.nan)
+            if type(g) == str
+            else fdr_result.get(tuple(g.values), np.nan),
+            axis=1,
+        )
         # Sort
         data.sort_values(by=[fdr_name, bonf_name], inplace=True)
+
+        # Restore index
+        data.set_index(index_cols, inplace=True)

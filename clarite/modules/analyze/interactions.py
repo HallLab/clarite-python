@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 import click
@@ -6,12 +6,12 @@ import click
 from .regression import InteractionRegression
 
 
-def interactions(
+def interaction_test(
     outcome_variable: str,
     covariates: List[str],
     data: pd.DataFrame,
     min_n: int = 200,
-    interactions: Optional[List[Tuple[str, str]]] = None,
+    interactions: Optional[Union[List[Tuple[str, str]], str]] = None,
     report_betas: bool = False,
 ):
     """
@@ -52,7 +52,7 @@ def interactions(
 
     Examples
     --------
-    >>> ewas_discovery = clarite.analyze.interactions("logBMI", covariates, nhanes_discovery)
+    >>> ewas_discovery = clarite.analyze.interaction_test("logBMI", covariates, nhanes_discovery)
     """
     # Copy data to avoid modifying the original, in case it is changed
     data = data.copy(deep=True)
@@ -72,18 +72,5 @@ def interactions(
     regression.run()
     result = regression.get_results()
 
-    # Process Results
-    result["Outcome"] = outcome_variable
-    result = result.sort_values(["LRT_pvalue", "Beta_pvalue"]).set_index(
-        ["Outcome"], append=True)  # Sort and set index
-    column_order = [
-        "Converged",
-        "N",
-        "Beta",
-        "SE",
-        "Beta_pvalue",
-        "LRT_pvalue",
-    ]
-    result = result[column_order]  # Sort columns
     click.echo("Completed Interaction Analysis\n")
     return result

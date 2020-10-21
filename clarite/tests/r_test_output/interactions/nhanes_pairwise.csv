@@ -1,4 +1,4 @@
-"","Test_Number","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue"
-"RIAGENDR_X_agecat",1,TRUE,7846,"    NaN","    NaN",NA,9.18778425031019e-08
-"race_X_agecat",2,TRUE,7846,"    NaN","    NaN",NA,0.598374388126561
-"RIAGENDR_X_race",3,TRUE,7846,"    NaN","    NaN",NA,0.00175509648518269
+"Term1","Term2","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue","Phenotype"
+"RIAGENDR","agecat",TRUE,7846,"    NaN","    NaN",NA,9.18778425031019e-08,"HI_CHOL"
+"race","agecat",TRUE,7846,"    NaN","    NaN",NA,0.598374388126561,"HI_CHOL"
+"RIAGENDR","race",TRUE,7846,"    NaN","    NaN",NA,0.00175509648518269,"HI_CHOL"

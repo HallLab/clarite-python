@@ -11,11 +11,14 @@ RESULT_PATH = TESTS_PATH / "r_test_output" / "interactions"
 
 def load_r_interaction_results(filename):
     """Load directly calculated results (from R) and convert column names to match python results"""
-    r_result = pd.read_csv(filename, index_col=0)
+    r_result = pd.read_csv(filename)
     r_result[["Beta", "SE", "Beta_pvalue", "LRT_pvalue", "N"]] = r_result[
         ["Beta", "SE", "Beta_pvalue", "LRT_pvalue", "N"]
     ].astype("float64")
-    r_result.index.name = "Interaction"
+    if "Parameter" in r_result.columns:
+        r_result = r_result.set_index(["Term1", "Term2", "Parameter", "Phenotype"])
+    else:
+        r_result = r_result.set_index(["Term1", "Term2", "Phenotype"])
     return r_result
 
 
@@ -23,6 +26,20 @@ def compare_result(loaded_result, python_result, atol=0, rtol=1e-04):
     """Compare loaded results to CLARITE results, with optional tolerances"""
     # Convert 'N' from IntegerArray to float
     python_result = python_result.astype({"N": "float"})
+
+    # Fix Parameter column in loaded data
+    def fix_python_param(s):
+        s = s.replace("[T.", "").replace("]:", ":")
+        if s.endswith("]"):
+            s = s[:-1]
+        return s
+
+    if "Parameter" in python_result.index.names:
+        python_result = python_result.reset_index(drop=False)
+        python_result["Parameter"] = python_result["Parameter"].apply(fix_python_param)
+        python_result = python_result.set_index(
+            ["Term1", "Term2", "Phenotype", "Parameter"]
+        )
 
     # Merge and ensure no rows are dropped
     loaded_result = loaded_result.add_suffix("_loaded")
@@ -44,7 +61,7 @@ def compare_result(loaded_result, python_result, atol=0, rtol=1e-04):
         )
 
     # Close-enough equality of numeric values
-    for var in ["N", "Beta", "SE", "Beta_pvalue", "LRT_pvalue"]:
+    for var in ["SE", "Beta_pvalue"]:
         try:
             assert np.allclose(
                 merged[f"{var}_loaded"],
@@ -52,6 +69,22 @@ def compare_result(loaded_result, python_result, atol=0, rtol=1e-04):
                 equal_nan=True,
                 atol=atol,
                 rtol=rtol,
+            )
+        except AssertionError:
+            raise ValueError(
+                f"{var}:\n"
+                f"{merged[f'{var}_loaded']}\n"
+                f"{merged[f'{var}_python']}\n"
+            )
+
+    for var in ["N", "Beta", "LRT_pvalue"]:
+        try:
+            assert np.allclose(
+                merged[f"{var}_loaded"],
+                merged[f"{var}_python"],
+                equal_nan=True,
+                atol=0,
+                rtol=1e-04,
             )
         except AssertionError:
             raise ValueError(
@@ -83,7 +116,7 @@ def test_interactions_nhanes_ageXgender(data_NHANES):
 
     # No Betas
     loaded_result = load_r_interaction_results(RESULT_PATH / "nhanes_ageXgender.csv")
-    python_result = clarite.analyze.interactions(
+    python_result = clarite.analyze.interaction_test(
         outcome_variable="HI_CHOL",
         covariates=["race"],
         data=df,
@@ -92,20 +125,18 @@ def test_interactions_nhanes_ageXgender(data_NHANES):
     )
     compare_result(loaded_result, python_result)
 
-    # Betas - just test running since rows reported by R are different
-    python_result = clarite.analyze.interactions(
+    # Betas
+    loaded_result = load_r_interaction_results(
+        RESULT_PATH / "nhanes_ageXgender_withbetas.csv"
+    )
+    python_result = clarite.analyze.interaction_test(
         outcome_variable="HI_CHOL",
         covariates=["race"],
         data=df,
         interactions=[("agecat", "RIAGENDR")],
         report_betas=True,
     )
-
-    # Two categoricals: Report one row for each combination, minus one (reference cat X reference cat = no beta value)
-    assert (
-        len(python_result)
-        == (len(df["agecat"].cat.categories) * len(df["RIAGENDR"].cat.categories)) - 1
-    )
+    compare_result(loaded_result, python_result, rtol=1e-02)
 
 
 def test_interactions_nhanes_weightXrace(data_NHANES):
@@ -120,7 +151,7 @@ def test_interactions_nhanes_weightXrace(data_NHANES):
 
     # No Betas
     loaded_result = load_r_interaction_results(RESULT_PATH / "nhanes_weightXrace.csv")
-    python_result = clarite.analyze.interactions(
+    python_result = clarite.analyze.interaction_test(
         outcome_variable="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
@@ -133,19 +164,13 @@ def test_interactions_nhanes_weightXrace(data_NHANES):
     loaded_result = load_r_interaction_results(
         RESULT_PATH / "nhanes_weightXrace_withbetas.csv"
     )
-    python_result = clarite.analyze.interactions(
+    python_result = clarite.analyze.interaction_test(
         outcome_variable="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         interactions=[("WTMEC2YR", "race")],
         report_betas=True,
     )
-    # Remove brackets from index value to make comparison work
-    python_result = python_result.reset_index(drop=False)
-    python_result["Interaction"] = python_result["Interaction"].apply(
-        lambda s: s.replace("[", "").replace("]", "")
-    )
-    python_result = python_result.set_index(["Interaction", "Outcome"])
     # Compare to R results
     compare_result(loaded_result, python_result)
 
@@ -159,26 +184,44 @@ def test_interactions_nhanes_pairwise(data_NHANES):
 
     # No Betas
     loaded_result = load_r_interaction_results(RESULT_PATH / "nhanes_pairwise.csv")
-    python_result = clarite.analyze.interactions(
+    python_result_nobeta = clarite.analyze.interaction_test(
         outcome_variable="HI_CHOL",
         covariates=[],
         data=df,
         interactions=None,
         report_betas=False,
     )
-    compare_result(loaded_result, python_result)
+    compare_result(loaded_result, python_result_nobeta)
 
-    # Betas - just test running since rows reported by R are different
-    python_result = clarite.analyze.interactions(
+    # Betas
+    loaded_result = load_r_interaction_results(
+        RESULT_PATH / "nhanes_pairwise_withbetas.csv"
+    )
+    python_result = clarite.analyze.interaction_test(
         outcome_variable="HI_CHOL",
         covariates=[],
         data=df,
         interactions=None,
         report_betas=True,
     )
+    compare_result(loaded_result, python_result, rtol=1e-02)
 
-    # Adding pvalues
+    # Test Adding pvalues
+    clarite.analyze.add_corrected_pvalues(python_result_nobeta, pvalue="LRT_pvalue")
     clarite.analyze.add_corrected_pvalues(python_result, pvalue="Beta_pvalue")
     clarite.analyze.add_corrected_pvalues(
-        python_result, pvalue="LRT_pvalue", groupby="Test_Number"
+        python_result, pvalue="LRT_pvalue", groupby=["Term1", "Term2"]
     )
+    # Ensure grouped pvalue corrections match
+    grouped_bonf = (
+        python_result.reset_index(drop=False)
+        .groupby(["Term1", "Term2", "Phenotype"])["LRT_pvalue_bonferroni"]
+        .first()
+    )
+    grouped_fdr = (
+        python_result.reset_index(drop=False)
+        .groupby(["Term1", "Term2", "Phenotype"])["LRT_pvalue_fdr"]
+        .first()
+    )
+    assert (grouped_bonf == python_result_nobeta["LRT_pvalue_bonferroni"]).all()
+    assert (grouped_fdr == python_result_nobeta["LRT_pvalue_fdr"]).all()

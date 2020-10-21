@@ -97,22 +97,40 @@ class RSurveyRegression(Regression):
         for k, v in self.regression_variables.items():
             self.description += f"\n\t{len(v):,} {k} variables"
 
-    def get_results(self) -> Tuple[pd.DataFrame, Dict[str, List[str]], Dict[str, str]]:
+    def get_results(self) -> pd.DataFrame:
         """
         Get regression results if `run` has already been called
 
         Returns
         -------
-        result: pd.DataFrame
+        pd.DataFrame
             Results DataFrame with these columns:
-            ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+            ['Variable', 'Phenotype', 'Variable_type', 'N', 'Converged',
+            'Beta', 'SE', 'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue', Weight]
         """
         if not self.run_complete:
             raise ValueError(
                 "No results: either the 'run' method was not called, or there was a problem running"
             )
 
-        return self.result
+        result = self.result.set_index(["Variable", "Phenotype"]).sort_values("pvalue")
+
+        # Order columns
+        column_order = [
+            "Variable_type",
+            "Weight",
+            "Converged",
+            "N",
+            "Beta",
+            "SE",
+            "Variable_pvalue",
+            "LRT_pvalue",
+            "Diff_AIC",
+            "pvalue",
+        ]
+        result = result[column_order]
+
+        return result
 
     @requires("rpy2")
     def run(self):
