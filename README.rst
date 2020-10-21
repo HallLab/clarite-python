@@ -23,33 +23,13 @@ Installation
 ------------
 
 In order to use the *ewas_r* function, R must be installed along with the *survey* library.
-This can be done manually or using Conda:
-
-Manually
-^^^^^^^^
 
 1. Install R and ensure it is accessible from the command line.  You may need to add its location to the PATH environmental variable.
 2. Use *install.packages* in R to install the *survey* library.
 
-Using Conda
-^^^^^^^^^^^
-
-1. Create and activate a conda environment with python 3.6 or 3.7::
-
-    $ conda create -n clarite python=3.7
-    $ conda activate clarite
-
-2. Install rpy2 (optional). CLARITE has a version of the EWAS function that calls R code using the *survey* library::
-
-    $ conda install -c conda-forge rpy2
-    $ conda install -c conda-forge r-survey
-
-3. Install CLARITE::
-
-    $ pip install clarite
     
 Citing CLARITE
-^^^^^^^^^^^^^^
+--------------
 
 1.
 Lucas AM, et al (2019)

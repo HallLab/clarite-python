@@ -8,7 +8,7 @@ Functions used for analyses such as EWAS
      :toctree: modules/analyze
 
      ewas
-     interactions
+     interaction_test
      add_corrected_pvalues
 
 """

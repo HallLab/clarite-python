@@ -21,9 +21,9 @@ def add_corrected_pvalues(
     pvalue:
         Name of a column in data that the calculations will be based on.
     groupby:
-        One column name in data (or a list of names) that will be used to group before performing calculations.
-        Meant to be used when multiple rows are present with repeated pvalues based on the same test.
-        This will reduce the number of tests.  For example, grouping by ["Term1", "Term2"] in interaction results
+        A name or list of names of columns (including index columns) that will be used to group rows before performing
+        calculations. This is meant to be used when multiple rows are present with repeated pvalues based on the same
+        test. This will reduce the number of tests.  For example, grouping by ["Term1", "Term2"] in interaction results
         to apply corrections to the LRT_pvalue when betas are reported (which creates more rows than the number of
         tests)
 

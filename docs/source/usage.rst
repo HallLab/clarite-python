@@ -8,7 +8,7 @@ Organization of Functions
 CLARITE has many functions organized into several different modules:
 
 Analyze
-  Functions related to calculating EWAS results
+  Functions related to calculating association study results
 
 Describe
   Functions used to gather information about data
@@ -50,7 +50,7 @@ Or it can be done using Pandas *pipe*
                                 .pipe(clarite.modify.rowfilter_incomplete_obs),
                               filename='plots.pdf')
 
-2. Using the command line tool
+2. Using the :ref:`command line tool <cli:CLI Reference>`
 
 .. code-block:: bash
 
@@ -60,4 +60,6 @@ Or it can be done using Pandas *pipe*
    clarite-cli modify rowfilter-incomplete-obs data_filtered data_filtered_complete
    clarite-cli plot distributions data_filtered_complete plots.pdf
 
-3. Using the GUI (coming soon) 
+3. `Using the GUI`_
+
+.. _`Using the GUI`: https://clarite-gui.readthedocs.io/en/stable
