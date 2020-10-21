@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 import click
@@ -6,17 +6,18 @@ import click
 from .regression import InteractionRegression
 
 
-def interactions(
+def interaction_test(
     outcome_variable: str,
     covariates: List[str],
     data: pd.DataFrame,
     min_n: int = 200,
-    interactions: Optional[List[Tuple[str, str]]] = None,
+    interactions: Optional[Union[List[Tuple[str, str]], str]] = None,
     report_betas: bool = False,
 ):
-    """
-    Run an Environment-Wide Association Study
+    """Perform LRT tests comparing a model with interaction terms to one without.
 
+    An intercept, covariates, and main effects of the variables used in the interactiona are included in both the full
+    and restricted models.
     All variables in `data` other than the outcome and covariates are potential interaction variables.
     All pairwise interactions are tested unless specific
     Results are sorted in order of increasing `pvalue`
@@ -24,17 +25,19 @@ def interactions(
     Parameters
     ----------
     data: pd.DataFrame
-        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable: string
         The variable to be used as the output (y) of the regression
     covariates: list (strings),
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     min_n: int or None
-        Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
+        Minimum number of complete-case observations (no NA values for outcome, covariates, or variable)
         Defaults to 200
-    interactions: list(tuple(strings)) or None
-        A list of tuples of variable names to be tested as interactions.  If not specified, all pairwise interactions
-        will be tested for any variables in the data that are not the outcome or covariates.
+    interactions: list(tuple(strings)), str, or None
+        Valid variables are those in the data that are not the outcome variable or a covariate.
+        None: Test all pairwise interactions between valid variables
+        String: Test all interactions of this valid variable with other valid variables
+        List of tuples: Test specific interactions of valid variables
     report_betas: boolean
         False by default.
           If True, the results will contain one row for each interaction term and will include the beta value,
@@ -46,12 +49,11 @@ def interactions(
     -------
     df: pd.DataFrame
         DataFrame with these columns: ['Test_Number', 'Converged', 'N', 'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue']
-        indexed by the interaction and the outcome
+        indexed by the interaction terms ("Term1", "Term2") and the outcome variable ("Outcome")
 
     Examples
     --------
-    >>> ewas_discovery = clarite.analyze.test_interactions("logBMI", covariates, nhanes_discovery)
-    Running EWAS on a continuous variable
+    >>> ewas_discovery = clarite.analyze.interaction_test("logBMI", covariates, nhanes_discovery)
     """
     # Copy data to avoid modifying the original, in case it is changed
     data = data.copy(deep=True)
@@ -71,20 +73,5 @@ def interactions(
     regression.run()
     result = regression.get_results()
 
-    # Process Results
-    result["Outcome"] = outcome_variable
-    result = result.sort_values(["LRT_pvalue", "Beta_pvalue"]).set_index(
-        ["Interaction", "Outcome"]
-    )  # Sort and set index
-    column_order = [
-        "Test_Number",
-        "Converged",
-        "N",
-        "Beta",
-        "SE",
-        "Beta_pvalue",
-        "LRT_pvalue",
-    ]
-    result = result[column_order]  # Sort columns
     click.echo("Completed Interaction Analysis\n")
     return result

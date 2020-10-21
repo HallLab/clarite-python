@@ -8,18 +8,17 @@ Functions used for analyses such as EWAS
      :toctree: modules/analyze
 
      ewas
-     interactions
-     regression
+     interaction_test
      add_corrected_pvalues
 
 """
 
 from .ewas import ewas
-from .interactions import interactions
+from .interactions import interaction_test
 from .utils import add_corrected_pvalues
 from . import regression
 
-__all__ = [ewas, interactions, add_corrected_pvalues, regression]
+__all__ = [ewas, interaction_test, add_corrected_pvalues, regression]
 
 # Constants
 required_result_columns = {"N", "pvalue", "error", "warnings"}

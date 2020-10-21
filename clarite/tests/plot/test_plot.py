@@ -47,7 +47,7 @@ def resultNHANESReal():
         nest=True,
     )
     calculated_result = clarite.analyze.ewas(
-        phenotype="BMXBMI",
+        outcome="BMXBMI",
         covariates=[
             "SES_LEVEL",
             "SDDSRVYR",
@@ -83,19 +83,19 @@ def resultNHANESsmall():
     python_result = pd.concat(
         [
             clarite.analyze.ewas(
-                phenotype="HI_CHOL",
+                outcome="HI_CHOL",
                 covariates=["agecat", "RIAGENDR"],
                 data=df,
                 survey_design_spec=design,
             ),
             clarite.analyze.ewas(
-                phenotype="HI_CHOL",
+                outcome="HI_CHOL",
                 covariates=["race", "RIAGENDR"],
                 data=df,
                 survey_design_spec=design,
             ),
             clarite.analyze.ewas(
-                phenotype="HI_CHOL",
+                outcome="HI_CHOL",
                 covariates=["race", "agecat"],
                 data=df,
                 survey_design_spec=design,
@@ -136,14 +136,14 @@ def test_top_results_nhanessmall(resultNHANESsmall, capfd):
     )
 
 
-def test_top_results_multiphenotype(resultNHANESsmall, capfd):
+def test_top_results_multioutcome(resultNHANESsmall, capfd):
     data = resultNHANESsmall.copy().reset_index()
-    data.loc[0, "Phenotype"] = "Other"
-    data.set_index(["Variable", "Phenotype"])
+    data.loc[0, "Outcome"] = "Other"
+    data.set_index(["Variable", "Outcome"])
     with pytest.raises(ValueError):
         clarite.plot.top_results(
             data,
             "pvalue_bonferroni",
             cutoff=0.05,
-            filename=PY_DATA_PATH / "top_results_multiphenotype.png",
+            filename=PY_DATA_PATH / "top_results_multioutcome.png",
         )

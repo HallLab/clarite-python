@@ -36,13 +36,13 @@ class GLMRegression(Regression):
     Parameters
     ----------
     data:
-        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable:
         The variable to be used as the output (y) of the regression
     covariates:
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     min_n:
-        Minimum number of complete-case observations (no NA values for phenotype, covariates, or variable)
+        Minimum number of complete-case observations (no NA values for outcome, covariates, or variable)
         Defaults to 200
     """
 
@@ -78,7 +78,7 @@ class GLMRegression(Regression):
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
         if self.outcome_dtype == "categorical":
             raise NotImplementedError(
-                "Categorical Phenotypes are not yet supported for this type of regression."
+                "Categorical Outcomes are not yet supported for this type of regression."
             )
         elif self.outcome_dtype == "continuous":
             self.description += (
@@ -118,8 +118,9 @@ class GLMRegression(Regression):
             self.description += f"\n\t{len(v):,} {k} variables"
 
     @staticmethod
-    def get_default_result_dict():
+    def get_default_result_dict(rv):
         return {
+            "Variable": rv,
             "Converged": False,
             "N": np.nan,
             "Beta": np.nan,
@@ -128,40 +129,10 @@ class GLMRegression(Regression):
             "LRT_pvalue": np.nan,
             "Diff_AIC": np.nan,
             "pvalue": np.nan,
+            "Weight": None,
         }
 
-    def get_complete_case_mask(self, data, regression_variable):
-        """
-        Get boolean mask of observations that are not missing in the test variable, the outcome variable, and covariates
-        Parameters
-        ----------
-        data
-        regression_variable
-
-        Returns
-        -------
-        Pd.Series
-            Boolean series with True = complete case and False = missing one or more values
-        """
-        return (
-            ~data[[regression_variable, self.outcome_variable] + self.covariates]
-            .isna()
-            .any(axis=1)
-        )
-
-    def check_covariate_values(self, keep_row_mask) -> Tuple[List[str], List[str]]:
-        """Remove covariates that do not vary, warning when this occurs"""
-        warnings = []
-        unique_values = self.data.loc[keep_row_mask, self.covariates].nunique()
-        varying_covars = list(unique_values[unique_values > 1].index.values)
-        non_varying_covars = list(unique_values[unique_values <= 1].index.values)
-        if len(non_varying_covars) > 0:
-            warnings.append(
-                f"non-varying covariates(s): {', '.join(non_varying_covars)}"
-            )
-        return varying_covars, warnings
-
-    def get_formulas(self, regression_variable, varying_covars) -> Tuple[str, str]:
+    def _get_formulas(self, regression_variable, varying_covars) -> Tuple[str, str]:
         # Restricted Formula, just outcome and covariates
         formula_restricted = f"{self.outcome_variable} ~ 1"
         if len(varying_covars) > 0:
@@ -180,43 +151,39 @@ class GLMRegression(Regression):
         Returns
         -------
         result: pd.DataFrame
-            Results DataFrame with these columns:
-            ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
         """
         if not self.run_complete:
             raise ValueError(
                 "No results: either the 'run' method was not called, or there was a problem running"
             )
+        self._log_errors_and_warnings()
+        result = pd.DataFrame(self.results).astype({"N": pd.Int64Dtype()})
 
-        # Log errors
-        if len(self.errors) == 0:
-            click.echo(click.style("0 regression variables had an error", fg="green"))
-        elif len(self.errors) > 0:
-            click.echo(
-                click.style(
-                    f"{len(self.errors):,} regression variables had an error", fg="red"
-                )
-            )
-            for rv, error in self.errors.items():
-                click.echo(click.style(f"\t{rv} = NULL due to: {error}", fg="red"))
+        # Add "Outcome" and set the index
+        result["Outcome"] = self.outcome_variable
+        result = result.set_index(["Variable", "Outcome"])
 
-        # Log warnings
-        for rv, warning_list in self.warnings.items():
-            if len(warning_list) > 0:
-                click.echo(click.style(f"{rv} had warnings:", fg="yellow"))
-                for warning in warning_list:
-                    click.echo(click.style(f"\t{warning}", fg="yellow"))
+        # Order columns
+        column_order = [
+            "Variable_type",
+            "Weight",
+            "Converged",
+            "N",
+            "Beta",
+            "SE",
+            "Variable_pvalue",
+            "LRT_pvalue",
+            "Diff_AIC",
+            "pvalue",
+        ]
+        result = result[column_order]
 
-        result = (
-            pd.DataFrame.from_dict(self.results, orient="index")
-            .reset_index(drop=False)
-            .rename(columns={"index": "Variable"})
-            .astype({"N": pd.Int64Dtype()})
-        )  # b/c N isn't checked when weights are missing
+        # Sort rows
+        result = result.sort_values("pvalue")
 
         return result
 
-    def run_continuous(self, data, regression_variable, formula) -> Dict:
+    def _run_continuous(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Regress
         est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
@@ -230,7 +197,7 @@ class GLMRegression(Regression):
 
         return result
 
-    def run_binary(self, data, regression_variable, formula) -> Dict:
+    def _run_binary(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Regress
         est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
@@ -259,7 +226,7 @@ class GLMRegression(Regression):
 
         return result
 
-    def run_categorical(self, data, formula, formula_restricted) -> Dict:
+    def _run_categorical(self, data, formula, formula_restricted) -> Dict:
         result = dict()
         # Regress both models
         est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
@@ -290,8 +257,8 @@ class GLMRegression(Regression):
             # TODO: Parallelize this loop
             for rv in rv_list:
                 # Initialize result with placeholders
-                self.results[rv] = self.get_default_result_dict()
-                self.results[rv]["Variable_type"] = rv_type
+                result = self.get_default_result_dict(rv)
+                result["Variable_type"] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
                     # Take a copy of the data (ignoring other RVs)
@@ -299,16 +266,20 @@ class GLMRegression(Regression):
                     data = self.data[keep_columns]
 
                     # Get complete case mask and filter by min_n
-                    complete_case_mask = self.get_complete_case_mask(data, rv)
+                    complete_case_mask = (
+                        ~data[[rv, self.outcome_variable] + self.covariates]
+                        .isna()
+                        .any(axis=1)
+                    )
                     N = complete_case_mask.sum()
-                    self.results[rv]["N"] = N
+                    result["N"] = N
                     if N < self.min_n:
                         raise ValueError(
                             f"too few complete observations (min_n filter: {N} < {self.min_n})"
                         )
 
                     # Check for covariates that do not vary (they get ignored)
-                    varying_covars, warnings = self.check_covariate_values(
+                    varying_covars, warnings = self._check_covariate_values(
                         complete_case_mask
                     )
                     self.warnings[rv].extend(warnings)
@@ -324,26 +295,27 @@ class GLMRegression(Regression):
                             )
 
                     # Get the formulas
-                    formula_restricted, formula = self.get_formulas(rv, varying_covars)
+                    formula_restricted, formula = self._get_formulas(rv, varying_covars)
 
                     # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
                     data = data.loc[complete_case_mask]
 
                     # Run Regression
                     if rv_type == "continuous":
-                        result = self.run_continuous(data, rv, formula)
+                        result.update(self._run_continuous(data, rv, formula))
                     elif (
                         rv_type == "binary"
                     ):  # Essentially same as continuous, except string used to key the results
-                        result = self.run_binary(data, rv, formula)
+                        result.update(self._run_binary(data, rv, formula))
                     elif rv_type == "categorical":
-                        result = self.run_categorical(data, formula, formula_restricted)
-                    else:
-                        result = dict()
-                    self.results[rv].update(result)
+                        result.update(
+                            self._run_categorical(data, formula, formula_restricted)
+                        )
 
                 except Exception as e:
                     self.errors[rv] = str(e)
+
+                self.results.append(result)
 
             click.echo(
                 click.style(

@@ -277,9 +277,9 @@ def _plot_manhattan(
                 f"This plot may only be created for EWAS results with corrected p-values added. "
                 f"DataFrame {df_idx + 1} of {len(dfs)} was missing columns: {', '.join(missing_cols)}"
             )
-        if df.index.names != ["Variable", "Phenotype"]:
+        if df.index.names != ["Variable", "Outcome"]:
             raise ValueError(
-                f"The ewas result dataframes should have an index of ('Variable', 'Phenotype')."
+                f"The ewas result dataframes should have an index of ('Variable', 'Outcome')."
                 f"DataFrame {df_idx + 1} of {len(dfs)} had '{list(df.index.names)}'"
             )
 
@@ -289,9 +289,9 @@ def _plot_manhattan(
         .stack()
         .reset_index()
     )
-    df.columns = ("variable", "phenotype", "dataset", pval_column)
-    df[["variable", "phenotype", "dataset"]] = df[
-        ["variable", "phenotype", "dataset"]
+    df.columns = ("variable", "outcome", "dataset", pval_column)
+    df[["variable", "outcome", "dataset"]] = df[
+        ["variable", "outcome", "dataset"]
     ].astype("category")
 
     # Add category
@@ -792,13 +792,13 @@ def top_results(
     .. image:: ../../_static/plot/top_results.png
     """
     # TODO
-    # Work with multiple phenotypes (subplots)
+    # Work with multiple outcomes (subplots)
     # Clearly show what the colors mean
     # Custom colors
-    # Error if multiple phenotypes are present
-    if len(ewas_result.reset_index(drop=False)["Phenotype"].unique()) > 1:
+    # Error if multiple outcomes are present
+    if len(ewas_result.reset_index(drop=False)["Outcome"].unique()) > 1:
         raise ValueError(
-            "The 'top_results' plot is limited to displaying results for a single phenotype at a time."
+            "The 'top_results' plot is limited to displaying results for a single outcome at a time."
         )
 
     # Ensure corrected pvalues are present

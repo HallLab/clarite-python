@@ -205,7 +205,7 @@ class ClariteEwasResultParamType(click.ParamType):
         try:
             # Load data
             data = pd.read_csv(
-                value + ".txt", sep="\t", index_col=["Variable", "Phenotype"]
+                value + ".txt", sep="\t", index_col=["Variable", "Outcome"]
             )
             # Check columns
             cols_original = analyze.result_columns

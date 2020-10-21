@@ -2,20 +2,23 @@
 Regression Classes
 ==================
 
+Base Class
+----------
+
+.. autoclass:: Regression
+
+
 clarite.analyze.ewas
 --------------------
 
-The `regression_kind` parameter can be set to use one of three regression classes:
+The `regression_kind` parameter can be set to use one of three regression classes, or a custom subclass of `Regression`
+can be created.
 
 .. autoclass:: GLMRegression
 
 .. autoclass:: WeightedGLMRegression
 
 .. autoclass:: RSurveyRegression
-
-Alternatively, a custom subclass of `Regression` can be created and used:
-
-.. autoclass:: Regression
 
 
 clarite.analyze.interactions

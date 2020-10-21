@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import List, Optional
 
 import pandas as pd
 
@@ -18,7 +18,7 @@ class RSurveyRegression(Regression):
     Parameters
     ----------
     data:
-      The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+      The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable:
       The variable to be used as the output (y) of the regression
     covariates:
@@ -27,7 +27,7 @@ class RSurveyRegression(Regression):
         A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
         Use None if unweighted regression is desired.
     min-n:
-      Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
+      Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
       Defaults to 200
     """
 
@@ -60,7 +60,7 @@ class RSurveyRegression(Regression):
         # Ensure the data output type is compatible
         if self.outcome_dtype == "categorical":
             raise NotImplementedError(
-                "Categorical Phenotypes are not yet supported for this type of regression."
+                "Categorical Outcomes are not yet supported for this type of regression."
             )
         elif self.outcome_dtype == "continuous":
             self.description += (
@@ -97,22 +97,40 @@ class RSurveyRegression(Regression):
         for k, v in self.regression_variables.items():
             self.description += f"\n\t{len(v):,} {k} variables"
 
-    def get_results(self) -> Tuple[pd.DataFrame, Dict[str, List[str]], Dict[str, str]]:
+    def get_results(self) -> pd.DataFrame:
         """
         Get regression results if `run` has already been called
 
         Returns
         -------
-        result: pd.DataFrame
+        pd.DataFrame
             Results DataFrame with these columns:
-            ['variable_type', 'N', 'beta', 'SE', 'var_pvalue', 'LRT_pvalue', 'diff_AIC', 'pvalue']
+            ['Variable', 'Outcome', 'Variable_type', 'N', 'Converged',
+            'Beta', 'SE', 'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue', Weight]
         """
         if not self.run_complete:
             raise ValueError(
                 "No results: either the 'run' method was not called, or there was a problem running"
             )
 
-        return self.result
+        result = self.result.set_index(["Variable", "Outcome"]).sort_values("pvalue")
+
+        # Order columns
+        column_order = [
+            "Variable_type",
+            "Weight",
+            "Converged",
+            "N",
+            "Beta",
+            "SE",
+            "Variable_pvalue",
+            "LRT_pvalue",
+            "Diff_AIC",
+            "pvalue",
+        ]
+        result = result[column_order]
+
+        return result
 
     @requires("rpy2")
     def run(self):

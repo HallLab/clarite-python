@@ -4,8 +4,6 @@ Example Analysis
 *CLARITE facilitates the quality control and analysis process for EWAS
 of metabolic-related traits*
 
-[Paper in review]
-
 Data from NHANES was used in an EWAS analysis including utilizing the
 provided survey weight information. The first two cycles of NHANES
 (1999-2000 and 2001-2002) are assigned to a ‘discovery’ dataset and the

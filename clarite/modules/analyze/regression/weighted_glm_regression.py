@@ -43,7 +43,7 @@ class WeightedGLMRegression(GLMRegression):
     Parameters
     ----------
     data:
-        The data to be analyzed, including the phenotype, covariates, and any variables to be regressed.
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable:
         The variable to be used as the output (y) of the regression
     covariates:
@@ -51,7 +51,7 @@ class WeightedGLMRegression(GLMRegression):
     survey_design_spec:
         A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
     min_n:
-        Minimum number of complete-case observations (no NA values for phenotype, covariates, variable, or weight)
+        Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
         Defaults to 200
     cov_method:
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
@@ -92,8 +92,9 @@ class WeightedGLMRegression(GLMRegression):
             raise ValueError(error)
 
     @staticmethod
-    def get_default_result_dict():
+    def get_default_result_dict(rv):
         return {
+            "Variable": rv,
             "Weight": "",
             "Converged": False,
             "N": np.nan,
@@ -105,7 +106,7 @@ class WeightedGLMRegression(GLMRegression):
             "pvalue": np.nan,
         }
 
-    def run_continuous_weighted(self, data, regression_variable, formula) -> Dict:
+    def _run_continuous_weighted(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Get data based on the formula
         y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
@@ -157,7 +158,7 @@ class WeightedGLMRegression(GLMRegression):
 
         return result
 
-    def run_categorical_weighted(
+    def _run_categorical_weighted(
         self, data, regression_variable, formula, formula_restricted
     ) -> Dict:
         """
@@ -223,8 +224,8 @@ class WeightedGLMRegression(GLMRegression):
             # TODO: Parallelize this loop
             for rv in rv_list:
                 # Initialize result with placeholders
-                self.results[rv] = self.get_default_result_dict()
-                self.results[rv]["Variable_type"] = rv_type
+                result = self.get_default_result_dict(rv)
+                result["Variable_type"] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
                     # Take a copy of the data (ignoring other RVs) and create a keep_rows mask
@@ -239,12 +240,14 @@ class WeightedGLMRegression(GLMRegression):
                     ) = self.survey_design_spec.check_missing_weights(data, rv)
                     if warning is not None:
                         self.warnings[rv].append(warning)
-                    self.results[rv]["Weight"] = weight_name
+                    result["Weight"] = weight_name
 
                     # Get complete case mask
-                    complete_case_mask = self.get_complete_case_mask(
-                        data, rv
-                    )  # Complete cases
+                    complete_case_mask = (
+                        ~data[[rv, self.outcome_variable] + self.covariates]
+                        .isna()
+                        .any(axis=1)
+                    )
                     # If allowed (an error hasn't been raised) negate missing_weight_mask so True=keep to drop those
                     complete_case_mask = complete_case_mask & ~missing_weight_mask
 
@@ -255,14 +258,14 @@ class WeightedGLMRegression(GLMRegression):
 
                     # Filter by min_n
                     N = (restricted_rows).sum()
-                    self.results[rv]["N"] = N
+                    result["N"] = N
                     if N < self.min_n:
                         raise ValueError(
                             f"too few complete observations (min_n filter: {N} < {self.min_n})"
                         )
 
                     # Check for covariates that do not vary (they get ignored)
-                    varying_covars, warnings = self.check_covariate_values(
+                    varying_covars, warnings = self._check_covariate_values(
                         restricted_rows
                     )
                     self.warnings[rv].extend(warnings)
@@ -288,25 +291,26 @@ class WeightedGLMRegression(GLMRegression):
                             self.warnings[rv].append(warning)
 
                     # Get the formulas
-                    formula_restricted, formula = self.get_formulas(rv, varying_covars)
+                    formula_restricted, formula = self._get_formulas(rv, varying_covars)
 
                     # Run Regression
                     if rv_type == "continuous":
-                        result = self.run_continuous_weighted(data, rv, formula)
+                        result.update(self._run_continuous_weighted(data, rv, formula))
                     elif (
                         rv_type == "binary"
                     ):  # The same calculation as for continuous variables
-                        result = self.run_continuous_weighted(data, rv, formula)
+                        result.update(self._run_continuous_weighted(data, rv, formula))
                     elif rv_type == "categorical":
-                        result = self.run_categorical_weighted(
-                            data, rv, formula, formula_restricted
+                        result.update(
+                            self._run_categorical_weighted(
+                                data, rv, formula, formula_restricted
+                            )
                         )
-                    else:
-                        result = dict()
-                    self.results[rv].update(result)
 
                 except Exception as e:
                     self.errors[rv] = str(e)
+
+                self.results.append(result)
 
             click.echo(
                 click.style(

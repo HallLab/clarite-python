@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import click
 import pandas as pd
@@ -56,9 +56,11 @@ class Regression(metaclass=ABCMeta):
         # Validate parameters
         self.outcome_dtype = None
         self.regression_variables = dict()  # Mapping dtype to the variable names
-        self.validate_regression_params()
+        self._validate_regression_params()
         # Store defaults/placeholders (mapping each regressed variable to the value
-        self.results = defaultdict(dict)
+        self.results = (
+            list()
+        )  # List of dictionaries that get transformed into DataFrame rows
         self.errors = dict()
         self.warnings = defaultdict(list)
         # Flag marking whether self.run() was called, determining if it is valid to use self.get_results()
@@ -75,7 +77,7 @@ class Regression(metaclass=ABCMeta):
             + ("-" * 25)
         )
 
-    def validate_regression_params(self):
+    def _validate_regression_params(self):
         """
         Validate standard regression parameters- data, outcome_variable, and covariates.  Store relevant information.
         """
@@ -148,6 +150,36 @@ class Regression(metaclass=ABCMeta):
             raise ValueError(
                 f"The outcome variable ('{self.outcome_variable}') is a constant value."
             )
+
+    def _log_errors_and_warnings(self):
+        """Print any errors and warnings present in the regression (if any)"""
+        # Log errors
+        if len(self.errors) == 0:
+            click.echo(click.style("0 tests had an error", fg="green"))
+        elif len(self.errors) > 0:
+            click.echo(
+                click.style(f"{len(self.errors):,} tests had an error", fg="red")
+            )
+            for label, error in self.errors.items():
+                click.echo(click.style(f"\t{label} = NULL due to: {error}", fg="red"))
+        # Log warnings
+        for label, warning_list in self.warnings.items():
+            if len(warning_list) > 0:
+                click.echo(click.style(f"{label} had warnings:", fg="yellow"))
+                for warning in warning_list:
+                    click.echo(click.style(f"\t{warning}", fg="yellow"))
+
+    def _check_covariate_values(self, keep_row_mask) -> Tuple[List[str], List[str]]:
+        """Remove covariates that do not vary, warning when this occurs"""
+        warnings = []
+        unique_values = self.data.loc[keep_row_mask, self.covariates].nunique()
+        varying_covars = list(unique_values[unique_values > 1].index.values)
+        non_varying_covars = list(unique_values[unique_values <= 1].index.values)
+        if len(non_varying_covars) > 0:
+            warnings.append(
+                f"non-varying covariates(s): {', '.join(non_varying_covars)}"
+            )
+        return varying_covars, warnings
 
     @abstractmethod
     def run(self) -> None:

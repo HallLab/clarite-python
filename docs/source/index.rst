@@ -15,6 +15,7 @@ CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
    usage
    example
    complex_surveys
+   regression
 
 API Reference
 -------------
