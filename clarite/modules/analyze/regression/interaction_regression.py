@@ -1,18 +1,14 @@
-import re
 from itertools import combinations
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import click
 import numpy as np
 import pandas as pd
 import scipy
-import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
 from clarite.internal.utilities import _remove_empty_categories
 from . import GLMRegression
-
-from .base import Regression
 
 
 class InteractionRegression(GLMRegression):
