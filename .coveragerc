@@ -1,0 +1,6 @@
+[run]
+omit =
+    setup.py
+    versioneer.py
+    clarite/_version.py
+    clarite/tests/*
