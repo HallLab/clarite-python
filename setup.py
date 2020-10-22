@@ -66,7 +66,9 @@ setup(
     license="BSD (3-clause)",
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Natural Language :: English",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
         "Programming Language :: Python :: 3",
+        "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
 )
