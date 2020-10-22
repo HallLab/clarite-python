@@ -38,6 +38,9 @@ jobs:
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
+      - name: Where is the pip cache?
+        run: python -m pip cache dir
+
       - name: Cache python dependencies
         uses: actions/cache@v1
         id: cache-python
