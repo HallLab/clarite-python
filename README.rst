@@ -1,4 +1,5 @@
 .. raw:: html
+
     <div align="center">
     <img src="docs/source/_static/clarite_logo.png" alt="clarite logo"/>
     </div>
@@ -14,7 +15,7 @@
     <!-- PyPi -->
     <a href="https://pypi.org/project/clarite/">
     <img src="https://img.shields.io/pypi/v/clarite.svg?style=flat-square" alt="pypi" />
-    </a>
+    </a></br>
     <!-- Build status -->
     <a href="https://github.com/HallLab/clarite-python/actions?query=workflow%3ACI">
     <img src="https://img.shields.io/github/workflow/status/HallLab/clarite-python/CI?style=flat-square" alt="Build Status" />
@@ -26,11 +27,11 @@
     <!-- Test coverage -->
     <a href="https://codecov.io/gh/HallLab/clarite-python/">
     <img src="https://img.shields.io/codecov/c/gh/HallLab/clarite-python.svg?style=flat-square" alt="Coverage Status"/>
-    </a>
+    </a></br>
     <!-- License -->
     <a href="https://opensource.org/licenses/BSD-3-Clause">
     <img src="https://img.shields.io/pypi/l/clarite-python?style=flat-square" alt="license"/>
-    </a>
+    </a></br>
     <!-- Black -->
     <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-Black-black?style=flat-square" alt="code style: black"/>
