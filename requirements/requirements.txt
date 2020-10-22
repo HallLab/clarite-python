@@ -4,6 +4,6 @@ scipy>=1.5
 seaborn>=0.9
 statsmodels>=0.10
 matplotlib
-numpy<=1.16.4  # limited due to rpy2
+numpy
 rpy2
 tzlocal  # needed for R
