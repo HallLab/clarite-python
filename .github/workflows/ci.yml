@@ -43,12 +43,12 @@ jobs:
         id: cache-python
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements/requirements.txt') }}-${{ hashFiles('requirements/requirements-dev.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements/requirements.txt', 'requirements/requirements-dev.txt') }}
 
       - name: Install Dependencies
         run: |
-          pip install -r requirements/requirements.txt
-          pip install -r requirements/requirements-dev.txt
+          python -m pip install -r requirements/requirements.txt
+          python -m pip install -r requirements/requirements-dev.txt
         if: steps.cache-python.outputs.cache-hit != 'true'
 
       - name: Code Quality
