@@ -16,12 +16,12 @@ clarite_version = get_versions()
 def _plot_manhattan(
     dfs: Dict[str, pd.DataFrame],
     pval_column: str = "pvalue",
-    categories: Dict[str, str] = dict(),
+    categories: Optional[Dict[str, str]] = None,
     cutoffs: Optional[
         List[List[Tuple[str, float, str, str]]]
     ] = None,  # One list of tuples for each df
     num_labeled: int = 3,
-    label_vars: List[str] = list(),
+    label_vars: Optional[List[str]] = None,
     figsize: Tuple[int, int] = (12, 6),
     dpi: int = 300,
     title: Optional[str] = None,
@@ -35,7 +35,13 @@ def _plot_manhattan(
     than to use this one big function with all of the parameters.
     """
     # Hardcoded options
-    offset = 5  # Spacing between categories
+    OFFSET = 5  # Spacing between categories
+
+    # Fix optional params
+    if categories is None:
+        categories = dict()
+    if label_vars is None:
+        label_vars = []
 
     # Parameter Validation - EWAS Results
     for df_idx, df in enumerate(dfs.values()):
@@ -62,6 +68,17 @@ def _plot_manhattan(
         ["variable", "outcome", "dataset"]
     ].astype("category")
 
+    # Add label str
+    if len(df["outcome"].cat.categories) == 1:
+        df["label"] = df["variable"]
+    else:
+        df["label"] = (
+            df[["variable", "outcome"]]
+            .astype(str)
+            .apply(lambda row: f"{row['variable']}, {row['outcome']}", axis=1)
+            .astype("category")
+        )
+
     # Add category
     df["category"] = (
         df["variable"].apply(lambda v: categories.get(v, "unknown")).astype("category")
@@ -76,7 +93,7 @@ def _plot_manhattan(
 
     # Update index (actually x position) column by padding between each category
     df["category_x_offset"] = (
-        df.groupby("category").ngroup() * offset
+        df.groupby("category").ngroup() * OFFSET
     )  # sorted category number, multiplied to pad between categories
     df["xpos"] = (
         df.groupby(["category", "variable"]).ngroup() + df["category_x_offset"]
@@ -104,8 +121,8 @@ def _plot_manhattan(
             df.groupby("category")
         ):
             # background bars
-            left = category_data["xpos"].min() - (offset / 2) - 0.5
-            right = category_data["xpos"].max() + (offset / 2) + 0.5
+            left = category_data["xpos"].min() - (OFFSET / 2) - 0.5
+            right = category_data["xpos"].max() + (OFFSET / 2) + 0.5
             width = right - left
             for ax in axes:
                 ax.axvspan(
@@ -183,18 +200,33 @@ def _plot_manhattan(
         ax.yaxis.label.set_size(16)
         # Update y-axis
         plt.yticks(fontsize=8)
-        # Label points
-        top_n = dataset_data.sort_values(log_pval_column, ascending=False).head(
-            n=num_labeled
-        )["variable"]
-        labeled = set(label_vars) | set(top_n)
-        for _, row in dataset_data.loc[
-            dataset_data["variable"].isin(labeled),
+        # Label top_n points
+        labeled_top_n_var_idxs = set()  # Avoid labeling again by variable name later
+        if num_labeled > 0:
+            for row_idx, row in (
+                dataset_data.sort_values(log_pval_column, ascending=False)
+                .head(n=num_labeled)
+                .iterrows()
+            ):
+                labeled_top_n_var_idxs.add(row_idx)
+                ax.text(
+                    row["xpos"] + 1,
+                    row[log_pval_column],
+                    str(row["label"]),
+                    rotation=0,
+                    ha="left",
+                    va="center",
+                )
+        # Label points by variable name
+        for row_idx, row in dataset_data.loc[
+            dataset_data["variable"].isin(label_vars),
         ].iterrows():
+            if row_idx in labeled_top_n_var_idxs:
+                continue
             ax.text(
                 row["xpos"] + 1,
                 row[log_pval_column],
-                str(row["variable"]),
+                str(row["label"]),
                 rotation=0,
                 ha="left",
                 va="center",
@@ -205,7 +237,7 @@ def _plot_manhattan(
     ax.set_xticks(x_labels_pos)
     ax.set_xticklabels(x_labels)
     ax.tick_params(labelrotation=90)
-    ax.set_xlim([df["xpos"].min() - offset, df["xpos"].max() + offset])
+    ax.set_xlim([df["xpos"].min() - OFFSET, df["xpos"].max() + OFFSET])
     ax.set_ylim([-1, df[log_pval_column].max() + 10])
     ax.set_xlabel("")  # Hide x-axis label since it is obvious
 
@@ -243,11 +275,11 @@ def _plot_manhattan(
 
 def manhattan(
     dfs: Dict[str, pd.DataFrame],
-    categories: Dict[str, str] = dict(),
+    categories: Optional[Dict[str, str]] = None,
     bonferroni: Optional[float] = 0.05,
     fdr: Optional[float] = None,
     num_labeled: int = 3,
-    label_vars: List[str] = list(),
+    label_vars: Optional[List[str]] = None,
     figsize: Tuple[int, int] = (12, 6),
     dpi: int = 300,
     title: Optional[str] = None,
@@ -263,16 +295,16 @@ def manhattan(
     ----------
     dfs: DataFrame
         Dictionary of dataset names to pandas dataframes of ewas results (requires certain columns)
-    categories: dictionary (string: string)
-        A dictionary mapping each variable name to a category name
+    categories: dictionary (string: string) or None
+        A dictionary mapping each variable name to a category name for optional grouping
     bonferroni: float or None (default 0.05)
         Show a cutoff line at the pvalue corresponding to a given bonferroni-corrected pvalue
     fdr: float or None (default None)
         Show a cutoff line at the pvalue corresponding to a given fdr
     num_labeled: int, default 3
         Label the top <num_labeled> results with the variable name
-    label_vars: list of strings, default empty list
-        Label the named variables
+    label_vars: list of strings, default None
+        Label the named variables (or pass None to skip labeling this way)
     figsize: tuple(int, int), default (12, 6)
         The figure size of the resulting plot in inches
     dpi: int, default 300
@@ -350,10 +382,10 @@ def manhattan(
 
 def manhattan_bonferroni(
     dfs: Dict[str, pd.DataFrame],
-    categories: Dict[str, str] = dict(),
+    categories: Optional[Dict[str, str]] = None,
     cutoff: Optional[float] = 0.05,
     num_labeled: int = 3,
-    label_vars: List[str] = list(),
+    label_vars: Optional[List[str]] = None,
     figsize: Tuple[int, int] = (12, 6),
     dpi: int = 300,
     title: Optional[str] = None,
@@ -369,14 +401,14 @@ def manhattan_bonferroni(
     ----------
     dfs: DataFrame
         Dictionary of dataset names to pandas dataframes of ewas results (requires certain columns)
-    categories: dictionary (string: string)
-        A dictionary mapping each variable name to a category name
+    categories: dictionary (string: string) or None
+        A dictionary mapping each variable name to a category name for optional grouping
     cutoff: float or None (default 0.05)
         The pvalue to draw the Bonferroni significance line at (None for no line)
     num_labeled: int, default 3
         Label the top <num_labeled> results with the variable name
-    label_vars: list of strings, default empty list
-        Label the named variables
+    label_vars: list of strings, default None
+        Label the named variables (or pass None to skip labeling this way)
     figsize: tuple(int, int), default (12, 6)
         The figure size of the resulting plot in inches
     dpi: int, default 300
@@ -433,10 +465,10 @@ def manhattan_bonferroni(
 
 def manhattan_fdr(
     dfs: Dict[str, pd.DataFrame],
-    categories: Dict[str, str] = dict(),
+    categories: Optional[Dict[str, str]] = None,
     cutoff: Optional[float] = 0.05,
     num_labeled: int = 3,
-    label_vars: List[str] = list(),
+    label_vars: Optional[List[str]] = None,
     figsize: Tuple[int, int] = (12, 6),
     dpi: int = 300,
     title: Optional[str] = None,
@@ -452,14 +484,14 @@ def manhattan_fdr(
     ----------
     dfs: DataFrame
         Dictionary of dataset names to pandas dataframes of ewas results (requires certain columns)
-    categories: dictionary (string: string)
-        A dictionary mapping each variable name to a category name
+    categories: dictionary (string: string) or None
+        A dictionary mapping each variable name to a category name for optional grouping
     cutoff: float or None (default 0.05)
         The pvalue to draw the FDR significance line at (None for no line)
     num_labeled: int, default 3
         Label the top <num_labeled> results with the variable name
-    label_vars: list of strings, default empty list
-        Label the named variables
+    label_vars: list of strings, default None
+        Label the named variables (or pass None to skip labeling this way)
     figsize: tuple(int, int), default (12, 6)
         The figure size of the resulting plot in inches
     dpi: int, default 300
