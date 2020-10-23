@@ -107,43 +107,49 @@ def resultNHANESsmall():
     return python_result
 
 
-def test_top_results_nhanesreal(resultNHANESReal, capfd):
-    clarite.plot.top_results(
-        resultNHANESReal,
-        "pvalue",
-        cutoff=0.05,
-        num_rows=3,
-        filename=PY_DATA_PATH / "top_results_nhanesreal.png",
-    )
-
-
-def test_top_results_nhanesreal_no_cutoff(resultNHANESReal, capfd):
-    clarite.plot.top_results(
-        resultNHANESReal,
-        "pvalue",
-        cutoff=None,
-        num_rows=3,
-        filename=PY_DATA_PATH / "top_results_nhanesreal_no_cutoff.png",
-    )
-
-
-def test_top_results_nhanessmall(resultNHANESsmall, capfd):
-    clarite.plot.top_results(
-        resultNHANESsmall,
-        "pvalue_bonferroni",
-        cutoff=0.05,
-        filename=PY_DATA_PATH / "top_results_nhanessmall.png",
-    )
-
-
-def test_top_results_multioutcome(resultNHANESsmall, capfd):
-    data = resultNHANESsmall.copy().reset_index()
-    data.loc[0, "Outcome"] = "Other"
-    data.set_index(["Variable", "Outcome"])
-    with pytest.raises(ValueError):
-        clarite.plot.top_results(
-            data,
+@pytest.mark.parametrize(
+    "ewas_result_name,pvalue_name,cutoff,num_rows,filename",
+    [
+        (
+            "resultNHANESReal",
+            "pvalue",
+            0.05,
+            3,
+            PY_DATA_PATH / "top_results_nhanesreal.png",
+        ),
+        (
+            "resultNHANESReal",
+            "pvalue",
+            None,
+            3,
+            PY_DATA_PATH / "top_results_nhanesreal_no_cutoff.png",
+        ),
+        (
+            "resultNHANESsmall",
             "pvalue_bonferroni",
-            cutoff=0.05,
-            filename=PY_DATA_PATH / "top_results_multioutcome.png",
-        )
+            0.05,
+            None,
+            PY_DATA_PATH / "top_results_nhanessmall.png",
+        ),
+        pytest.param(
+            "resultNHANESsmall",
+            "pvalue_bonferroni",
+            0.05,
+            None,
+            PY_DATA_PATH / "top_results_multioutcome.png",
+            marks=pytest.mark.xfail,
+        ),
+    ],
+)
+def test_top_results(
+    ewas_result_name, pvalue_name, cutoff, num_rows, filename, request
+):
+    ewas_result = request.getfixturevalue(ewas_result_name)
+    print(ewas_result.head())
+    clarite.plot.top_results(
+        ewas_result=ewas_result,
+        pvalue_name=pvalue_name,
+        cutoff=cutoff,
+        num_rows=num_rows,
+        filename=filename,
+    )
