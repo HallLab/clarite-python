@@ -1,149 +1,102 @@
 from pathlib import Path
-import pandas as pd
 import pytest
 
 import clarite
+import matplotlib.pyplot as plt
 
 DATA_PATH = Path(__file__).parent.parent / "test_data_files"
 PY_DATA_PATH = Path(__file__).parent.parent / "py_test_output"
 
 
-@pytest.fixture
-def resultNHANESReal():
-    # Load the data
-    df = clarite.load.from_tsv(DATA_PATH / "nhanes_real.txt", index_col="ID")
-
-    # Split out survey info
-    survey_cols = ["SDMVPSU", "SDMVSTRA", "WTMEC4YR", "WTSHM4YR", "WTSVOC4Y"]
-    survey_df = df[survey_cols]
-    df = df.drop(columns=survey_cols)
-
-    df = clarite.modify.make_binary(
-        df,
-        only=[
-            "RHQ570",
-            "first_degree_support",
-            "SDDSRVYR",
-            "female",
-            "black",
-            "mexican",
-            "other_hispanic",
-            "other_eth",
-        ],
-    )
-    df = clarite.modify.make_categorical(df, only=["SES_LEVEL"])
-    design = clarite.survey.SurveyDesignSpec(
-        survey_df,
-        weights={
-            "RHQ570": "WTMEC4YR",
-            "first_degree_support": "WTMEC4YR",
-            "URXUPT": "WTSHM4YR",
-            "LBXV3A": "WTSVOC4Y",
-            "LBXBEC": "WTMEC4YR",
+@pytest.mark.parametrize(
+    "categories",
+    [
+        None,
+        {
+            "race": "demographics",
+            "RIAGENDR": "demographics",
+            "agecat": "demographics",
+            "first_degree_support": "environment",
         },
-        cluster="SDMVPSU",
-        strata="SDMVSTRA",
-        fpc=None,
-        nest=True,
-    )
-    calculated_result = clarite.analyze.ewas(
-        outcome="BMXBMI",
-        covariates=[
-            "SES_LEVEL",
-            "SDDSRVYR",
-            "female",
-            "black",
-            "mexican",
-            "other_hispanic",
-            "other_eth",
-            "RIDAGEYR",
-        ],
-        data=df,
-        survey_design_spec=design,
-    )
-    return calculated_result
-
-
-@pytest.fixture
-def resultNHANESsmall():
-    # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "nhanes_data.csv", index_col=None)
-    # Process data
-    df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
-    df = clarite.modify.make_categorical(df, only=["race", "agecat"])
-    design = clarite.survey.SurveyDesignSpec(
-        df,
-        weights="WTMEC2YR",
-        cluster="SDMVPSU",
-        strata="SDMVSTRA",
-        fpc=None,
-        nest=True,
-    )
-    df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-            ),
-        ],
-        axis=0,
-    )
-    clarite.analyze.add_corrected_pvalues(python_result)
-    return python_result
-
-
-def test_top_results_nhanesreal(resultNHANESReal, capfd):
-    clarite.plot.top_results(
-        resultNHANESReal,
-        "pvalue",
-        cutoff=0.05,
-        num_rows=3,
-        filename=PY_DATA_PATH / "top_results_nhanesreal.png",
+    ],
+)
+@pytest.mark.parametrize(
+    "ewas_result_list,bonferroni,fdr,label_vars",
+    [
+        (["resultNHANESReal"], None, None, None),
+        (["resultNHANESReal", "resultNHANESsmall"], None, None, None),
+        (["resultNHANESReal", "resultNHANESsmall"], 0.05, 0.1, ["LBXBEC"]),
+        (["resultNHANESReal_multi"], None, None, ["LBXBEC"]),
+    ],
+)
+def test_manhattan(ewas_result_list, bonferroni, fdr, label_vars, categories, request):
+    dfs = {name: request.getfixturevalue(name) for name in ewas_result_list}
+    clarite.plot.manhattan(
+        dfs=dfs,
+        bonferroni=bonferroni,
+        fdr=fdr,
+        label_vars=label_vars,
+        categories=categories,
     )
 
 
-def test_top_results_nhanesreal_no_cutoff(resultNHANESReal, capfd):
-    clarite.plot.top_results(
-        resultNHANESReal,
-        "pvalue",
-        cutoff=None,
-        num_rows=3,
-        filename=PY_DATA_PATH / "top_results_nhanesreal_no_cutoff.png",
-    )
-
-
-def test_top_results_nhanessmall(resultNHANESsmall, capfd):
-    clarite.plot.top_results(
-        resultNHANESsmall,
-        "pvalue_bonferroni",
-        cutoff=0.05,
-        filename=PY_DATA_PATH / "top_results_nhanessmall.png",
-    )
-
-
-def test_top_results_multioutcome(resultNHANESsmall, capfd):
-    data = resultNHANESsmall.copy().reset_index()
-    data.loc[0, "Outcome"] = "Other"
-    data.set_index(["Variable", "Outcome"])
-    with pytest.raises(ValueError):
-        clarite.plot.top_results(
-            data,
+@pytest.mark.parametrize(
+    "ewas_result_name,pvalue_name,cutoff,num_rows,filename",
+    [
+        (
+            "resultNHANESReal",
+            "pvalue",
+            0.05,
+            3,
+            PY_DATA_PATH / "top_results_nhanesreal.png",
+        ),
+        (
+            "resultNHANESReal",
+            "pvalue",
+            None,
+            3,
+            PY_DATA_PATH / "top_results_nhanesreal_no_cutoff.png",
+        ),
+        (
+            "resultNHANESsmall",
             "pvalue_bonferroni",
-            cutoff=0.05,
-            filename=PY_DATA_PATH / "top_results_multioutcome.png",
-        )
+            0.05,
+            None,
+            PY_DATA_PATH / "top_results_nhanessmall.png",
+        ),
+        pytest.param(
+            "resultNHANESsmall",
+            "pvalue_bonferroni",
+            0.05,
+            None,
+            PY_DATA_PATH / "top_results_multioutcome.png",
+            marks=pytest.mark.xfail,
+        ),
+    ],
+)
+def test_top_results(
+    ewas_result_name, pvalue_name, cutoff, num_rows, filename, request
+):
+    ewas_result = request.getfixturevalue(ewas_result_name)
+    clarite.plot.top_results(
+        ewas_result=ewas_result,
+        pvalue_name=pvalue_name,
+        cutoff=cutoff,
+        num_rows=num_rows,
+        filename=filename,
+    )
+
+
+@pytest.mark.parametrize(
+    "column,bins", [("URXUPT", None), ("URXUPT", 100), ("SES_LEVEL", None)]
+)
+def test_histogram(dataNHANESReal, column, bins):
+    clarite.plot.histogram(data=dataNHANESReal, column=column, bins=bins)
+    plt.show()
+
+
+@pytest.mark.parametrize("filename", ["test", "test.pdf"])
+@pytest.mark.parametrize("quality", ["low", "medium", "high"])
+def test_distributions(dataNHANESReal, filename, quality, tmpdir):
+    filename = Path(tmpdir) / filename
+    clarite.plot.distributions(data=dataNHANESReal, filename=filename, quality=quality)
