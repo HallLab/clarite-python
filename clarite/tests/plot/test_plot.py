@@ -123,6 +123,7 @@ def resultNHANESsmall():
 @pytest.mark.parametrize(
     "ewas_result_list,bonferroni,fdr,label_vars",
     [
+        (["resultNHANESReal"], None, None, None),
         (["resultNHANESReal", "resultNHANESsmall"], None, None, None),
         (["resultNHANESReal", "resultNHANESsmall"], 0.05, 0.1, ["LBXBEC"]),
         (["resultNHANESReal_multi"], None, None, ["LBXBEC"]),
