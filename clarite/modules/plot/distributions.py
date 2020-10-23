@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 from typing import List, Optional
 
 import matplotlib.pyplot as plt
@@ -29,7 +30,7 @@ def distributions(
     ----------
     data: pd.DataFrame
         The DataFrame containing data to be plotted
-    filename: string
+    filename: string or pathlib.Path
         Name of the saved pdf file.  The extension will be added automatically if it was not included.
     continuous_kind: string
         What kind of plots to use for continuous data.  Binary and Categorical variables will always be shown with histograms.
@@ -73,9 +74,11 @@ def distributions(
     if variables is not None:
         data = data[variables]
 
-    # Check filename
-    if not filename.endswith(".pdf"):
-        filename += ".pdf"
+    # Check filename, adding ".pdf" if needed
+    if type(filename) == str:
+        filename = Path(filename)
+    if filename.suffix != "pdf":
+        filename = Path(str(filename) + ".pdf")
 
     # Set DPI
     dpi_dict = {"low": 150, "medium": 300, "high": 1200}
