@@ -121,6 +121,18 @@ def resultNHANESsmall():
 
 
 @pytest.mark.parametrize(
+    "categories",
+    [
+        None,
+        {
+            "race": "demographics",
+            "RIAGENDR": "demographics",
+            "agecat": "demographics",
+            "first_degree_support": "environment",
+        },
+    ],
+)
+@pytest.mark.parametrize(
     "ewas_result_list,bonferroni,fdr,label_vars",
     [
         (["resultNHANESReal"], None, None, None),
@@ -129,10 +141,14 @@ def resultNHANESsmall():
         (["resultNHANESReal_multi"], None, None, ["LBXBEC"]),
     ],
 )
-def test_manhattan(ewas_result_list, bonferroni, fdr, label_vars, request):
+def test_manhattan(ewas_result_list, bonferroni, fdr, label_vars, categories, request):
     dfs = {name: request.getfixturevalue(name) for name in ewas_result_list}
     clarite.plot.manhattan(
-        dfs=dfs, bonferroni=bonferroni, fdr=fdr, label_vars=label_vars
+        dfs=dfs,
+        bonferroni=bonferroni,
+        fdr=fdr,
+        label_vars=label_vars,
+        categories=categories,
     )
 
 
