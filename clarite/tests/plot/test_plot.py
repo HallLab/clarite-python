@@ -61,7 +61,20 @@ def resultNHANESReal():
         data=df,
         survey_design_spec=design,
     )
+    clarite.analyze.add_corrected_pvalues(calculated_result)
     return calculated_result
+
+
+@pytest.fixture
+def resultNHANESReal_multi(resultNHANESReal):
+    top = resultNHANESReal.copy()
+    bottom = resultNHANESReal.reset_index(drop=False)
+    bottom["Outcome"] = "AlsoBMXBMI"
+    bottom = bottom.set_index(resultNHANESReal.index.names)
+    bottom["pvalue"] = bottom["pvalue"] / 10
+    result = pd.concat([top, bottom])
+    clarite.analyze.add_corrected_pvalues(result)
+    return result
 
 
 @pytest.fixture
@@ -108,6 +121,19 @@ def resultNHANESsmall():
 
 
 @pytest.mark.parametrize(
+    "ewas_result_list,bonferroni,fdr",
+    [
+        (["resultNHANESReal", "resultNHANESsmall"], None, None),
+        (["resultNHANESReal", "resultNHANESsmall"], 0.05, 0.1),
+        (["resultNHANESReal_multi"], None, None),
+    ],
+)
+def test_manhattan(ewas_result_list, bonferroni, fdr, request):
+    dfs = {name: request.getfixturevalue(name) for name in ewas_result_list}
+    clarite.plot.manhattan(dfs=dfs, bonferroni=bonferroni, fdr=fdr)
+
+
+@pytest.mark.parametrize(
     "ewas_result_name,pvalue_name,cutoff,num_rows,filename",
     [
         (
@@ -145,7 +171,6 @@ def test_top_results(
     ewas_result_name, pvalue_name, cutoff, num_rows, filename, request
 ):
     ewas_result = request.getfixturevalue(ewas_result_name)
-    print(ewas_result.head())
     clarite.plot.top_results(
         ewas_result=ewas_result,
         pvalue_name=pvalue_name,
