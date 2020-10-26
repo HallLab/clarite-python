@@ -28,7 +28,7 @@ def from_tsv(filename: str, index_col: Optional[Union[str, int]] = 0, **kwargs):
     index_col: int or string (default 0)
         Column to use as the row labels of the DataFrame.
     **kwargs:
-        Other keword arguments to pass to pd.read_csv
+        Other keyword arguments to pass to pd.read_csv
 
     Returns
     -------
@@ -40,7 +40,7 @@ def from_tsv(filename: str, index_col: Optional[Union[str, int]] = 0, **kwargs):
     Load a tab-delimited file with an "ID" column
 
     >>> import clarite
-    >>> df = clarite.import.from_tsv('nhanes.txt', index_col="SEQN")
+    >>> df = clarite.load.from_tsv('nhanes.txt', index_col="SEQN")
     Loaded 22,624 observations of 970 variables
     """
     # Load data
@@ -65,7 +65,7 @@ def from_csv(filename: str, index_col: Optional[Union[str, int]] = 0, **kwargs):
     index_col: int or string (default 0)
         Column to use as the row labels of the DataFrame.
     **kwargs:
-        Other keword arguments to pass to pd.read_csv
+        Other keyword arguments to pass to pd.read_csv
 
     Returns
     -------
@@ -77,7 +77,7 @@ def from_csv(filename: str, index_col: Optional[Union[str, int]] = 0, **kwargs):
     Load a tab-delimited file with an "ID" column
 
     >>> import clarite
-    >>> df = clarite.import.from_csv('nhanes.csv', index_col="SEQN")
+    >>> df = clarite.load.from_csv('nhanes.csv', index_col="SEQN")
     Loaded 22,624 observations of 970 variables
     """
     # Load data
