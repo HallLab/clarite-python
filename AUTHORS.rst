@@ -5,7 +5,7 @@ Credits
 Maintainer
 ----------
 
-* John McGuigan <jrm5100@psu.edu>
+* John McGuigan <john.mcguigan@psu.edu>
 
 Contributors
 ------------

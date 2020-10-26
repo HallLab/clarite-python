@@ -49,12 +49,16 @@ CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
 Installation
 ------------
 
-In order to use the *ewas_r* function, R must be installed along with the *survey* library.
+In order to use the *survey_r* regression_kind in the *ewas* function, R must be installed along with the *survey* library.
 
 1. Install R and ensure it is accessible from the command line.  You may need to add its location to the PATH environmental variable.
 2. Use *install.packages* in R to install the *survey* library.
 
-    
+Questions
+---------
+If you have any questions not answered by the `documentation <https://clarite-python.readthedocs.io/en/latest/>`_,
+feel free to open an `Issue <https://github.com/HallLab/clarite-python/issues>`_.
+
 Citing CLARITE
 --------------
 
