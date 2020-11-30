@@ -108,7 +108,7 @@ class InteractionRegression(GLMRegression):
                     )
             if len(errors) > 0:
                 raise ValueError(
-                    "Invalid interactions provided\n" + "\n\t".join(errors)
+                    "Invalid interactions provided\n\t" + "\n\t".join(errors)
                 )
             else:
                 self.interactions = interactions

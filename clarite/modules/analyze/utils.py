@@ -84,13 +84,13 @@ def add_corrected_pvalues(
             multipletests(
                 data.loc[first & ~data[pvalue].isna(), pvalue], method="bonferroni"
             )[1],
-            index=data[first][groupby],
+            index=data[first & ~data[pvalue].isna()][groupby],
         ).to_dict()
         fdr_result = pd.Series(
             multipletests(
                 data.loc[first & ~data[pvalue].isna(), pvalue], method="fdr_bh"
             )[1],
-            index=data[first][groupby],
+            index=data[first & ~data[pvalue].isna()][groupby],
         ).to_dict()
         # Expand results to duplicated rows
         data[bonf_name] = data[groupby].apply(
