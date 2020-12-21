@@ -238,13 +238,6 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
     subset_data <- subset_data & subset_array
   }
 
-  # Skip regression if any covariates are constant (after removing NAs) without being specified as allowed
-  varying_covariates <- get_varying_covariates(data[subset_data,], covariates, var_name, allowed_nonvarying)
-  # If 'get_varying_covarites' returned NULL it found a nonvarying covariate the wasn't allowed)
-  if (is.null(varying_covariates) && !is.null(covariates)){
-    return(data.frame(result, stringsAsFactors = FALSE))
-  }
-
   # Gather survey info if needed
   if(use_survey){
     # Get weight
@@ -303,6 +296,13 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
       id_values <- NULL
     }
   }
+  
+  # Skip regression if any covariates are constant (after removing NAs) without being specified as allowed
+  varying_covariates <- get_varying_covariates(data[subset_data,], covariates, var_name, allowed_nonvarying)
+  # If 'get_varying_covarites' returned NULL it found a nonvarying covariate the wasn't allowed)
+  if (is.null(varying_covariates) && !is.null(covariates)){
+    return(data.frame(result, stringsAsFactors = FALSE))
+  }
 
   # Record N and skip regression if the min_n filter isn't met
   non_na_obs <- sum(subset_data)
@@ -325,15 +325,15 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
     if(var_type == 'bin'){
       regression_result <- regress_cont_survey(data, varying_covariates, outcome=y, var_name, regression_family,
                                                weight_values, strata_values, fpc_values, id_values,
-                                               subset_array, ...)
+                                               subset_data, ...)
     } else if(var_type == 'cat'){
       regression_result <- regress_cat_survey(data, varying_covariates, outcome=y, var_name, regression_family,
                                               weight_values, strata_values, fpc_values, id_values,
-                                              subset_array, ...)
+                                              subset_data, ...)
     } else if(var_type == 'cont'){
       regression_result <- regress_cont_survey(data, varying_covariates, outcome=y, var_name, regression_family,
                                                weight_values, strata_values, fpc_values, id_values,
-                                               subset_array, ...)
+                                               subset_data, ...)
     }
   }
   # Update result with the regression results
