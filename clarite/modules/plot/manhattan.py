@@ -29,6 +29,7 @@ def _plot_manhattan(
     colors: List[str] = ["#53868B", "#4D4D4D"],
     background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
     filename: Optional[str] = None,
+    return_figure: bool = False,
 ):
     """
     Create a manhattan plot.  Easier for the user to expose multiple functions with different specific parameters
@@ -267,10 +268,13 @@ def _plot_manhattan(
     figure.suptitle(title, fontsize=20)
 
     # Save
-    if filename is not None:
-        plt.savefig(filename, bbox_inches="tight")
+    if return_figure:
+        return figure
     else:
-        plt.show()
+        if filename is not None:
+            plt.savefig(filename, bbox_inches="tight")
+        else:
+            plt.show()
 
 
 def manhattan(
@@ -287,6 +291,7 @@ def manhattan(
     colors: List[str] = ["#53868B", "#4D4D4D"],
     background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
     filename: Optional[str] = None,
+    return_figure: bool = False,
 ):
     """
     Create a Manhattan-like plot for a list of EWAS Results
@@ -319,10 +324,13 @@ def manhattan(
         A list of background colors to use for alternating categories (must be same length as 'colors')
     filename: Optional str
         If provided, a copy of the plot will be saved to the specified file instead of being shown
+    return_figure: boolean, default False
+        If True, return figure instead of showing or saving the plot. Useful to customize the plot
 
     Returns
     -------
-    None
+    figure: matplotlib Figure or None
+        If return_figure, returns a matplotlib Figure object. Else returns None
 
     Examples
     --------
@@ -363,7 +371,7 @@ def manhattan(
             )
         cutoffs.append(df_cutoffs)
 
-    _plot_manhattan(
+    fig = _plot_manhattan(
         dfs=dfs,
         pval_column="pvalue",
         categories=categories,
@@ -377,7 +385,10 @@ def manhattan(
         colors=colors,
         background_colors=background_colors,
         filename=filename,
+        return_figure=return_figure,
     )
+    if return_figure:
+        return fig
 
 
 def manhattan_bonferroni(
@@ -393,6 +404,7 @@ def manhattan_bonferroni(
     colors: List[str] = ["#53868B", "#4D4D4D"],
     background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
     filename: Optional[str] = None,
+    return_figure: bool = False,
 ):
     """
     Create a Manhattan-like plot for a list of EWAS Results using Bonferroni significance
@@ -423,10 +435,13 @@ def manhattan_bonferroni(
         A list of background colors to use for alternating categories (must be same length as 'colors')
     filename: Optional str
         If provided, a copy of the plot will be saved to the specified file instead of being shown
+    return_figure: boolean, default False
+        If True, return figure instead of showing or saving the plot. Useful to customize the plot
 
     Returns
     -------
-    None
+    figure: matplotlib Figure or None
+        If return_figure, returns a matplotlib Figure object. Else returns None
 
     Examples
     --------
@@ -446,7 +461,7 @@ def manhattan_bonferroni(
         cutoffs = [[(f"{cutoff} Bonferroni", cutoff, "red", "dashed")] for _ in dfs]
     else:
         cutoffs = None
-    _plot_manhattan(
+    fig = _plot_manhattan(
         dfs=dfs,
         pval_column="pvalue_bonferroni",
         categories=categories,
@@ -460,8 +475,10 @@ def manhattan_bonferroni(
         colors=colors,
         background_colors=background_colors,
         filename=filename,
+        return_figure=return_figure,
     )
-
+    if return_figure:
+        return fig
 
 def manhattan_fdr(
     dfs: Dict[str, pd.DataFrame],
@@ -476,6 +493,7 @@ def manhattan_fdr(
     colors: List[str] = ["#53868B", "#4D4D4D"],
     background_colors: List[str] = ["#EBEBEB", "#FFFFFF"],
     filename: Optional[str] = None,
+    return_figure: bool = False,
 ):
     """
     Create a Manhattan-like plot for a list of EWAS Results using FDR significance
@@ -506,10 +524,13 @@ def manhattan_fdr(
         A list of background colors to use for alternating categories (must be same length as 'colors')
     filename: Optional str
         If provided, a copy of the plot will be saved to the specified file instead of being shown
+    return_figure: boolean, default False
+        If True, return figure instead of showing or saving the plot. Useful to customize the plot
 
     Returns
     -------
-    None
+    figure: matplotlib Figure or None
+        If return_figure, returns a matplotlib Figure object. Else returns None
 
     Examples
     --------
@@ -529,7 +550,7 @@ def manhattan_fdr(
         cutoffs = [[(f"{cutoff} FDR", cutoff, "red", "dashed")] for _ in dfs]
     else:
         cutoffs = None
-    _plot_manhattan(
+    fig = _plot_manhattan(
         dfs=dfs,
         pval_column="pvalue_fdr",
         categories=categories,
@@ -543,4 +564,7 @@ def manhattan_fdr(
         colors=colors,
         background_colors=background_colors,
         filename=filename,
+        return_figure=return_figure,
     )
+    if return_figure:
+        return fig
