@@ -480,6 +480,7 @@ def manhattan_bonferroni(
     if return_figure:
         return fig
 
+
 def manhattan_fdr(
     dfs: Dict[str, pd.DataFrame],
     categories: Optional[Dict[str, str]] = None,
@@ -568,4 +569,3 @@ def manhattan_fdr(
     )
     if return_figure:
         return fig
-        
