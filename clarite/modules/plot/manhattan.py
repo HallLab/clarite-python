@@ -568,3 +568,4 @@ def manhattan_fdr(
     )
     if return_figure:
         return fig
+        
