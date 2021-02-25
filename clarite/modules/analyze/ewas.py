@@ -34,7 +34,7 @@ def ewas(
     data: Any, usually pd.DataFrame
         The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     regression_kind: str or subclass of Regression
-        This can be 'glm', 'glm_weighted', or 'r_survey' for built-in Regression types,
+        This can be 'glm', 'weighted_glm', or 'r_survey' for built-in Regression types,
         or a custom subclass of Regression
         None by default to maintain existing api (`glm` unless SurveyDesignSpec exists, in which case `weighted_glm`)
     kwargs: Keyword arguments specific to the Regression being used
@@ -64,7 +64,9 @@ def ewas(
     if type(regression_kind) == str:
         regression_cls = builtin_regression_kinds.get(regression_kind, None)
         if regression_cls is None:
-            raise ValueError(f"Unknown regression kind '{regression_kind}")
+            raise ValueError(
+                f"Unknown regression kind '{regression_kind}, known values are {','.join(builtin_regression_kinds.keys())}"
+            )
     elif regression_kind in regression_kind.mro():
         regression_cls = regression_kind
     else:

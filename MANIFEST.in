@@ -3,7 +3,7 @@ include CONTRIBUTING.rst
 include LICENSE
 include README.rst
 include requirements/*
-include clarite/r_code/*.R
+include clarite/modules/analyze/r_code/*.R
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
