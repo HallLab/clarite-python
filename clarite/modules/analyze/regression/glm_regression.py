@@ -140,7 +140,7 @@ class GLMRegression(Regression):
             formula_restricted += " + ".join([f"Q('{v}')" for v in varying_covars])
 
         # Full Formula, adding the regression variable to the restricted formula
-        formula = formula_restricted + f" + Q('{regression_variable}"')'
+        formula = formula_restricted + f" + Q('{regression_variable}" ")"
 
         return formula_restricted, formula
 
