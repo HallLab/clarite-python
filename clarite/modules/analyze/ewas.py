@@ -64,7 +64,9 @@ def ewas(
     if type(regression_kind) == str:
         regression_cls = builtin_regression_kinds.get(regression_kind, None)
         if regression_cls is None:
-            raise ValueError(f"Unknown regression kind '{regression_kind}, known values are {','.join(builtin_regression_kinds.keys())}")
+            raise ValueError(
+                f"Unknown regression kind '{regression_kind}, known values are {','.join(builtin_regression_kinds.keys())}"
+            )
     elif regression_kind in regression_kind.mro():
         regression_cls = regression_kind
     else:
