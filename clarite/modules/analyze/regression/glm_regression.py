@@ -11,6 +11,7 @@ import statsmodels.api as sm
 from clarite.internal.utilities import _remove_empty_categories
 
 from .base import Regression
+from ..utils import fix_names
 
 
 class GLMRegression(Regression):
@@ -148,23 +149,6 @@ class GLMRegression(Regression):
     def _process_formula(formula, data) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Use patsy to process the formula with quoted variable names, but return with the original names"""
         y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
-
-        def fix_names(df):
-            new_names = []
-            for c in df.columns:
-                if c == "Intercept":
-                    new_names.append(c)
-                else:
-                    match = re.search(r"^Q\('(.*)'\)(\[T\..*\])?", c)
-                    if match is None:
-                        raise ValueError(f"Error processing quoted variable name: {c}")
-                    else:
-                        new_names.append(
-                            "".join([g for g in match.groups() if g is not None])
-                        )
-            df.columns = new_names
-            return df
-
         y = fix_names(y)
         X = fix_names(X)
         return y, X

@@ -5,7 +5,7 @@ import click
 import numpy as np
 import pandas as pd
 import scipy
-import statsmodels.formula.api as smf
+import statsmodels.api as sm
 
 from clarite.internal.utilities import _remove_empty_categories
 from . import GLMRegression
@@ -165,8 +165,10 @@ class InteractionRegression(GLMRegression):
 
     def _run_interaction(self, data, formula, formula_restricted) -> Dict:
         # Regress both models
-        est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
-        est_restricted = smf.glm(formula_restricted, data=data, family=self.family).fit(
+        y, X = self._process_formula(formula, data)
+        est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
+        y_restricted, X_restricted = self._process_formula(formula_restricted, data)
+        est_restricted = sm.GLM(y_restricted, X_restricted, family=self.family).fit(
             use_t=True
         )
         # Check convergence
