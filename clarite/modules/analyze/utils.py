@@ -1,3 +1,4 @@
+import re
 from typing import Optional, List, Union
 
 import numpy as np
@@ -110,3 +111,31 @@ def add_corrected_pvalues(
 
         # Restore index
         data.set_index(index_cols, inplace=True)
+
+
+def fix_names(df):
+    new_names = []
+    for c in df.columns:
+        if c == "Intercept":
+            new_names.append(c)
+        elif ":" in c:
+            # Process interaction term
+            term1, term2 = c.split(":")
+            match1 = re.search(r"^Q\('(.*)'\)(\[T\..*\])?", term1)
+            match2 = re.search(r"^Q\('(.*)'\)(\[T\..*\])?", term2)
+            if match1 is not None and match2 is not None:
+                new_names.append(
+                    f"{''.join([g for g in match1.groups() if g is not None])}:{''.join([g for g in match2.groups() if g is not None])}"
+                )
+            else:
+                raise ValueError(
+                    f"Error processing quoted variable names in interaction term: {c}"
+                )
+        else:
+            match = re.search(r"^Q\('(.*)'\)(\[T\..*\])?", c)
+            if match is None:
+                raise ValueError(f"Error processing quoted variable name: {c}")
+            else:
+                new_names.append("".join([g for g in match.groups() if g is not None]))
+    df.columns = new_names
+    return df
