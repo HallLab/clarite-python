@@ -6,6 +6,9 @@ warn_on_e <- function(var_name, e){
   return(NULL)
 }
 
+# Quote variable names with backticks to account for special characters
+quote_name <- function(s){paste0("`", s, "`")}
+
 # Get required data for regressing a specific variable
 get_varying_covariates <- function(df, covariates, variable, allowed_nonvarying){
   # Get number of unique values in covariates among observations where the variable is not NA
@@ -33,9 +36,9 @@ regress_cont <- function(data, varying_covariates, outcome, var_name, regression
 
   # Create a regression formula
   if(length(varying_covariates)>0){
-    fmla <- paste(outcome, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
+    fmla <- paste(quote_name(outcome), "~", quote_name(var_name), "+", paste(lapply(varying_covariates, quote_name), collapse="+"), sep="")
   } else {
-    fmla <- paste(outcome, "~", var_name, sep="")
+    fmla <- paste(quote_name(outcome), "~", quote_name(var_name), sep="")
   }
 
   var_result <- tryCatch(glm(stats::as.formula(fmla),
@@ -88,9 +91,9 @@ regress_cont_survey <- function(data, varying_covariates, outcome, var_name, reg
 
   # Create a regression formula
   if(length(varying_covariates)>0){
-    fmla <- paste(outcome, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
+    fmla <- paste(quote_name(outcome), "~", quote_name(var_name), "+", paste(lapply(varying_covariates, quote_name), collapse="+"), sep="")
   } else {
-    fmla <- paste(outcome, "~", var_name, sep="")
+    fmla <- paste(quote_name(outcome), "~", quote_name(var_name), sep="")
   }
 
   var_result <- tryCatch(survey::svyglm(stats::as.formula(fmla), survey_design, family=regression_family, na.action=na.omit),
@@ -130,11 +133,11 @@ regress_cat <- function(data, varying_covariates, outcome, var_name, regression_
 
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
-    fmla <- paste(outcome, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
-    fmla_restricted <- paste(outcome, "~", paste(varying_covariates, collapse="+"), sep="")
+    fmla <- paste(quote_name(outcome), "~", quote_name(var_name), "+", paste(lapply(varying_covariates, quote_name), collapse="+"), sep="")
+    fmla_restricted <- paste(quote_name(outcome), "~", paste(lapply(varying_covariates, quote_name), collapse="+"), sep="")
   } else {
-    fmla <- paste(outcome, "~", var_name, sep="")
-    fmla_restricted <- paste(outcome, "~1", sep="")
+    fmla <- paste(quote_name(outcome), "~", quote_name(var_name), sep="")
+    fmla_restricted <- paste(quote_name(outcome), "~1", sep="")
   }
 
   # Run GLM Functions
@@ -188,11 +191,11 @@ regress_cat_survey <- function(data, varying_covariates, outcome, var_name, regr
 
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
-    fmla <- paste(outcome, "~", var_name, "+", paste(varying_covariates, collapse="+"), sep="")
-    fmla_restricted <- paste(outcome, "~", paste(varying_covariates, collapse="+"), sep="")
+    fmla <- paste(quote_name(outcome), "~", quote_name(var_name), "+", paste(lapply(varying_covariates, quote_name), collapse="+"), sep="")
+    fmla_restricted <- paste(quote_name(outcome), "~", paste(lapply(varying_covariates, quote_name), collapse="+"), sep="")
   } else {
-    fmla <- paste(outcome, "~", var_name, sep="")
-    fmla_restricted <- paste(outcome, "~1", sep="")
+    fmla <- paste(quote_name(outcome), "~", quote_name(var_name), sep="")
+    fmla_restricted <- paste(quote_name(outcome), "~1", sep="")
   }
 
   # Results using surveyglm
