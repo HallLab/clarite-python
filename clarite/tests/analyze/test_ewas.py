@@ -244,13 +244,25 @@ def test_api_noweights():
     r_result = pd.concat(
         [
             clarite.analyze.ewas(
-                outcome="api00", covariates=["meals", "mobility"], data=df, min_n=1
+                outcome="api00",
+                covariates=["meals", "mobility"],
+                data=df,
+                min_n=1,
+                regression_kind="r_survey",
             ),
             clarite.analyze.ewas(
-                outcome="api00", covariates=["ell", "mobility"], data=df, min_n=1
+                outcome="api00",
+                covariates=["ell", "mobility"],
+                data=df,
+                min_n=1,
+                regression_kind="r_survey",
             ),
             clarite.analyze.ewas(
-                outcome="api00", covariates=["ell", "meals"], data=df, min_n=1
+                outcome="api00",
+                covariates=["ell", "meals"],
+                data=df,
+                min_n=1,
+                regression_kind="r_survey",
             ),
         ],
         axis=0,
