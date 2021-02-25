@@ -134,13 +134,13 @@ class GLMRegression(Regression):
 
     def _get_formulas(self, regression_variable, varying_covars) -> Tuple[str, str]:
         # Restricted Formula, just outcome and covariates
-        formula_restricted = f"{self.outcome_variable} ~ 1"
+        formula_restricted = f"Q('{self.outcome_variable}') ~ 1"
         if len(varying_covars) > 0:
             formula_restricted += " + "
-            formula_restricted += " + ".join(varying_covars)
+            formula_restricted += " + ".join([f"Q('{v}')" for v in varying_covars])
 
         # Full Formula, adding the regression variable to the restricted formula
-        formula = formula_restricted + f" + {regression_variable}"
+        formula = formula_restricted + f" + Q('{regression_variable}"')'
 
         return formula_restricted, formula
 

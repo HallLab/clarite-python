@@ -129,13 +129,13 @@ class InteractionRegression(GLMRegression):
 
     def _get_formulas(self, i1, i2, varying_covars) -> Tuple[str, str]:
         # Restricted Formula - covariates and main effects
-        formula_restricted = f"{self.outcome_variable} ~ 1 + {i1} + {i2}"
+        formula_restricted = f"Q('{self.outcome_variable}') ~ 1 + Q('{i1}') + Q('{i2}')"
         if len(varying_covars) > 0:
             formula_restricted += " + "
-            formula_restricted += " + ".join(varying_covars)
+            formula_restricted += " + ".join([f"Q('{v}')" for v in varying_covars])
 
         # Full Formula - restricted plus interactions
-        formula = formula_restricted + f" + {i1}:{i2}"
+        formula = formula_restricted + f" + Q('{i1}'):Q('{i2}')"
 
         return formula_restricted, formula
 

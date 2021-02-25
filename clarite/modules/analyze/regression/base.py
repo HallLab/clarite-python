@@ -181,6 +181,9 @@ class Regression(metaclass=ABCMeta):
             )
         return varying_covars, warnings
 
+    def _encode_var_name(self, varname):
+        """Replace variable names"""
+
     @abstractmethod
     def run(self) -> None:
         """Run the regression"""
