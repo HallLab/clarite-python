@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 
 import click
 import numpy as np
@@ -109,7 +109,7 @@ class WeightedGLMRegression(GLMRegression):
     def _run_continuous_weighted(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Get data based on the formula
-        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
+        y, X = self._process_formula(formula, data)
 
         # Get survey design
         survey_design = self.survey_design_spec.get_survey_design(
@@ -169,7 +169,7 @@ class WeightedGLMRegression(GLMRegression):
         result = dict()
 
         # Regress full model
-        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
+        y, X = self._process_formula(formula, data)
         # Get survey design
         survey_design = self.survey_design_spec.get_survey_design(
             regression_variable, X.index
@@ -184,9 +184,7 @@ class WeightedGLMRegression(GLMRegression):
         model.fit(y=y, X=X)
 
         # Regress restricted model
-        y_restricted, X_restricted = patsy.dmatrices(
-            formula_restricted, data, return_type="dataframe", NA_action="drop"
-        )
+        y_restricted, X_restricted = self._process_formula(formula_restricted, data)
         model_restricted = SurveyModel(
             design=survey_design,
             model_class=sm.GLM,

@@ -4,9 +4,9 @@ from typing import Dict, List, Tuple, Optional
 import click
 import numpy as np
 import pandas as pd
+import patsy
 import scipy
 import statsmodels.api as sm
-import statsmodels.formula.api as smf
 
 from clarite.internal.utilities import _remove_empty_categories
 
@@ -140,9 +140,34 @@ class GLMRegression(Regression):
             formula_restricted += " + ".join([f"Q('{v}')" for v in varying_covars])
 
         # Full Formula, adding the regression variable to the restricted formula
-        formula = formula_restricted + f" + Q('{regression_variable}" ")"
+        formula = formula_restricted + f" + Q('{regression_variable}" "')"
 
         return formula_restricted, formula
+
+    @staticmethod
+    def _process_formula(formula, data) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Use patsy to process the formula with quoted variable names, but return with the original names"""
+        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
+
+        def fix_names(df):
+            new_names = []
+            for c in df.columns:
+                if c == "Intercept":
+                    new_names.append(c)
+                else:
+                    match = re.search(r"^Q\('(.*)'\)(\[T\..*\])?", c)
+                    if match is None:
+                        raise ValueError(f"Error processing quoted variable name: {c}")
+                    else:
+                        new_names.append(
+                            "".join([g for g in match.groups() if g is not None])
+                        )
+            df.columns = new_names
+            return df
+
+        y = fix_names(y)
+        X = fix_names(X)
+        return y, X
 
     def get_results(self) -> pd.DataFrame:
         """
@@ -186,7 +211,8 @@ class GLMRegression(Regression):
     def _run_continuous(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Regress
-        est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
+        y, X = self._process_formula(formula, data)
+        est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
         # Save results if the regression converged
         if est.converged:
             result["Converged"] = True
@@ -200,7 +226,8 @@ class GLMRegression(Regression):
     def _run_binary(self, data, regression_variable, formula) -> Dict:
         result = dict()
         # Regress
-        est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
+        y, X = self._process_formula(formula, data)
+        est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
         # Check convergence
         # Save results if the regression converged
         if est.converged:
@@ -229,8 +256,10 @@ class GLMRegression(Regression):
     def _run_categorical(self, data, formula, formula_restricted) -> Dict:
         result = dict()
         # Regress both models
-        est = smf.glm(formula, data=data, family=self.family).fit(use_t=self.use_t)
-        est_restricted = smf.glm(formula_restricted, data=data, family=self.family).fit(
+        y, X = self._process_formula(formula, data)
+        est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
+        y_restricted, X_restricted = self._process_formula(formula_restricted, data)
+        est_restricted = sm.GLM(y_restricted, X_restricted, family=self.family).fit(
             use_t=True
         )
         # Check convergence
