@@ -175,8 +175,23 @@ def test_recode_values(plantTraits):
     return
 
 
-def test_remove_outliers(plantTraits):
-    # TODO
+def test_remove_outliers_gaussian(plantTraits):
+    # Gaussian
+    result = modify.remove_outliers(plantTraits, method="gaussian", skip=["durflow"])
+    assert result.isna().sum()["longindex"] == plantTraits.isna().sum()["longindex"]
+    assert result.isna().sum()["durflow"] == plantTraits.isna().sum()["durflow"]
+    assert result.isna().sum()["vegaer"] == plantTraits.isna().sum()["vegaer"] + 12
+    return
+
+
+def test_remove_outliers_iqr(plantTraits):
+    # Inter-Quartile Range
+    result = modify.remove_outliers(
+        plantTraits, method="iqr", cutoff=1.5, skip=["durflow"]
+    )
+    assert result.isna().sum()["longindex"] == plantTraits.isna().sum()["longindex"]
+    assert result.isna().sum()["durflow"] == plantTraits.isna().sum()["durflow"]
+    assert result.isna().sum()["vegaer"] == plantTraits.isna().sum()["vegaer"] + 17
     return
 
 
