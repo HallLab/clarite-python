@@ -700,41 +700,33 @@ def remove_outliers(
             f"'{method}' is not a supported method for outlier removal - only 'gaussian' and 'iqr'."
         )
 
-    # Define outlier replacemet functions
-    def iqr_outliers(col):
-        q1 = col.quantile(0.25)
-        q3 = col.quantile(0.75)
-        iqr = abs(q3 - q1)
-        bottom = q1 - (iqr * cutoff)
-        top = q3 + (iqr * cutoff)
-        outliers_bottom = col < bottom
-        outliers_top = col > top
-        col.loc[outliers_bottom] = np.nan
-        col.loc[outliers_top] = np.nan
-        click.echo(
-            f"\tRemoved {outliers_bottom.sum():,} low and {outliers_top.sum():,} high IQR outliers "
-            f"from {col.name} (outside {bottom:,.2f} to {top:,.2f})"
-        )
-
-    def gaussian_outliers(col):
-        mean = col.mean()
-        std = col.std()
-        bottom = mean - (std * cutoff)
-        top = mean + (std * cutoff)
-        outliers_bottom = col < bottom
-        outliers_top = col > top
-        col.loc[outliers_bottom] = np.nan
-        col.loc[outliers_top] = np.nan
-        click.echo(
-            f"\tRemoved {outliers_bottom.sum()} low and {outliers_top.sum()} high gaussian outliers "
-            f"from {col.name} (outside {bottom:,.2f} to {top:,.2f})"
-        )
-
     # Remove outliers
-    if method == "iqr":
-        data.loc[:, columns] = data.loc[:, columns].apply(iqr_outliers)
-    elif method == "gaussian":
-        data.loc[:, columns] = data.loc[:, columns].apply(gaussian_outliers)
+    # Note: This could be faster by performing calculations on the entire dataset at once, but in practice this should
+    # be used on more of a limited basis, reviewing changes in each variable.
+    for col_name, process_col in columns.iteritems():
+        if not process_col:
+            continue
+        if method == "iqr":
+            q1 = data[col_name].quantile(0.25)
+            q3 = data[col_name].quantile(0.75)
+            iqr = abs(q3 - q1)
+            bottom = q1 - (iqr * cutoff)
+            top = q3 + (iqr * cutoff)
+        elif method == "gaussian":
+            mean = data[col_name].mean()
+            std = data[col_name].std()
+            bottom = mean - (std * cutoff)
+            top = mean + (std * cutoff)
+        # Replace with NA
+        outliers_bottom = data[col_name] < bottom
+        outliers_top = data[col_name] > top
+        data.loc[outliers_bottom, col_name] = np.nan
+        data.loc[outliers_top, col_name] = np.nan
+        # Log
+        click.echo(
+            f"\tRemoved {outliers_bottom.sum()} low and {outliers_top.sum()} high outliers "
+            f"from {col_name} (outside {bottom:,.2f} to {top:,.2f})"
+        )
 
     return data
 
