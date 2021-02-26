@@ -1,17 +1,17 @@
 import re
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List
 
 import click
 import numpy as np
 import scipy
 import pandas as pd
-import patsy
 import statsmodels.api as sm
 
 from .glm_regression import GLMRegression
 from clarite.modules.survey import SurveyDesignSpec, SurveyModel
 from clarite.internal.calculations import regTermTest
 from clarite.internal.utilities import _remove_empty_categories
+from ..utils import statsmodels_var_regex
 
 
 class WeightedGLMRegression(GLMRegression):
@@ -132,7 +132,7 @@ class WeightedGLMRegression(GLMRegression):
             rv_idx_list = [
                 i
                 for i, n in enumerate(X.columns)
-                if re.match(fr"^{regression_variable}(\[T\..*\])?$", n)
+                if re.match(statsmodels_var_regex(regression_variable), n)
             ]
             if len(rv_idx_list) != 1:
                 raise ValueError(

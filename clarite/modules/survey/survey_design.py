@@ -373,7 +373,7 @@ class SurveyDesignSpec:
         """
         if self.single_weight:
             has_weights = True
-            weight_name = (self.weight_name,)
+            weight_name = self.weight_name
             weight_values = self.weight_values
         elif self.multi_weight:
             has_weights = True

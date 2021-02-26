@@ -11,7 +11,7 @@ import statsmodels.api as sm
 from clarite.internal.utilities import _remove_empty_categories
 
 from .base import Regression
-from ..utils import fix_names
+from ..utils import fix_names, statsmodels_var_regex
 
 
 class GLMRegression(Regression):
@@ -221,8 +221,8 @@ class GLMRegression(Regression):
             rv_keys = [
                 k
                 for k in est.params.keys()
-                if re.match(fr"^{regression_variable}(\[T\..*\])?$", k)
-            ]  # <regression_variable>[T.<category>]
+                if re.match(statsmodels_var_regex(regression_variable), k)
+            ]
             try:
                 assert len(rv_keys) == 1
                 rv_key = rv_keys[0]
