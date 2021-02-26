@@ -732,9 +732,9 @@ def remove_outliers(
 
     # Remove outliers
     if method == "iqr":
-        data.loc[:, columns].apply(iqr_outliers)
+        data.loc[:, columns] = data.loc[:, columns].apply(iqr_outliers)
     elif method == "gaussian":
-        data.loc[:, columns].apply(gaussian_outliers)
+        data.loc[:, columns] = data.loc[:, columns].apply(gaussian_outliers)
 
     return data
 
