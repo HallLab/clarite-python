@@ -114,6 +114,7 @@ def add_corrected_pvalues(
 
 
 def fix_names(df):
+    QUOTED_NAME_REGEX = r"^Q\('(.*)'\)(\[T\..*\])?"
     new_names = []
     for c in df.columns:
         if c == "Intercept":
@@ -121,8 +122,8 @@ def fix_names(df):
         elif ":" in c:
             # Process interaction term
             term1, term2 = c.split(":")
-            match1 = re.search(r"^Q\('(.*)'\)(\[T\..*\])?", term1)
-            match2 = re.search(r"^Q\('(.*)'\)(\[T\..*\])?", term2)
+            match1 = re.search(QUOTED_NAME_REGEX, term1)
+            match2 = re.search(QUOTED_NAME_REGEX, term2)
             if match1 is not None and match2 is not None:
                 new_names.append(
                     f"{''.join([g for g in match1.groups() if g is not None])}:{''.join([g for g in match2.groups() if g is not None])}"
@@ -132,10 +133,19 @@ def fix_names(df):
                     f"Error processing quoted variable names in interaction term: {c}"
                 )
         else:
-            match = re.search(r"^Q\('(.*)'\)(\[T\..*\])?", c)
+            match = re.search(QUOTED_NAME_REGEX, c)
             if match is None:
                 raise ValueError(f"Error processing quoted variable name: {c}")
             else:
                 new_names.append("".join([g for g in match.groups() if g is not None]))
     df.columns = new_names
     return df
+
+
+def statsmodels_var_regex(variable_name) -> str:
+    """
+    Generate a regex string that can find all statsmodels parameter names associated with the variable
+    1) Categoricals may have the value encoded at the end (for example, Male[T.1.0])
+    2) Symbols in the variable name must be accounted for: (, ), -, +, etc
+    """
+    return fr"^{re.escape(variable_name)}(\[T\..*\])?$"
