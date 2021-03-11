@@ -44,6 +44,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     description="CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures",
     long_description=readme,
+    long_description_content_type='text/x-rst',
     author="Hall Lab",
     author_email="mah546@psu.edu",
     url="https://github.com/HallLab/clarite-python",
