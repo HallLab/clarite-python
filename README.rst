@@ -1,7 +1,7 @@
 .. raw:: html
 
     <div align="center">
-    <img src="docs/source/_static/clarite_logo.png" alt="clarite logo"/>
+    <img src="https://raw.githubusercontent.com/HallLab/clarite-python/master/docs/source/_static/clarite_logo.png" alt="clarite logo"/>
     </div>
 
     <br/>
