@@ -64,7 +64,7 @@ setup(
         ]
     },
     install_requires=requirements,
-    license="BSD License (BSD-3-Clause)",
+    license="BSD-3-Clause",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",

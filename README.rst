@@ -25,7 +25,7 @@
    :target: https://codecov.io/gh/HallLab/clarite-python/
    :alt: Test coverage
 
-.. image:: https://img.shields.io/pypi/l/clarite-python?style=flat-square
+.. image:: https://img.shields.io/pypi/l/clarite?style=flat-square
    :target: https://opensource.org/licenses/BSD-3-Clause
    :alt: License
 
