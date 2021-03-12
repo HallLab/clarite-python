@@ -10,7 +10,7 @@ on:
 
 jobs:
 
-  CI Pipeline:
+  CI_Pipeline:
     runs-on: ubuntu-latest
 
     env:
