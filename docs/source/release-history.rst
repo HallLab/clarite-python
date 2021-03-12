@@ -2,7 +2,29 @@
 Release History
 ===============
 
-v1.1.1 (2020-06-12)
+v1.2.0 (2021-03-12)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Add clariate.analyze.interaction_test
+* Improved logging in r_survey ewas
+* Refactored lots of regression and ewas code to make it more efficient and provide more validation of input data, including better handling of variable names with symbols/numbers
+* Corrected instructions on installing R packages with Conda
+* Improved documentation of Regression classes
+* Manhattan plots have a "return_figure" option
+
+Fixes
+^^^^^
+* r_survey regression no longer uses an LRT for binary variables in order to make it concordant with regression in python
+* outlier_removal is now working as intended
+
+Tests
+^^^^^
+* Added a test for outlier removal
+
+
+v1.1.1 (2020-09-12)
 -------------------
 
 Fixes
