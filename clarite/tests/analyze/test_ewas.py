@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from pandas._testing import assert_frame_equal
 
 import clarite
 
@@ -1262,3 +1263,61 @@ def test_nhanes_subset_singleclusters():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+
+
+def test_report_betas(data_NHANES):
+    # Process data
+    df = clarite.modify.colfilter(
+        data_NHANES, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
+    )
+    # Get Results
+    normal_result = clarite.analyze.ewas(
+        outcome="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df
+    )
+    betas_result = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        report_categorical_betas=True,
+    )
+    # Ensure including betas worked
+    assert len(betas_result) == len(df["race"].cat.categories) - 1
+    # Ensure including betas did not change other values
+    beta_sub = betas_result.groupby(level=[0, 1]).first()
+    beta_sub[["Beta", "SE", "Beta_pvalue"]] = np.nan
+    assert_frame_equal(beta_sub, normal_result)
+
+
+def test_report_betas_fulldesign(data_NHANES):
+    design = clarite.survey.SurveyDesignSpec(
+        data_NHANES,
+        weights="WTMEC2YR",
+        cluster="SDMVPSU",
+        strata="SDMVSTRA",
+        fpc=None,
+        nest=True,
+    )
+    # Process data
+    df = clarite.modify.colfilter(
+        data_NHANES, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
+    )
+    # Get Results
+    normal_result = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        survey_design_spec=design,
+    )
+    betas_result = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        report_categorical_betas=True,
+        survey_design_spec=design,
+    )
+    # Ensure including betas worked
+    assert len(betas_result) == len(df["race"].cat.categories) - 1
+    # Ensure including betas did not change other values
+    beta_sub = betas_result.groupby(level=[0, 1]).first()
+    beta_sub[["Beta", "SE", "Beta_pvalue"]] = np.nan
+    assert_frame_equal(beta_sub, normal_result)

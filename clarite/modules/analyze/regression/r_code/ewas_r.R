@@ -59,7 +59,7 @@ regress_cont <- function(data, varying_covariates, outcome, var_name, regression
         Converged = TRUE,
         Beta = var_summary$coefficients[2,1],
         SE = var_summary$coefficients[2,2],
-        Variable_pvalue = var_summary$coefficients[2,4],
+        Beta_pvalue = var_summary$coefficients[2,4],
         pval = var_summary$coefficients[2,4]
       ))
     }
@@ -111,7 +111,7 @@ regress_cont_survey <- function(data, varying_covariates, outcome, var_name, reg
         Converged = TRUE,
         Beta = var_summary$coefficients[2,1],
         SE = var_summary$coefficients[2,2],
-        Variable_pvalue = 1.0,
+        Beta_pvalue = 1.0,
         pval = 1.0
       ))
     } else {
@@ -119,7 +119,7 @@ regress_cont_survey <- function(data, varying_covariates, outcome, var_name, reg
         Converged = TRUE,
         Beta = var_summary$coefficients[2,1],
         SE = var_summary$coefficients[2,2],
-        Variable_pvalue = var_summary$coefficients[2,4],
+        Beta_pvalue = var_summary$coefficients[2,4],
         pval = var_summary$coefficients[2,4]
       ))
     }
@@ -509,7 +509,7 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
                                Converged = logical(n),
                                Beta = numeric(n),
                                SE = numeric(n),
-                               Variable_pvalue = numeric(n),
+                               Beta_pvalue = numeric(n),
                                LRT_pvalue = numeric(n),
                                Diff_AIC = numeric(n),
                                pval = numeric(n),

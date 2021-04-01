@@ -106,7 +106,7 @@ class RSurveyRegression(Regression):
         pd.DataFrame
             Results DataFrame with these columns:
             ['Variable', 'Outcome', 'Variable_type', 'N', 'Converged',
-            'Beta', 'SE', 'Variable_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue', Weight]
+            'Beta', 'SE', 'Beta_pvalue', 'LRT_pvalue', 'Diff_AIC', 'pvalue', Weight]
         """
         if not self.run_complete:
             raise ValueError(
@@ -123,7 +123,7 @@ class RSurveyRegression(Regression):
             "N",
             "Beta",
             "SE",
-            "Variable_pvalue",
+            "Beta_pvalue",
             "LRT_pvalue",
             "Diff_AIC",
             "pvalue",
@@ -301,7 +301,7 @@ class RSurveyRegression(Regression):
         float_cols = [
             "Beta",
             "SE",
-            "Variable_pvalue",
+            "Beta_pvalue",
             "LRT_pvalue",
             "Diff_AIC",
             "pvalue",

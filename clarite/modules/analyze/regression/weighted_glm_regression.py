@@ -53,6 +53,11 @@ class WeightedGLMRegression(GLMRegression):
     min_n:
         Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
         Defaults to 200
+    report_betas: boolean
+        False by default.
+          If True, the results will contain one row for each categorical value (other than the reference category) and
+          will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of
+          terms increases with the number of categories.
     cov_method:
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
         Warning: `jackknife` is untested and may not be accurate
@@ -66,6 +71,7 @@ class WeightedGLMRegression(GLMRegression):
         survey_design_spec: Optional[SurveyDesignSpec] = None,
         min_n: int = 200,
         cov_method: Optional[str] = "stata",
+        report_categorical_betas: bool = False,
     ):
         # survey_design_spec should actually not be None, but is a keyword for convenience
         if survey_design_spec is None:
@@ -77,6 +83,7 @@ class WeightedGLMRegression(GLMRegression):
             outcome_variable=outcome_variable,
             covariates=covariates,
             min_n=min_n,
+            report_categorical_betas=report_categorical_betas,
         )
 
         # Custom init involving kwargs passed to this regression
@@ -100,7 +107,7 @@ class WeightedGLMRegression(GLMRegression):
             "N": np.nan,
             "Beta": np.nan,
             "SE": np.nan,
-            "Variable_pvalue": np.nan,
+            "Beta_pvalue": np.nan,
             "LRT_pvalue": np.nan,
             "Diff_AIC": np.nan,
             "pvalue": np.nan,
@@ -150,11 +157,11 @@ class WeightedGLMRegression(GLMRegression):
             # Change SE to infinite and pvalue to 1 when dof < 1
             if dof < 1:
                 result["SE"] = np.inf
-                result["Variable_pvalue"] = 1.0
+                result["Beta_pvalue"] = 1.0
                 result["pvalue"] = 1.0
             else:
-                result["Variable_pvalue"] = scipy.stats.t.sf(tval, df=dof) * 2
-                result["pvalue"] = result["Variable_pvalue"]
+                result["Beta_pvalue"] = scipy.stats.t.sf(tval, df=dof) * 2
+                result["pvalue"] = result["Beta_pvalue"]
 
         return result
 
@@ -205,9 +212,38 @@ class WeightedGLMRegression(GLMRegression):
                 X_names=X.columns,
                 var_name=regression_variable,
             )
-            result["LRT_pvalue"] = lr_pvalue
-            result["pvalue"] = result["LRT_pvalue"]
             # Don't report AIC values for weighted categorical analysis since they may be incorrect
+            if self.report_categorical_betas:
+                rv_idx_list = [
+                    i
+                    for i, n in enumerate(X.columns)
+                    if re.match(statsmodels_var_regex(regression_variable), n)
+                ]
+                for rv_idx in rv_idx_list:
+                    beta = model.params[rv_idx]
+                    se = model.stderr[rv_idx]
+                    # Calculate pvalue using a Two-sided t-test
+                    tval = np.abs(
+                        beta / se
+                    )  # T statistic is the absolute value of beta / SE
+                    dof = survey_design.get_dof(X)
+                    # Change SE to infinite and pvalue to 1 when dof < 1
+                    if dof < 1:
+                        se = np.inf
+                        beta_pval = 1.0
+                    else:
+                        beta_pval = scipy.stats.t.sf(tval, df=dof) * 2
+                    yield {
+                        "Converged": True,
+                        "LRT_pvalue": lr_pvalue,
+                        "pvalue": lr_pvalue,
+                        "Category": X.columns[rv_idx],
+                        "Beta": beta,
+                        "SE": se,
+                        "Beta_pvalue": beta_pval,
+                    }
+            else:
+                yield {"Converged": True, "LRT_pvalue": lr_pvalue, "pvalue": lr_pvalue}
 
         return result
 
@@ -221,9 +257,6 @@ class WeightedGLMRegression(GLMRegression):
             )
             # TODO: Parallelize this loop
             for rv in rv_list:
-                # Initialize result with placeholders
-                result = self.get_default_result_dict(rv)
-                result["Variable_type"] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
                     # Take a copy of the data (ignoring other RVs) and create a keep_rows mask
@@ -238,7 +271,6 @@ class WeightedGLMRegression(GLMRegression):
                     ) = self.survey_design_spec.check_missing_weights(data, rv)
                     if warning is not None:
                         self.warnings[rv].append(warning)
-                    result["Weight"] = weight_name
 
                     # Get complete case mask
                     complete_case_mask = (
@@ -256,7 +288,6 @@ class WeightedGLMRegression(GLMRegression):
 
                     # Filter by min_n
                     N = (restricted_rows).sum()
-                    result["N"] = N
                     if N < self.min_n:
                         raise ValueError(
                             f"too few complete observations (min_n filter: {N} < {self.min_n})"
@@ -293,22 +324,35 @@ class WeightedGLMRegression(GLMRegression):
 
                     # Run Regression
                     if rv_type == "continuous":
+                        result = self.get_default_result_dict(rv)
+                        result["Variable_type"] = rv_type
+                        result["Weight"] = weight_name
+                        result["N"] = N
                         result.update(self._run_continuous_weighted(data, rv, formula))
+                        self.results.append(result)
                     elif (
                         rv_type == "binary"
                     ):  # The same calculation as for continuous variables
+                        result = self.get_default_result_dict(rv)
+                        result["Variable_type"] = rv_type
+                        result["Weight"] = weight_name
+                        result["N"] = N
                         result.update(self._run_continuous_weighted(data, rv, formula))
+                        self.results.append(result)
                     elif rv_type == "categorical":
-                        result.update(
-                            self._run_categorical_weighted(
-                                data, rv, formula, formula_restricted
-                            )
-                        )
+                        for r in self._run_categorical_weighted(
+                            data, rv, formula, formula_restricted
+                        ):
+                            result = self.get_default_result_dict(rv)
+                            result["Variable_type"] = rv_type
+                            result["Weight"] = weight_name
+                            result["N"] = N
+                            result.update(r)
+                            self.results.append(result)
 
                 except Exception as e:
                     self.errors[rv] = str(e)
-
-                self.results.append(result)
+                    self.results.append(result)
 
             click.echo(
                 click.style(
