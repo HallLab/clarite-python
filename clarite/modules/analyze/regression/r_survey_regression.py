@@ -11,24 +11,29 @@ from ...survey import SurveyDesignSpec
 
 class RSurveyRegression(Regression):
     """
-    Run regressions by calling R from Python
-    When a SurveyDesignSpec is provided, the R *survey* library is used.
-    Results should match those run with either GLMRegression or WeightedGLMRegression.
+      Run regressions by calling R from Python
+      When a SurveyDesignSpec is provided, the R *survey* library is used.
+      Results should match those run with either GLMRegression or WeightedGLMRegression.
 
-    Parameters
-    ----------
-    data:
-      The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
-    outcome_variable:
-      The variable to be used as the output (y) of the regression
-    covariates:
-      The variables to be used as covariates. Any variables in the DataFrames not listed as covariates are regressed.
-    survey_design_spec:
-        A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
-        Use None if unweighted regression is desired.
-    min-n:
-      Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
-      Defaults to 200
+      Parameters
+      ----------
+      data:
+        The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
+      outcome_variable:
+        The variable to be used as the output (y) of the regression
+      covariates:
+        The variables to be used as covariates. Any variables in the DataFrames not listed as covariates are regressed.
+      survey_design_spec:
+          A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
+          Use None if unweighted regression is desired.
+      min-n:
+        Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
+        Defaults to 200
+    report_betas: boolean
+      False by default.
+        If True, the results will contain one row for each categorical value (other than the reference category) and
+        will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of
+        terms increases with the number of categories.
     """
 
     def __init__(
@@ -38,6 +43,7 @@ class RSurveyRegression(Regression):
         covariates: Optional[List[str]],
         survey_design_spec: Optional[SurveyDesignSpec] = None,
         min_n: int = 200,
+        report_categorical_betas: bool = False,
     ):
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
@@ -49,6 +55,7 @@ class RSurveyRegression(Regression):
         # Custom init involving kwargs passed to this regression
         self.min_n = min_n
         self.survey_design_spec = survey_design_spec
+        self.report_categorical_betas = report_categorical_betas
 
         # Note this runs the entire regression in R, returning a DataFrame instead of a dict.
         # Therefore, store the dataframe in self.result instead of a dict in self.results
@@ -113,7 +120,14 @@ class RSurveyRegression(Regression):
                 "No results: either the 'run' method was not called, or there was a problem running"
             )
 
-        result = self.result.set_index(["Variable", "Outcome"]).sort_values("pvalue")
+        if self.report_categorical_betas:
+            result = self.result.set_index(
+                ["Variable", "Outcome", "Category"]
+            ).sort_values(["pvalue", "Beta_pvalue"])
+        else:
+            result = self.result.set_index(["Variable", "Outcome"]).sort_values(
+                ["pvalue"]
+            )
 
         # Order columns
         column_order = [
@@ -208,6 +222,7 @@ class RSurveyRegression(Regression):
                     regression_family=self.family,
                     allowed_nonvarying=allowed_nonvarying,
                     min_n=self.min_n,
+                    report_categorical_betas=self.report_categorical_betas,
                 )
         else:
             # Merge weights into data and get weight name(s) (Note 'data' becomes a local variable)
@@ -289,6 +304,7 @@ class RSurveyRegression(Regression):
                     regression_family=self.family,
                     allowed_nonvarying=allowed_nonvarying,
                     min_n=self.min_n,
+                    report_categorical_betas=self.report_categorical_betas,
                     weights=weights,
                     subset=self.survey_design_spec.subset_array,
                     drop_unweighted=self.survey_design_spec.drop_unweighted,

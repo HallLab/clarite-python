@@ -70,8 +70,8 @@ class WeightedGLMRegression(GLMRegression):
         covariates: Optional[List[str]],
         survey_design_spec: Optional[SurveyDesignSpec] = None,
         min_n: int = 200,
-        cov_method: Optional[str] = "stata",
         report_categorical_betas: bool = False,
+        cov_method: Optional[str] = "stata",
     ):
         # survey_design_spec should actually not be None, but is a keyword for convenience
         if survey_design_spec is None:

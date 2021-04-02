@@ -130,7 +130,6 @@ regress_cont_survey <- function(data, varying_covariates, outcome, var_name, reg
 
 ###Categorical###
 regress_cat <- function(data, varying_covariates, outcome, var_name, regression_family){
-
   # Create a regression formula and a restricted regression formula
   if(length(varying_covariates)>0){
     fmla <- paste(quote_name(outcome), "~", quote_name(var_name), "+", paste(lapply(varying_covariates, quote_name), collapse="+"), sep="")
@@ -156,12 +155,23 @@ regress_cat <- function(data, varying_covariates, outcome, var_name, regression_
     # Get the LRT using anova
     lrt <- list(p=NA)  # Start with NA for p in case anova fails
     tryCatch(lrt <- anova(var_result, restricted_result, test = "LRT"), error=function(e) warn_on_e(var_name, e))
-    return(data.frame(
+    result <- data.frame(
       Converged = var_result$converged,
       LRT_pvalue = lrt$`Pr(>Chi)`[2],
       Diff_AIC = var_result$aic - restricted_result$aic,
       pval = lrt$`Pr(>Chi)`[2]
-    ))
+    )
+    # Expand to multiple rows if reporting betas
+    if(report_categorical_betas){
+      vars <- setdiff(names(var_result$coefficients), names(restricted_result$coefficients))
+      var_summary <- summary(var_result)
+      result <- result[rep(1, length(vars)), ]
+      result$Category <- vars
+      result$Beta <- var_summary$coefficients[vars, 1]
+      result$SE <- var_summary$coefficients[vars, 2]
+      result$Beta_pvalue <- var_summary$coefficients[vars, 4]
+    }
+    return(result)
   } else {
     return(NULL)
   }
@@ -170,7 +180,7 @@ regress_cat <- function(data, varying_covariates, outcome, var_name, regression_
 
 regress_cat_survey <- function(data, varying_covariates, outcome, var_name, regression_family,
                                weight_values, strata_values, fpc_values, id_values, subset_array, ...) {
-
+  print(report_categorical_betas)
   # Create survey design
   if(is.null(id_values)){
     survey_design <- survey::svydesign(ids = ~1,
@@ -385,9 +395,14 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
 ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
                  bin_covars=NULL, cat_covars=NULL, cont_covars=NULL,
                  regression_family="gaussian", allowed_nonvarying=NULL, min_n=200, weights=NULL,
-                 ids=NULL, strata=NULL, fpc=NULL, subset_array=NULL, ...){
+                 ids=NULL, strata=NULL, fpc=NULL, subset_array=NULL,
+                 report_categorical_betas=FALSE, ...){
   # Record start time
   t1 <- Sys.time()
+
+  # Record global options
+  report_categorical_betas <<- report_categorical_betas
+  print(report_categorical_betas)
 
   # Validate inputs
   #################
@@ -502,7 +517,11 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   #################
 
   # Create a placeholder dataframe for results, anything not updated will be NA
-  n <- length(bin_vars) + length(cat_vars) + length(cont_vars)
+  if(report_categorical_betas){
+    n <- length(bin_vars) + length(cont_vars) + sum(sapply(cat_vars, function(v) length(table(d[v]))-1))
+  } else {
+    n <- length(bin_vars) + length(cat_vars) + length(cont_vars)
+  }
   ewas_result_df <- data.frame(Variable = character(n),
                                Variable_type = character(n),
                                N = numeric(n),
@@ -523,8 +542,6 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   # Process binary variables, if any
   print(paste("Processing ", length(bin_vars), " binary variables", sep=""))
   for(var_name in bin_vars){
-    # Get new row in the results
-    i <- i + 1
     # Update var name and outcome
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$outcome[i] <- y
@@ -542,27 +559,26 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   # Process categorical variables, if any
   print(paste("Processing ", length(cat_vars), " categorical variables", sep=""))
   for(var_name in cat_vars){
-    # Get new row in the results
-    i <- i + 1
-    # Update var name and outcome
-    ewas_result_df$Variable[i] <- var_name
-    ewas_result_df$outcome[i] <- y
-    ewas_result_df$Variable_type[i] <- "categorical"
-
     result <- regress(d, y, var_name, covariates, min_n, allowed_nonvarying, regression_family, var_type="cat",
                       use_survey, single_weight, weights, strata, fpc, ids, subset_array, ...)
 
     # Save results
     if(!is.null(result)){
-      ewas_result_df[i, colnames(result)] <- result
+      for(ridx in 1:nrow(result)){
+        i <- i + 1
+        # Update var name and outcome
+        ewas_result_df$Variable[i] <- var_name
+        ewas_result_df$outcome[i] <- y
+        ewas_result_df$Variable_type[i] <- "categorical"
+        # Update results
+        ewas_result_df[i, colnames(result)] <- result[ridx,]
+      }
     }
   }
 
   # Process continuous variables, if any
   print(paste("Processing ", length(cont_vars), " continuous variables", sep=""))
   for(var_name in cont_vars){
-    # Get new row in the results
-    i <- i + 1
     # Update var name and outcome
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$outcome[i] <- y
@@ -585,7 +601,12 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   }
 
   # Sort by pval
-  ewas_result_df <- ewas_result_df[order(ewas_result_df$pval),]
+  # TODO: Sort differently
+  if(report_categorical_betas){
+    ewas_result_df <- ewas_result_df[order(ewas_result_df$pval, ewas_result_df$Beta_pvalue),]
+  } else {
+    ewas_result_df <- ewas_result_df[order(ewas_result_df$pval),]
+  }
 
   # Replace NA with 'None' for correct conversion back to Pandas format
   ewas_result_df[is.na(ewas_result_df)]='None'
