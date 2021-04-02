@@ -426,7 +426,6 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
 
   # Record global options
   report_categorical_betas <<- report_categorical_betas
-  print(report_categorical_betas)
 
   # Validate inputs
   #################
@@ -541,7 +540,7 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   #################
 
   # Create a placeholder dataframe for results, anything not updated will be NA
-  if(report_categorical_betas){
+  if(report_categorical_betas & length(cat_vars)>0){
     n <- length(bin_vars) + length(cont_vars) + sum(sapply(cat_vars, function(v) length(table(d[v]))-1))
   } else {
     n <- length(bin_vars) + length(cat_vars) + length(cont_vars)
@@ -567,6 +566,7 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   print(paste("Processing ", length(bin_vars), " binary variables", sep=""))
   for(var_name in bin_vars){
     # Update var name and outcome
+    i <- i + 1
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$outcome[i] <- y
     ewas_result_df$Variable_type[i] <- "binary"
@@ -604,6 +604,7 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
   print(paste("Processing ", length(cont_vars), " continuous variables", sep=""))
   for(var_name in cont_vars){
     # Update var name and outcome
+    i <- i + 1
     ewas_result_df$Variable[i] <- var_name
     ewas_result_df$outcome[i] <- y
     ewas_result_df$Variable_type[i] <- "continuous"
