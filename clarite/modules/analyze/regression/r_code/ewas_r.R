@@ -165,11 +165,24 @@ regress_cat <- function(data, varying_covariates, outcome, var_name, regression_
     if(report_categorical_betas){
       vars <- setdiff(names(var_result$coefficients), names(restricted_result$coefficients))
       var_summary <- summary(var_result)
+      num_coeff_cols <- length(var_summary$coefficients)/nrow(var_summary$coefficients)
+      if (num_coeff_cols < 2){
+        # Assume non-convergence if no p values are generated
+        return(NULL)
+      } else if (num_coeff_cols == 2) {
+          Beta = var_summary$coefficients[vars,1]
+          SE = var_summary$coefficients[vars,2]
+          Beta_pvalue = 1.0
+      } else {
+          Beta = var_summary$coefficients[vars,1]
+          SE = var_summary$coefficients[vars,2]
+          Beta_pvalue = var_summary$coefficients[vars,4]
+      }
       result <- result[rep(1, length(vars)), ]
       result$Category <- vars
-      result$Beta <- var_summary$coefficients[vars, 1]
-      result$SE <- var_summary$coefficients[vars, 2]
-      result$Beta_pvalue <- var_summary$coefficients[vars, 4]
+      result$Beta <- Beta
+      result$SE <- SE
+      result$Beta_pvalue <- Beta_pvalue
     }
     return(result)
   } else {
@@ -229,11 +242,22 @@ regress_cat_survey <- function(data, varying_covariates, outcome, var_name, regr
     # Get the LRT using anova
     lrt <- list(p=NA)  # Start with NA for p in case anova fails
     tryCatch(lrt <- anova(var_result, restricted_result, method = "LRT"), error=function(e) warn_on_e(var_name, e))
-    return(data.frame(
+    result <- data.frame(
       Converged = var_result$converged,
       LRT_pvalue = lrt$p,
       pval = lrt$p
-    ))
+    )
+    # Expand to multiple rows if reporting betas
+    if(report_categorical_betas){
+      vars <- setdiff(names(var_result$coefficients), names(restricted_result$coefficients))
+      var_summary <- summary(var_result)
+      result <- result[rep(1, length(vars)), ]
+      result$Category <- vars
+      result$Beta <- var_summary$coefficients[vars, 1]
+      result$SE <- var_summary$coefficients[vars, 2]
+      result$Beta_pvalue <- var_summary$coefficients[vars, 4]
+    }
+    return(result)
   } else {
     return(NULL)
   }

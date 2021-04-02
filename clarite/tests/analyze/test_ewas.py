@@ -1341,16 +1341,35 @@ def test_report_betas_fulldesign(data_NHANES):
         data=df,
         survey_design_spec=design,
     )
-    betas_result = clarite.analyze.ewas(
+    betas_result_python = clarite.analyze.ewas(
         outcome="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         report_categorical_betas=True,
         survey_design_spec=design,
     )
+    betas_result_r = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        report_categorical_betas=True,
+        survey_design_spec=design,
+        regression_kind="r_survey",
+    )
     # Ensure including betas worked
-    assert len(betas_result) == len(df["race"].cat.categories) - 1
+    assert len(betas_result_python) == len(df["race"].cat.categories) - 1
+    assert len(betas_result_python) == len(betas_result_r)
     # Ensure including betas did not change other values
-    beta_sub = betas_result.groupby(level=[0, 1]).first()
+    beta_sub = betas_result_python.groupby(level=[0, 1]).first()
     beta_sub[["Beta", "SE", "Beta_pvalue"]] = np.nan
     assert_frame_equal(beta_sub, normal_result)
+    # Ensure python and R results match
+    betas_result_python = python_cat_to_r_cat(betas_result_python)
+    assert_frame_equal(
+        betas_result_python,
+        betas_result_r,
+        check_dtype=False,
+        check_exact=False,
+        atol=0,
+        rtol=1e-4,
+    )
