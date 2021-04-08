@@ -45,6 +45,11 @@ class GLMRegression(Regression):
     min_n:
         Minimum number of complete-case observations (no NA values for outcome, covariates, or variable)
         Defaults to 200
+    report_categorical_betas: boolean
+        False by default.
+          If True, the results will contain one row for each categorical value (other than the reference category) and
+          will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of
+          terms increases with the number of categories.
     """
 
     def __init__(
@@ -53,6 +58,7 @@ class GLMRegression(Regression):
         outcome_variable: str,
         covariates: Optional[List[str]] = None,
         min_n: int = 200,
+        report_categorical_betas: bool = False,
     ):
         """
         Parameters
@@ -64,6 +70,7 @@ class GLMRegression(Regression):
         Kwargs
         ______
         min_n - minimum number of observations (after discarding any with NA)
+        report_categorical_betas - whether or not to report betas for individual categories
         """
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
@@ -74,6 +81,7 @@ class GLMRegression(Regression):
 
         # Custom init involving kwargs passed to this regression
         self.min_n = min_n
+        self.report_categorical_betas = report_categorical_betas
 
         # Ensure the data output type is compatible
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
@@ -126,7 +134,7 @@ class GLMRegression(Regression):
             "N": np.nan,
             "Beta": np.nan,
             "SE": np.nan,
-            "Variable_pvalue": np.nan,
+            "Beta_pvalue": np.nan,
             "LRT_pvalue": np.nan,
             "Diff_AIC": np.nan,
             "pvalue": np.nan,
@@ -170,7 +178,12 @@ class GLMRegression(Regression):
 
         # Add "Outcome" and set the index
         result["Outcome"] = self.outcome_variable
-        result = result.set_index(["Variable", "Outcome"])
+        if self.report_categorical_betas:
+            result = result.set_index(["Variable", "Outcome", "Category"]).sort_values(
+                ["pvalue", "Beta_pvalue"]
+            )
+        else:
+            result = result.set_index(["Variable", "Outcome"]).sort_values(["pvalue"])
 
         # Order columns
         column_order = [
@@ -180,15 +193,12 @@ class GLMRegression(Regression):
             "N",
             "Beta",
             "SE",
-            "Variable_pvalue",
+            "Beta_pvalue",
             "LRT_pvalue",
             "Diff_AIC",
             "pvalue",
         ]
         result = result[column_order]
-
-        # Sort rows
-        result = result.sort_values("pvalue")
 
         return result
 
@@ -202,8 +212,8 @@ class GLMRegression(Regression):
             result["Converged"] = True
             result["Beta"] = est.params[regression_variable]
             result["SE"] = est.bse[regression_variable]
-            result["Variable_pvalue"] = est.pvalues[regression_variable]
-            result["pvalue"] = result["Variable_pvalue"]
+            result["Beta_pvalue"] = est.pvalues[regression_variable]
+            result["pvalue"] = result["Beta_pvalue"]
 
         return result
 
@@ -232,8 +242,8 @@ class GLMRegression(Regression):
                 )
             result["Beta"] = est.params[rv_key]
             result["SE"] = est.bse[rv_key]
-            result["Variable_pvalue"] = est.pvalues[rv_key]
-            result["pvalue"] = result["Variable_pvalue"]
+            result["Beta_pvalue"] = est.pvalues[rv_key]
+            result["pvalue"] = result["Beta_pvalue"]
 
         return result
 
@@ -248,16 +258,33 @@ class GLMRegression(Regression):
         )
         # Check convergence
         if est.converged & est_restricted.converged:
-            result["Converged"] = True
             # Calculate Results
             lrdf = est_restricted.df_resid - est.df_resid
             lrstat = -2 * (est_restricted.llf - est.llf)
             lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
-            result["LRT_pvalue"] = lr_pvalue
-            result["pvalue"] = result["LRT_pvalue"]
-            result["Diff_AIC"] = est.aic - est_restricted.aic
-
-        return result
+            if self.report_categorical_betas:
+                param_names = set(est.bse.index) - set(est_restricted.bse.index)
+                # The restricted model shouldn't have extra terms, unless there is some case we have overlooked
+                assert len(set(est_restricted.bse.index) - set(est.bse.index)) == 0
+                for param_name in param_names:
+                    yield {
+                        "Converged": True,
+                        "Category": param_name,
+                        "Beta": est.params[param_name],
+                        "SE": est.bse[param_name],
+                        "Beta_pvalue": est.pvalues[param_name],
+                        "LRT_pvalue": lr_pvalue,
+                        "pvalue": lr_pvalue,
+                        "Diff_AIC": est.aic - est_restricted.aic,
+                    }
+            else:
+                # Only return the LRT result
+                yield {
+                    "Converged": True,
+                    "LRT_pvalue": lr_pvalue,
+                    "pvalue": lr_pvalue,
+                    "Diff_AIC": est.aic - est_restricted.aic,
+                }
 
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
@@ -269,9 +296,6 @@ class GLMRegression(Regression):
             )
             # TODO: Parallelize this loop
             for rv in rv_list:
-                # Initialize result with placeholders
-                result = self.get_default_result_dict(rv)
-                result["Variable_type"] = rv_type
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
                     # Take a copy of the data (ignoring other RVs)
@@ -285,7 +309,6 @@ class GLMRegression(Regression):
                         .any(axis=1)
                     )
                     N = complete_case_mask.sum()
-                    result["N"] = N
                     if N < self.min_n:
                         raise ValueError(
                             f"too few complete observations (min_n filter: {N} < {self.min_n})"
@@ -315,20 +338,34 @@ class GLMRegression(Regression):
 
                     # Run Regression
                     if rv_type == "continuous":
+                        result = self.get_default_result_dict(rv)
+                        result["Variable_type"] = rv_type
+                        result["N"] = N
                         result.update(self._run_continuous(data, rv, formula))
+                        self.results.append(result)
                     elif (
                         rv_type == "binary"
                     ):  # Essentially same as continuous, except string used to key the results
+                        # Initialize result with placeholders
+                        result = self.get_default_result_dict(rv)
+                        result["Variable_type"] = rv_type
+                        result["N"] = N
                         result.update(self._run_binary(data, rv, formula))
+                        self.results.append(result)
                     elif rv_type == "categorical":
-                        result.update(
-                            self._run_categorical(data, formula, formula_restricted)
-                        )
+                        for r in self._run_categorical(
+                            data, formula, formula_restricted
+                        ):
+                            # Initialize result with placeholders
+                            result = self.get_default_result_dict(rv)
+                            result["Variable_type"] = rv_type
+                            result["N"] = N
+                            result.update(r)
+                            self.results.append(result)
 
                 except Exception as e:
                     self.errors[rv] = str(e)
-
-                self.results.append(result)
+                    self.results.append(result)
 
             click.echo(
                 click.style(

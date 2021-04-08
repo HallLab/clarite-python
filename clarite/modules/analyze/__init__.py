@@ -28,7 +28,7 @@ result_columns = [
     "N",
     "Beta",
     "SE",
-    "Variable_pvalue",
+    "Beta_pvalue",
     "LRT_pvalue",
     "Diff_AIC",
     "pvalue",
