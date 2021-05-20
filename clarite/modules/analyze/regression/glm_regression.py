@@ -114,7 +114,7 @@ class GLMRegression(Regression):
             )
 
         # Finish updating description
-        self.description += f"\nRegressing {len(self.results):,} variables"
+        self.description += f"\nRegressing {sum([len(v) for v in self.regression_variables.values()]):,} variables"
         for k, v in self.regression_variables.items():
             self.description += f"\n\t{len(v):,} {k} variables"
 
