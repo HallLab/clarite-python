@@ -1,7 +1,9 @@
+import re
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from pandas._testing import assert_frame_equal
 
 import clarite
 
@@ -18,6 +20,20 @@ def load_surveylib_results(filename):
         ["Beta", "SE", "Diff_AIC", "pvalue", "N"]
     ].astype("float64")
     return r_result
+
+
+def python_cat_to_r_cat(python_df):
+    """
+    Return the same dataframe with the 3rd level of the multiindex ("Category") updated
+    so that the python-style name (e.g. race[T.3]) is converted to r-style (e.g. race3)
+    """
+    re_str = re.compile(r"(?P<var_name>.+)\[T\.(?P<cat_name>.+)\]")
+    df = python_df.reset_index(level="Category", drop=False)
+    df["Category"] = df["Category"].apply(
+        lambda s: s if re_str.match(s) is None else "".join(re_str.match(s).groups())
+    )
+    df = df.set_index("Category", append=True)
+    return df
 
 
 def compare_result(loaded_result, python_result, r_result, atol=0, rtol=1e-04):
@@ -1262,3 +1278,98 @@ def test_nhanes_subset_singleclusters():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+
+
+def test_report_betas(data_NHANES):
+    # Process data
+    df = clarite.modify.colfilter(
+        data_NHANES, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
+    )
+    # Get Results
+    normal_result = clarite.analyze.ewas(
+        outcome="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df
+    )
+    betas_result_python = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        report_categorical_betas=True,
+    )
+    betas_result_r = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        regression_kind="r_survey",
+        report_categorical_betas=True,
+    )
+    # Ensure including betas worked
+    assert len(betas_result_python) == len(df["race"].cat.categories) - 1
+    assert len(betas_result_python) == len(betas_result_r)
+    # Ensure including betas did not change other values
+    beta_sub = betas_result_python.groupby(level=[0, 1]).first()
+    beta_sub[["Beta", "SE", "Beta_pvalue"]] = np.nan
+    assert_frame_equal(beta_sub, normal_result)
+    # Ensure python and R results match
+    betas_result_python = python_cat_to_r_cat(betas_result_python)
+    assert_frame_equal(
+        betas_result_python,
+        betas_result_r,
+        check_dtype=False,
+        check_exact=False,
+        atol=0,
+        rtol=1e-4,
+    )
+
+
+def test_report_betas_fulldesign(data_NHANES):
+    design = clarite.survey.SurveyDesignSpec(
+        data_NHANES,
+        weights="WTMEC2YR",
+        cluster="SDMVPSU",
+        strata="SDMVSTRA",
+        fpc=None,
+        nest=True,
+    )
+    # Process data
+    df = clarite.modify.colfilter(
+        data_NHANES, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
+    )
+    # Get Results
+    normal_result = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        survey_design_spec=design,
+    )
+    betas_result_python = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        report_categorical_betas=True,
+        survey_design_spec=design,
+    )
+    betas_result_r = clarite.analyze.ewas(
+        outcome="HI_CHOL",
+        covariates=["agecat", "RIAGENDR"],
+        data=df,
+        report_categorical_betas=True,
+        survey_design_spec=design,
+        regression_kind="r_survey",
+    )
+    # Ensure including betas worked
+    assert len(betas_result_python) == len(df["race"].cat.categories) - 1
+    assert len(betas_result_python) == len(betas_result_r)
+    # Ensure including betas did not change other values
+    beta_sub = betas_result_python.groupby(level=[0, 1]).first()
+    beta_sub[["Beta", "SE", "Beta_pvalue"]] = np.nan
+    assert_frame_equal(beta_sub, normal_result)
+    # Ensure python and R results match
+    betas_result_python = python_cat_to_r_cat(betas_result_python)
+    assert_frame_equal(
+        betas_result_python,
+        betas_result_r,
+        check_dtype=False,
+        check_exact=False,
+        atol=0,
+        rtol=1e-4,
+    )
