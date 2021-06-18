@@ -141,93 +141,44 @@ def compare_result(loaded_result, python_result, r_result, atol=0, rtol=1e-04):
 # nest = True
 
 
-def test_fpc_withoutfpc(data_fpc):
+@pytest.mark.parametrize(
+    "design_str, load_filename",
+    [
+        ("withoutfpc", "fpc_withoutfpc_result.csv"),
+        ("withfpc", "fpc_withfpc_result.csv"),
+        ("nostrata", "fpc_withfpc_nostrat_result.csv"),
+    ],
+)
+def test_fpc(data_fpc, design_str, load_filename):
     """Use a survey design specifying weights, cluster, strata"""
-    # Make Design
-    design = clarite.survey.SurveyDesignSpec(
-        data_fpc, weights="weight", cluster="psuid", strata="stratid", nest=True
-    )
-    df = clarite.modify.colfilter(data_fpc, only=["x", "y"])
+    # Set data and design for each test
+    if design_str == "withoutfpc":
+        design = clarite.survey.SurveyDesignSpec(
+            data_fpc, weights="weight", cluster="psuid", strata="stratid", nest=True
+        )
+        df = clarite.modify.colfilter(data_fpc, only=["x", "y"])
+    elif design_str == "withfpc":
+        design = clarite.survey.SurveyDesignSpec(
+            data_fpc,
+            weights="weight",
+            cluster="psuid",
+            strata="stratid",
+            fpc="Nh",
+            nest=True,
+        )
+        df = clarite.modify.colfilter(data_fpc, only=["x", "y"])
+    elif design_str == "nostrata":
+        # Load the data
+        df = clarite.load.from_csv(DATA_PATH / "fpc_nostrat_data.csv", index_col=None)
+        # Process data
+        df = clarite.modify.make_continuous(df, only=["x", "y"])
+        design = clarite.survey.SurveyDesignSpec(
+            df, weights="weight", cluster="psuid", strata=None, fpc="Nh", nest=True
+        )
+        df = clarite.modify.colfilter(df, only=["x", "y"])
+
     # Get results
-    loaded_result = load_surveylib_results(RESULT_PATH / "fpc_withoutfpc_result.csv")
-    python_result = clarite.analyze.ewas(
-        outcome="y", covariates=[], data=df, survey_design_spec=design, min_n=1
-    )
-    r_result = clarite.analyze.ewas(
-        outcome="y",
-        covariates=[],
-        data=df,
-        survey_design_spec=design,
-        min_n=1,
-        regression_kind="r_survey",
-    )
-    # Compare
-    compare_result(loaded_result, python_result, r_result)
-    # Standardized
-    standardized = clarite.analyze.ewas(
-        outcome="y",
-        covariates=[],
-        data=df,
-        survey_design_spec=design,
-        min_n=1,
-        standardize_data=True,
-    )
-    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
-
-
-def test_fpc_withfpc(data_fpc):
-    """Use a survey design specifying weights, cluster, strata, fpc"""
-    # Make Design
-    design = clarite.survey.SurveyDesignSpec(
-        data_fpc,
-        weights="weight",
-        cluster="psuid",
-        strata="stratid",
-        fpc="Nh",
-        nest=True,
-    )
-    df = clarite.modify.colfilter(data_fpc, only=["x", "y"])
-    # Get results
-    loaded_result = load_surveylib_results(RESULT_PATH / "fpc_withfpc_result.csv")
-    python_result = clarite.analyze.ewas(
-        outcome="y", covariates=[], data=df, survey_design_spec=design, min_n=1
-    )
-    r_result = clarite.analyze.ewas(
-        outcome="y",
-        covariates=[],
-        data=df,
-        survey_design_spec=design,
-        min_n=1,
-        regression_kind="r_survey",
-    )
-    # Compare
-    compare_result(loaded_result, python_result, r_result)
-    # Standardized
-    standardized = clarite.analyze.ewas(
-        outcome="y",
-        covariates=[],
-        data=df,
-        survey_design_spec=design,
-        min_n=1,
-        standardize_data=True,
-    )
-    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
-
-
-def test_fpc_withfpc_nostrata():
-    """Use a survey design specifying weights, cluster, strata, fpc"""
-    # Load the data
-    df = clarite.load.from_csv(DATA_PATH / "fpc_nostrat_data.csv", index_col=None)
-    # Process data
-    df = clarite.modify.make_continuous(df, only=["x", "y"])
-    design = clarite.survey.SurveyDesignSpec(
-        df, weights="weight", cluster="psuid", strata=None, fpc="Nh", nest=True
-    )
-    df = clarite.modify.colfilter(df, only=["x", "y"])
-    # Get results
-    loaded_result = load_surveylib_results(
-        RESULT_PATH / "fpc_withfpc_nostrat_result.csv"
-    )
+    loaded_result = load_surveylib_results(RESULT_PATH / load_filename)
     python_result = clarite.analyze.ewas(
         outcome="y", covariates=[], data=df, survey_design_spec=design, min_n=1
     )
