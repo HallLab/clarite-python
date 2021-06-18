@@ -61,6 +61,10 @@ class WeightedGLMRegression(GLMRegression):
     cov_method:
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
         Warning: `jackknife` is untested and may not be accurate
+    standardize_data: boolean
+        False by default.
+          If True, numeric data will be standardized using z-scores before regression.
+          This will affect the beta values and standard error, but not the pvalues.
     """
 
     def __init__(
@@ -72,6 +76,7 @@ class WeightedGLMRegression(GLMRegression):
         min_n: int = 200,
         report_categorical_betas: bool = False,
         cov_method: Optional[str] = "stata",
+        standardize_data: bool = False,
     ):
         # survey_design_spec should actually not be None, but is a keyword for convenience
         if survey_design_spec is None:
@@ -89,6 +94,7 @@ class WeightedGLMRegression(GLMRegression):
         # Custom init involving kwargs passed to this regression
         self.survey_design_spec = survey_design_spec
         self.cov_method = cov_method
+        self.standardize_data = standardize_data
 
         # Add survey design info to the description
         self.description += "\n" + str(self.survey_design_spec)
@@ -117,6 +123,8 @@ class WeightedGLMRegression(GLMRegression):
         result = dict()
         # Get data based on the formula
         y, X = self._process_formula(formula, data)
+        if self.standardize_data:
+            y, X = self._standardize_data(y, X)
 
         # Get survey design
         survey_design = self.survey_design_spec.get_survey_design(
@@ -177,6 +185,8 @@ class WeightedGLMRegression(GLMRegression):
 
         # Regress full model
         y, X = self._process_formula(formula, data)
+        if self.standardize_data:
+            y, X = self._standardize_data(y, X)
         # Get survey design
         survey_design = self.survey_design_spec.get_survey_design(
             regression_variable, X.index
@@ -192,6 +202,10 @@ class WeightedGLMRegression(GLMRegression):
 
         # Regress restricted model
         y_restricted, X_restricted = self._process_formula(formula_restricted, data)
+        if self.standardize_data:
+            y_restricted, X_restricted = self._standardize_data(
+                y_restricted, X_restricted
+            )
         model_restricted = SurveyModel(
             design=survey_design,
             model_class=sm.GLM,
@@ -259,6 +273,8 @@ class WeightedGLMRegression(GLMRegression):
             for rv in rv_list:
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
+                    # Must define result to catch errors outside running individual variables
+                    result = None
                     # Take a copy of the data (ignoring other RVs) and create a keep_rows mask
                     keep_columns = [rv, self.outcome_variable] + self.covariates
                     data = self.data[keep_columns]

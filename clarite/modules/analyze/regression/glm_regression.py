@@ -53,7 +53,8 @@ class GLMRegression(Regression):
           terms increases with the number of categories.
     standardize_data: boolean
         False by default.
-          If True, numeric data will be standardized using z-scores before regression.  This will affect the beta values but not the pvalues.
+          If True, numeric data will be standardized using z-scores before regression.
+          This will affect the beta values and standard error, but not the pvalues.
     """
 
     def __init__(
@@ -162,21 +163,38 @@ class GLMRegression(Regression):
     def _process_formula(self, formula, data) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Use patsy to process the formula with quoted variable names, but return with the original names.
-        Standardize data if enabled.
         """
         y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
         y = fix_names(y)
         X = fix_names(X)
-        if self.standardize_data:
-            # Transform numeric columns in X, skipping the intercept (first column)
-            X[[c for c in X.columns if c != "Intercept"]] = (
-                X[[c for c in X.columns if c != "Intercept"]]
-                .select_dtypes(include=[np.number])
-                .dropna()
-                .apply(stats.zscore)
-            )
-            if self.outcome_dtype == "continuous":
-                y = stats.zscore(y)
+        return y, X
+
+    def _standardize_data(
+        self, y: pd.DataFrame, X: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Standardize data by z-score
+
+        Parameters
+        ----------
+        y: exogenous variables
+        X: endogenous variables
+
+        Returns
+        -------
+        (y,X): Standardized data
+
+        """
+        # Transform numeric columns in X, skipping the intercept (first column)
+        X[[c for c in X.columns if c != "Intercept"]] = (
+            X[[c for c in X.columns if c != "Intercept"]]
+            .select_dtypes(include=[np.number])
+            .dropna()
+            .apply(stats.zscore)
+        )
+        # Transform y if it is continuous
+        if self.outcome_dtype == "continuous":
+            y = pd.DataFrame(stats.zscore(y), index=y.index, columns=y.columns)
         return y, X
 
     def get_results(self) -> pd.DataFrame:
@@ -224,6 +242,8 @@ class GLMRegression(Regression):
         result = dict()
         # Regress
         y, X = self._process_formula(formula, data)
+        if self.standardize_data:
+            y, X = self._standardize_data(y, X)
         est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
         # Save results if the regression converged
         if est.converged:
@@ -239,6 +259,8 @@ class GLMRegression(Regression):
         result = dict()
         # Regress
         y, X = self._process_formula(formula, data)
+        if self.standardize_data:
+            y, X = self._standardize_data(y, X)
         est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
         # Check convergence
         # Save results if the regression converged
@@ -266,9 +288,10 @@ class GLMRegression(Regression):
         return result
 
     def _run_categorical(self, data, formula, formula_restricted) -> Dict:
-        result = dict()
         # Regress both models
         y, X = self._process_formula(formula, data)
+        if self.standardize_data:
+            y, X = self._standardize_data(y, X)
         est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
         y_restricted, X_restricted = self._process_formula(formula_restricted, data)
         est_restricted = sm.GLM(y_restricted, X_restricted, family=self.family).fit(

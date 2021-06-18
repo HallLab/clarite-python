@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 from pandas._testing import assert_frame_equal, assert_series_equal
 
 import clarite
@@ -162,6 +163,16 @@ def test_fpc_withoutfpc(data_fpc):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized
+    standardized = clarite.analyze.ewas(
+        outcome="y",
+        covariates=[],
+        data=df,
+        survey_design_spec=design,
+        min_n=1,
+        standardize_data=True,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_fpc_withfpc(data_fpc):
@@ -191,6 +202,16 @@ def test_fpc_withfpc(data_fpc):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized
+    standardized = clarite.analyze.ewas(
+        outcome="y",
+        covariates=[],
+        data=df,
+        survey_design_spec=design,
+        min_n=1,
+        standardize_data=True,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_fpc_withfpc_nostrata():
@@ -220,6 +241,16 @@ def test_fpc_withfpc_nostrata():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized
+    standardized = clarite.analyze.ewas(
+        outcome="y",
+        covariates=[],
+        data=df,
+        survey_design_spec=design,
+        min_n=1,
+        standardize_data=True,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 ###############
@@ -286,7 +317,7 @@ def test_api_noweights():
     # Compare
     compare_result(loaded_result, python_result, r_result)
     # Standardized Result
-    standardized = python_result = pd.concat(
+    standardized = pd.concat(
         [
             clarite.analyze.ewas(
                 outcome="api00",
@@ -367,7 +398,7 @@ def test_api_noweights_withNA():
     # Compare
     compare_result(loaded_result, python_result, r_result)
     # Standardized Result
-    standardized = python_result = pd.concat(
+    standardized = pd.concat(
         [
             clarite.analyze.ewas(
                 outcome="api00",
@@ -465,6 +496,37 @@ def test_api_stratified():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["meals", "mobility"],
+                data=df,
+                survey_design_spec=design,
+                min_n=1,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["ell", "mobility"],
+                data=df,
+                survey_design_spec=design,
+                min_n=1,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["ell", "meals"],
+                data=df,
+                survey_design_spec=design,
+                min_n=1,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_api_cluster():
@@ -536,6 +598,37 @@ def test_api_cluster():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["meals", "mobility"],
+                data=df,
+                survey_design_spec=design,
+                min_n=1,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["ell", "mobility"],
+                data=df,
+                survey_design_spec=design,
+                min_n=1,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["ell", "meals"],
+                data=df,
+                survey_design_spec=design,
+                min_n=1,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 ##################
@@ -768,6 +861,34 @@ def test_nhanes_fulldesign(data_NHANES):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["agecat", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "agecat"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_nhanes_fulldesign_withna(data_NHANES_withNA):
@@ -839,6 +960,34 @@ def test_nhanes_fulldesign_withna(data_NHANES_withNA):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["agecat", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "agecat"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_nhanes_fulldesign_subset_category(data_NHANES):
@@ -911,6 +1060,34 @@ def test_nhanes_fulldesign_subset_category(data_NHANES):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result, rtol=1e-03)
+    # Standardized Result
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["agecat", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "agecat"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_nhanes_fulldesign_subset_continuous():
@@ -987,6 +1164,34 @@ def test_nhanes_fulldesign_subset_continuous():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["agecat", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "agecat"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_nhanes_weightsonly(data_NHANES):
@@ -1051,9 +1256,45 @@ def test_nhanes_weightsonly(data_NHANES):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["agecat", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "RIAGENDR"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "agecat"],
+                data=df,
+                survey_design_spec=design,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
-def test_nhanes_lonely_certainty(data_NHANES_lonely):
+@pytest.mark.parametrize(
+    "single_cluster,load_filename",
+    [
+        ("certainty", "nhanes_certainty_result.csv"),
+        ("adjust", "nhanes_adjust_result.csv"),
+        ("average", "nhanes_average_result.csv"),
+    ],
+)
+def test_nhanes_lonely(data_NHANES_lonely, single_cluster, load_filename):
     """Test the nhanes dataset with a lonely PSU and the value set to certainty"""
     # Make Design
     design = clarite.survey.SurveyDesignSpec(
@@ -1063,13 +1304,13 @@ def test_nhanes_lonely_certainty(data_NHANES_lonely):
         strata="SDMVSTRA",
         fpc=None,
         nest=True,
-        single_cluster="certainty",
+        single_cluster=single_cluster,
     )
     df = clarite.modify.colfilter(
         data_NHANES_lonely, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
     )
     # Get Results
-    loaded_result = load_surveylib_results(RESULT_PATH / "nhanes_certainty_result.csv")
+    loaded_result = load_surveylib_results(RESULT_PATH / load_filename)
     python_result = pd.concat(
         [
             clarite.analyze.ewas(
@@ -1121,146 +1362,34 @@ def test_nhanes_lonely_certainty(data_NHANES_lonely):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
-
-
-def test_nhanes_lonely_adjust(data_NHANES_lonely):
-    """Test the nhanes dataset with a lonely PSU and the value set to adjust"""
-    # Make Design
-    design = clarite.survey.SurveyDesignSpec(
-        data_NHANES_lonely,
-        weights="WTMEC2YR",
-        cluster="SDMVPSU",
-        strata="SDMVSTRA",
-        fpc=None,
-        nest=True,
-        single_cluster="adjust",
-    )
-    df = clarite.modify.colfilter(
-        data_NHANES_lonely, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
-    )
-    # Get Results
-    loaded_result = load_surveylib_results(RESULT_PATH / "nhanes_adjust_result.csv")
-    python_result = pd.concat(
+    # Standardize Data
+    standardized = pd.concat(
         [
             clarite.analyze.ewas(
                 outcome="HI_CHOL",
                 covariates=["agecat", "RIAGENDR"],
                 data=df,
                 survey_design_spec=design,
+                standardize_data=True,
             ),
             clarite.analyze.ewas(
                 outcome="HI_CHOL",
                 covariates=["race", "RIAGENDR"],
                 data=df,
                 survey_design_spec=design,
+                standardize_data=True,
             ),
             clarite.analyze.ewas(
                 outcome="HI_CHOL",
                 covariates=["race", "agecat"],
                 data=df,
                 survey_design_spec=design,
+                standardize_data=True,
             ),
         ],
         axis=0,
     )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
-    compare_result(loaded_result, python_result, r_result)
-
-
-def test_nhanes_lonely_average(data_NHANES_lonely):
-    """Test the nhanes dataset with a lonely PSU and the value set to average"""
-    # Make Design
-    design = clarite.survey.SurveyDesignSpec(
-        data_NHANES_lonely,
-        weights="WTMEC2YR",
-        cluster="SDMVPSU",
-        strata="SDMVSTRA",
-        fpc=None,
-        nest=True,
-        single_cluster="average",
-    )
-    df = clarite.modify.colfilter(
-        data_NHANES_lonely, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
-    )
-    # Get Results
-    loaded_result = load_surveylib_results(RESULT_PATH / "nhanes_average_result.csv")
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
-    compare_result(loaded_result, python_result, r_result)
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_nhanes_realistic():
@@ -1338,6 +1467,24 @@ def test_nhanes_realistic():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = clarite.analyze.ewas(
+        outcome="BMXBMI",
+        covariates=[
+            "SES_LEVEL",
+            "SDDSRVYR",
+            "female",
+            "black",
+            "mexican",
+            "other_hispanic",
+            "other_eth",
+            "RIDAGEYR",
+        ],
+        data=df,
+        survey_design_spec=design,
+        standardize_data=True,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_nhanes_subset_singleclusters():
@@ -1384,6 +1531,16 @@ def test_nhanes_subset_singleclusters():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardize Result
+    standardized = clarite.analyze.ewas(
+        outcome="LBXLYPCT",
+        covariates=covariates,
+        data=df,
+        survey_design_spec=design,
+        min_n=50,
+        standardize_data=True,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_report_betas(data_NHANES):
