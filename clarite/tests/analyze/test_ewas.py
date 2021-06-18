@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from pandas._testing import assert_frame_equal
+from pandas._testing import assert_frame_equal, assert_series_equal
 
 import clarite
 
@@ -285,6 +285,34 @@ def test_api_noweights():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = python_result = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["meals", "mobility"],
+                data=df,
+                min_n=1,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["ell", "mobility"],
+                data=df,
+                min_n=1,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["ell", "meals"],
+                data=df,
+                min_n=1,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_api_noweights_withNA():
@@ -338,6 +366,34 @@ def test_api_noweights_withNA():
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized Result
+    standardized = python_result = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["meals", "mobility"],
+                data=df,
+                min_n=1,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["ell", "mobility"],
+                data=df,
+                min_n=1,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="api00",
+                covariates=["ell", "meals"],
+                data=df,
+                min_n=1,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_api_stratified():
@@ -542,6 +598,31 @@ def test_nhanes_noweights(data_NHANES):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["agecat", "RIAGENDR"],
+                data=df,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "RIAGENDR"],
+                data=df,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "agecat"],
+                data=df,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_nhanes_noweights_withNA(data_NHANES_withNA):
@@ -593,6 +674,31 @@ def test_nhanes_noweights_withNA(data_NHANES_withNA):
     )
     # Compare
     compare_result(loaded_result, python_result, r_result)
+    # Standardized
+    standardized = pd.concat(
+        [
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["agecat", "RIAGENDR"],
+                data=df,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "RIAGENDR"],
+                data=df,
+                standardize_data=True,
+            ),
+            clarite.analyze.ewas(
+                outcome="HI_CHOL",
+                covariates=["race", "agecat"],
+                data=df,
+                standardize_data=True,
+            ),
+        ],
+        axis=0,
+    )
+    assert_series_equal(python_result["pvalue"], standardized["pvalue"])
 
 
 def test_nhanes_fulldesign(data_NHANES):

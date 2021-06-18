@@ -53,7 +53,7 @@ class WeightedGLMRegression(GLMRegression):
     min_n:
         Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
         Defaults to 200
-    report_betas: boolean
+    report_categorical_betas: boolean
         False by default.
           If True, the results will contain one row for each categorical value (other than the reference category) and
           will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of

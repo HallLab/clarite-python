@@ -7,6 +7,7 @@ import pandas as pd
 import patsy
 import scipy
 import statsmodels.api as sm
+from scipy.stats import stats
 
 from clarite.internal.utilities import _remove_empty_categories
 
@@ -50,6 +51,9 @@ class GLMRegression(Regression):
           If True, the results will contain one row for each categorical value (other than the reference category) and
           will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of
           terms increases with the number of categories.
+    standardize_data: boolean
+        False by default.
+          If True, numeric data will be standardized using z-scores before regression.  This will affect the beta values but not the pvalues.
     """
 
     def __init__(
@@ -59,6 +63,7 @@ class GLMRegression(Regression):
         covariates: Optional[List[str]] = None,
         min_n: int = 200,
         report_categorical_betas: bool = False,
+        standardize_data: bool = False,
     ):
         """
         Parameters
@@ -82,6 +87,7 @@ class GLMRegression(Regression):
         # Custom init involving kwargs passed to this regression
         self.min_n = min_n
         self.report_categorical_betas = report_categorical_betas
+        self.standardize_data = standardize_data
 
         # Ensure the data output type is compatible
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
@@ -153,12 +159,24 @@ class GLMRegression(Regression):
 
         return formula_restricted, formula
 
-    @staticmethod
-    def _process_formula(formula, data) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Use patsy to process the formula with quoted variable names, but return with the original names"""
+    def _process_formula(self, formula, data) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Use patsy to process the formula with quoted variable names, but return with the original names.
+        Standardize data if enabled.
+        """
         y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
         y = fix_names(y)
         X = fix_names(X)
+        if self.standardize_data:
+            # Transform numeric columns in X, skipping the intercept (first column)
+            X[[c for c in X.columns if c != "Intercept"]] = (
+                X[[c for c in X.columns if c != "Intercept"]]
+                .select_dtypes(include=[np.number])
+                .dropna()
+                .apply(stats.zscore)
+            )
+            if self.outcome_dtype == "continuous":
+                y = stats.zscore(y)
         return y, X
 
     def get_results(self) -> pd.DataFrame:
