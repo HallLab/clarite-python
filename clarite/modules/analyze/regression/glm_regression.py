@@ -236,6 +236,9 @@ class GLMRegression(Regression):
         ]
         result = result[column_order]
 
+        # Update datatypes
+        result["Weight"] = result["Weight"].fillna("None").astype("category")
+
         return result
 
     def _run_continuous(self, data, regression_variable, formula) -> Dict:

@@ -193,7 +193,6 @@ regress_cat <- function(data, varying_covariates, outcome, var_name, regression_
 
 regress_cat_survey <- function(data, varying_covariates, outcome, var_name, regression_family,
                                weight_values, strata_values, fpc_values, id_values, subset_array, ...) {
-  print(report_categorical_betas)
   # Create survey design
   if(is.null(id_values)){
     survey_design <- survey::svydesign(ids = ~1,
@@ -349,6 +348,12 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
     return(data.frame(result, stringsAsFactors = FALSE))
   }
 
+  # Standardize data if needed
+  if(standardize_data){
+    numeric_cols <- sapply(data, is.numeric)
+    data[numeric_cols] <- lapply(data[numeric_cols], scale)
+  }
+
   # Run Regression for the single variable
   if(!use_survey){
     if(var_type == 'bin'){
@@ -408,6 +413,8 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
 #' @param strata NULL by default (for no strata).  May be set to a string name of a column in the data which provides strata IDs.
 #' @param fpc NULL by default (for no fpc).  May be set to a string name of a column in the data which provides fpc values.
 #' @param subset_array NULL by default (for no subset).  May be set to a boolean array used to subset the data after creating the design
+#' @param report_categorical_betas FALSE by default
+#' @param standardize_data FALSE by default
 #' @param ... other arguments passed to svydesign which are ignored if 'weights' is NULL
 #' @return data frame containing following fields Variable, Sample Size, Converged, SE, Beta, Variable p-value, LRT, AIC, pval, outcome, weight
 #' @export
@@ -420,12 +427,13 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
                  bin_covars=NULL, cat_covars=NULL, cont_covars=NULL,
                  regression_family="gaussian", allowed_nonvarying=NULL, min_n=200, weights=NULL,
                  ids=NULL, strata=NULL, fpc=NULL, subset_array=NULL,
-                 report_categorical_betas=FALSE, ...){
+                 report_categorical_betas=FALSE, standardize_data=FALSE, ...){
   # Record start time
   t1 <- Sys.time()
 
   # Record global options
   report_categorical_betas <<- report_categorical_betas
+  standardize_data <<- standardize_data
 
   # Validate inputs
   #################
