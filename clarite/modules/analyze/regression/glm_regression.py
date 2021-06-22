@@ -129,19 +129,24 @@ class GLMRegression(Regression):
             )
 
         # Standardize continuous variables in the data if needed
+        # Use ddof=1 in the zscore calculation (used for StdErr) to match R
         if self.standardize_data:
             if self.outcome_dtype == "continuous":
                 self.data[self.outcome_variable] = stats.zscore(
-                    self.data[self.outcome_variable]
+                    self.data[self.outcome_variable], nan_policy="omit", ddof=1
                 )
             continuous_rvs = self.regression_variables["continuous"]
-            self.data[continuous_rvs] = stats.zscore(self.data[continuous_rvs])
+            self.data[continuous_rvs] = stats.zscore(
+                self.data[continuous_rvs], nan_policy="omit", ddof=1
+            )
             continuous_covars = [
                 rv
                 for rv, rv_type in self.covariate_types.items()
                 if rv_type == "continuous"
             ]
-            self.data[continuous_covars] = stats.zscore(self.data[continuous_covars])
+            self.data[continuous_covars] = stats.zscore(
+                self.data[continuous_covars], nan_policy="omit", ddof=1
+            )
 
         # Finish updating description
         self.description += f"\nRegressing {sum([len(v) for v in self.regression_variables.values()]):,} variables"
