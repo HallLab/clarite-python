@@ -128,6 +128,21 @@ class GLMRegression(Regression):
                 f"\n\t{na_outcome_count:,} are missing a value for the outcome variable"
             )
 
+        # Standardize continuous variables in the data if needed
+        if self.standardize_data:
+            if self.outcome_dtype == "continuous":
+                self.data[self.outcome_variable] = stats.zscore(
+                    self.data[self.outcome_variable]
+                )
+            continuous_rvs = self.regression_variables["continuous"]
+            self.data[continuous_rvs] = stats.zscore(self.data[continuous_rvs])
+            continuous_covars = [
+                rv
+                for rv, rv_type in self.covariate_types.items()
+                if rv_type == "continuous"
+            ]
+            self.data[continuous_covars] = stats.zscore(self.data[continuous_covars])
+
         # Finish updating description
         self.description += f"\nRegressing {sum([len(v) for v in self.regression_variables.values()]):,} variables"
         for k, v in self.regression_variables.items():
@@ -167,34 +182,6 @@ class GLMRegression(Regression):
         y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
         y = fix_names(y)
         X = fix_names(X)
-        return y, X
-
-    def _standardize_data(
-        self, y: pd.DataFrame, X: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Standardize data by z-score
-
-        Parameters
-        ----------
-        y: exogenous variables
-        X: endogenous variables
-
-        Returns
-        -------
-        (y,X): Standardized data
-
-        """
-        # Transform numeric columns in X, skipping the intercept (first column)
-        X[[c for c in X.columns if c != "Intercept"]] = (
-            X[[c for c in X.columns if c != "Intercept"]]
-            .select_dtypes(include=[np.number])
-            .dropna()
-            .apply(stats.zscore)
-        )
-        # Transform y if it is continuous
-        if self.outcome_dtype == "continuous":
-            y = pd.DataFrame(stats.zscore(y), index=y.index, columns=y.columns)
         return y, X
 
     def get_results(self) -> pd.DataFrame:
@@ -245,8 +232,6 @@ class GLMRegression(Regression):
         result = dict()
         # Regress
         y, X = self._process_formula(formula, data)
-        if self.standardize_data:
-            y, X = self._standardize_data(y, X)
         est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
         # Save results if the regression converged
         if est.converged:
@@ -262,8 +247,6 @@ class GLMRegression(Regression):
         result = dict()
         # Regress
         y, X = self._process_formula(formula, data)
-        if self.standardize_data:
-            y, X = self._standardize_data(y, X)
         est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
         # Check convergence
         # Save results if the regression converged
@@ -293,8 +276,6 @@ class GLMRegression(Regression):
     def _run_categorical(self, data, formula, formula_restricted) -> Dict:
         # Regress both models
         y, X = self._process_formula(formula, data)
-        if self.standardize_data:
-            y, X = self._standardize_data(y, X)
         est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
         y_restricted, X_restricted = self._process_formula(formula_restricted, data)
         est_restricted = sm.GLM(y_restricted, X_restricted, family=self.family).fit(

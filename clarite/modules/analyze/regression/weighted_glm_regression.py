@@ -89,12 +89,12 @@ class WeightedGLMRegression(GLMRegression):
             covariates=covariates,
             min_n=min_n,
             report_categorical_betas=report_categorical_betas,
+            standardize_data=standardize_data,
         )
 
         # Custom init involving kwargs passed to this regression
         self.survey_design_spec = survey_design_spec
         self.cov_method = cov_method
-        self.standardize_data = standardize_data
 
         # Add survey design info to the description
         self.description += "\n" + str(self.survey_design_spec)
@@ -123,8 +123,6 @@ class WeightedGLMRegression(GLMRegression):
         result = dict()
         # Get data based on the formula
         y, X = self._process_formula(formula, data)
-        if self.standardize_data:
-            y, X = self._standardize_data(y, X)
 
         # Get survey design
         survey_design = self.survey_design_spec.get_survey_design(
@@ -185,8 +183,6 @@ class WeightedGLMRegression(GLMRegression):
 
         # Regress full model
         y, X = self._process_formula(formula, data)
-        if self.standardize_data:
-            y, X = self._standardize_data(y, X)
         # Get survey design
         survey_design = self.survey_design_spec.get_survey_design(
             regression_variable, X.index
@@ -202,10 +198,6 @@ class WeightedGLMRegression(GLMRegression):
 
         # Regress restricted model
         y_restricted, X_restricted = self._process_formula(formula_restricted, data)
-        if self.standardize_data:
-            y_restricted, X_restricted = self._standardize_data(
-                y_restricted, X_restricted
-            )
         model_restricted = SurveyModel(
             design=survey_design,
             model_class=sm.GLM,

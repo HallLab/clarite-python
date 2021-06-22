@@ -350,8 +350,11 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
 
   # Standardize data if needed
   if(standardize_data){
-    numeric_cols <- sapply(data, is.numeric)
-    data[numeric_cols] <- lapply(data[numeric_cols], scale)
+    allowed_to_scale_cols <- colnames(data) %in% c(y, var_name, varying_covariates)
+    numeric_cols <- sapply(data, is.numeric)  # Exclude factors
+    binary_cols <- sapply(data, function(s){all(s==0 | s==1 | is.na(s))})  # Exclude binary encoded as 0/1/missing
+    scale_cols <- allowed_to_scale_cols & numeric_cols & !binary_cols
+    data[scale_cols] <- lapply(data[scale_cols], scale)
   }
 
   # Run Regression for the single variable
