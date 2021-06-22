@@ -53,7 +53,7 @@ class WeightedGLMRegression(GLMRegression):
     min_n:
         Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
         Defaults to 200
-    report_betas: boolean
+    report_categorical_betas: boolean
         False by default.
           If True, the results will contain one row for each categorical value (other than the reference category) and
           will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of
@@ -61,6 +61,10 @@ class WeightedGLMRegression(GLMRegression):
     cov_method:
         Covariance calculation method (if survey_design_spec is passed in).  'stata' by default.
         Warning: `jackknife` is untested and may not be accurate
+    standardize_data: boolean
+        False by default.
+          If True, numeric data will be standardized using z-scores before regression.
+          This will affect the beta values and standard error, but not the pvalues.
     """
 
     def __init__(
@@ -72,6 +76,7 @@ class WeightedGLMRegression(GLMRegression):
         min_n: int = 200,
         report_categorical_betas: bool = False,
         cov_method: Optional[str] = "stata",
+        standardize_data: bool = False,
     ):
         # survey_design_spec should actually not be None, but is a keyword for convenience
         if survey_design_spec is None:
@@ -84,6 +89,7 @@ class WeightedGLMRegression(GLMRegression):
             covariates=covariates,
             min_n=min_n,
             report_categorical_betas=report_categorical_betas,
+            standardize_data=standardize_data,
         )
 
         # Custom init involving kwargs passed to this regression
@@ -259,6 +265,8 @@ class WeightedGLMRegression(GLMRegression):
             for rv in rv_list:
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
+                    # Must define result to catch errors outside running individual variables
+                    result = None
                     # Take a copy of the data (ignoring other RVs) and create a keep_rows mask
                     keep_columns = [rv, self.outcome_variable] + self.covariates
                     data = self.data[keep_columns]

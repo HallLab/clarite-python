@@ -55,9 +55,14 @@ def ewas(
 
     # Set up regression object
     # Emulate existing API by figuring out which method automatically
+    # glm if not specified, unless survey_design_spec is passed and isn't None
     if regression_kind is None:
         if "survey_design_spec" in kwargs:
-            regression_kind = "weighted_glm"
+            if kwargs["survey_design_spec"] is None:
+                regression_kind = "glm"
+                del kwargs["survey_design_spec"]
+            else:
+                regression_kind = "weighted_glm"
         else:
             regression_kind = "glm"
 

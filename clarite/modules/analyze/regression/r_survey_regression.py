@@ -34,6 +34,10 @@ class RSurveyRegression(Regression):
         If True, the results will contain one row for each categorical value (other than the reference category) and
         will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of
         terms increases with the number of categories.
+    standardize_data: boolean
+        False by default.
+          If True, numeric data will be standardized using z-scores before regression.
+          This will affect the beta values and standard error, but not the pvalues.
     """
 
     def __init__(
@@ -44,6 +48,7 @@ class RSurveyRegression(Regression):
         survey_design_spec: Optional[SurveyDesignSpec] = None,
         min_n: int = 200,
         report_categorical_betas: bool = False,
+        standardize_data: bool = False,
     ):
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
@@ -56,6 +61,7 @@ class RSurveyRegression(Regression):
         self.min_n = min_n
         self.survey_design_spec = survey_design_spec
         self.report_categorical_betas = report_categorical_betas
+        self.standardize_data = standardize_data
 
         # Note this runs the entire regression in R, returning a DataFrame instead of a dict.
         # Therefore, store the dataframe in self.result instead of a dict in self.results
@@ -144,6 +150,10 @@ class RSurveyRegression(Regression):
         ]
         result = result[column_order]
 
+        # Convert datatype to match python results
+        result["N"] = result["N"].astype("Int64")
+        result["Weight"] = result["Weight"].fillna("None").astype("category")
+
         return result
 
     @requires("rpy2")
@@ -223,6 +233,7 @@ class RSurveyRegression(Regression):
                     allowed_nonvarying=allowed_nonvarying,
                     min_n=self.min_n,
                     report_categorical_betas=self.report_categorical_betas,
+                    standardize_data=self.standardize_data,
                 )
         else:
             # Merge weights into data and get weight name(s) (Note 'data' becomes a local variable)
@@ -308,6 +319,7 @@ class RSurveyRegression(Regression):
                     weights=weights,
                     subset=self.survey_design_spec.subset_array,
                     drop_unweighted=self.survey_design_spec.drop_unweighted,
+                    standardize_data=self.standardize_data,
                     **kwargs,
                 )
 

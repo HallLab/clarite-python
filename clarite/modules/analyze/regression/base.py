@@ -116,12 +116,12 @@ class Regression(metaclass=ABCMeta):
             raise ValueError("No variables are available to run regression on")
 
         # Ensure covariates are all present and not unknown type
-        covariate_types = [types.get(c, None) for c in self.covariates]
-        missing_covariates = [
-            c for c, dt in zip(self.covariates, covariate_types) if dt is None
-        ]
+        self.covariate_types = {
+            covariate: types.get(covariate, None) for covariate in self.covariates
+        }
+        missing_covariates = [c for c, dt in self.covariate_types.items() if dt is None]
         unknown_covariates = [
-            c for c, dt in zip(self.covariates, covariate_types) if dt == "unknown"
+            c for c, dt in self.covariate_types.items() if dt == "unknown"
         ]
         if len(missing_covariates) > 0:
             raise ValueError(

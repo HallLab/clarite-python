@@ -7,6 +7,7 @@ import pandas as pd
 import patsy
 import scipy
 import statsmodels.api as sm
+from scipy.stats import stats
 
 from clarite.internal.utilities import _remove_empty_categories
 
@@ -50,6 +51,10 @@ class GLMRegression(Regression):
           If True, the results will contain one row for each categorical value (other than the reference category) and
           will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of
           terms increases with the number of categories.
+    standardize_data: boolean
+        False by default.
+          If True, numeric data will be standardized using z-scores before regression.
+          This will affect the beta values and standard error, but not the pvalues.
     """
 
     def __init__(
@@ -59,6 +64,7 @@ class GLMRegression(Regression):
         covariates: Optional[List[str]] = None,
         min_n: int = 200,
         report_categorical_betas: bool = False,
+        standardize_data: bool = False,
     ):
         """
         Parameters
@@ -82,6 +88,7 @@ class GLMRegression(Regression):
         # Custom init involving kwargs passed to this regression
         self.min_n = min_n
         self.report_categorical_betas = report_categorical_betas
+        self.standardize_data = standardize_data
 
         # Ensure the data output type is compatible
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
@@ -121,6 +128,26 @@ class GLMRegression(Regression):
                 f"\n\t{na_outcome_count:,} are missing a value for the outcome variable"
             )
 
+        # Standardize continuous variables in the data if needed
+        # Use ddof=1 in the zscore calculation (used for StdErr) to match R
+        if self.standardize_data:
+            if self.outcome_dtype == "continuous":
+                self.data[self.outcome_variable] = stats.zscore(
+                    self.data[self.outcome_variable], nan_policy="omit", ddof=1
+                )
+            continuous_rvs = self.regression_variables["continuous"]
+            self.data[continuous_rvs] = stats.zscore(
+                self.data[continuous_rvs], nan_policy="omit", ddof=1
+            )
+            continuous_covars = [
+                rv
+                for rv, rv_type in self.covariate_types.items()
+                if rv_type == "continuous"
+            ]
+            self.data[continuous_covars] = stats.zscore(
+                self.data[continuous_covars], nan_policy="omit", ddof=1
+            )
+
         # Finish updating description
         self.description += f"\nRegressing {sum([len(v) for v in self.regression_variables.values()]):,} variables"
         for k, v in self.regression_variables.items():
@@ -153,9 +180,10 @@ class GLMRegression(Regression):
 
         return formula_restricted, formula
 
-    @staticmethod
-    def _process_formula(formula, data) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Use patsy to process the formula with quoted variable names, but return with the original names"""
+    def _process_formula(self, formula, data) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Use patsy to process the formula with quoted variable names, but return with the original names.
+        """
         y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
         y = fix_names(y)
         X = fix_names(X)
@@ -199,6 +227,9 @@ class GLMRegression(Regression):
             "pvalue",
         ]
         result = result[column_order]
+
+        # Update datatypes
+        result["Weight"] = result["Weight"].fillna("None").astype("category")
 
         return result
 
@@ -248,7 +279,6 @@ class GLMRegression(Regression):
         return result
 
     def _run_categorical(self, data, formula, formula_restricted) -> Dict:
-        result = dict()
         # Regress both models
         y, X = self._process_formula(formula, data)
         est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
