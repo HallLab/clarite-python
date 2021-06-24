@@ -8,6 +8,9 @@ import numpy as np
 import pandas as pd
 
 from clarite.modules.analyze import result_columns, corrected_pvalue_columns
+from clarite._version import get_versions
+
+clarite_version = get_versions()
 
 
 def _plot_manhattan(

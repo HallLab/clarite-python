@@ -1,8 +1,3 @@
-try:
-    import importlib.metadata as importlib_metadata
-except ModuleNotFoundError:
-    import importlib_metadata
-
 import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -13,7 +8,9 @@ import seaborn as sns
 from statsmodels.api import qqplot
 import click
 
-clarite_version = importlib_metadata.version("clarite")
+from clarite._version import get_versions
+
+clarite_version = get_versions()
 
 
 def distributions(

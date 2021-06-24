@@ -1,6 +1,0 @@
-"Variable","Variable_type","N","Beta","SE","Diff_AIC","pvalue"
-"RHQ570","binary",854,"-4.829350e-03","1.562083e-02",NA,"7.603968e-01"
-"first_degree_support","binary",2601,"7.241215e-03","8.387047e-03",NA,"3.986963e-01"
-"URXUPT","continuous",2875,"-3.143426e-03","2.513601e-04",NA,"1.286293e-10"
-"LBXV3A","continuous",248,"1.974499e-02","1.799362e-02",NA,"3.225093e-01"
-"LBXBEC","continuous",4649,"-2.532902e-03","1.226634e-04",NA,"8.393646e-07"
