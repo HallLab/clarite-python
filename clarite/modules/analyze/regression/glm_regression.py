@@ -326,6 +326,8 @@ class GLMRegression(Regression):
             )
             # TODO: Parallelize this loop
             for rv in rv_list:
+                # Must define result to catch errors outside running individual variables
+                result = None
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
                     # Take a copy of the data (ignoring other RVs)
@@ -395,6 +397,8 @@ class GLMRegression(Regression):
 
                 except Exception as e:
                     self.errors[rv] = str(e)
+                    if result is None:
+                        result = self.get_default_result_dict(rv)
                     self.results.append(result)
 
             click.echo(
