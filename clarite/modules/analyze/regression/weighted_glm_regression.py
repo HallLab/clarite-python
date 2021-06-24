@@ -263,10 +263,10 @@ class WeightedGLMRegression(GLMRegression):
             )
             # TODO: Parallelize this loop
             for rv in rv_list:
+                # Must define result to catch errors outside running individual variables
+                result = None
                 # Run in a try/except block to catch any errors specific to a regression variable
                 try:
-                    # Must define result to catch errors outside running individual variables
-                    result = None
                     # Take a copy of the data (ignoring other RVs) and create a keep_rows mask
                     keep_columns = [rv, self.outcome_variable] + self.covariates
                     data = self.data[keep_columns]
@@ -360,6 +360,8 @@ class WeightedGLMRegression(GLMRegression):
 
                 except Exception as e:
                     self.errors[rv] = str(e)
+                    if result is None:
+                        result = self.get_default_result_dict(rv)
                     self.results.append(result)
 
             click.echo(
