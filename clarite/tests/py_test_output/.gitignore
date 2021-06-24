@@ -1,4 +1,0 @@
-# Ignore everything (need to keep folder to pass tests)
-*
-# Except this file
-!.gitignore

@@ -1,5 +1,0 @@
-"Variable","Variable_type","N","Beta","SE","Diff_AIC","pvalue"
-"LBXHBC","binary",1593,"1.020832e+00","5.794090e-01",NA,"9.506911e-02"
-"LBXVCF","continuous",141,"1.760040e-04","9.363077e-05",NA,"3.112458e-01"
-"SMD160","continuous",84,"-1.269703e-01","1.477175e-01",NA,"4.385016e-01"
-"LBDEONO","continuous",1624,"-5.942805e+00","2.011145e+00",NA,"8.475455e-03"
