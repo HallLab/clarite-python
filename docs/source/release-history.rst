@@ -2,6 +2,18 @@
 Release History
 ===============
 
+v1.3.0 (2021-06-24)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Add a "report_betas" parameter to optionally return beta values for categorical variables
+* Add a "standardize_data" parameter to optionally normalize the data by zscores before running the regression, resulting in more comparable beta values
+
+Fixes
+^^^^^
+* Corrected an incorrect value logged for N in the stdout during ewas
+
 v1.2.0 (2021-03-12)
 -------------------
 
