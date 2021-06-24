@@ -1,4 +1,0 @@
-"Variable","Variable_type","N","Beta","SE","Diff_AIC","pvalue"
-"race","categorical",5941,"NA","NA","4.084523e+01","2.458773e-01"
-"agecat","categorical",5941,"NA","NA","-3.154772e+02","9.882567e-08"
-"RIAGENDR","binary",5941,"3.890387e-01","1.065730e-01","NA","4.459035e-03"
