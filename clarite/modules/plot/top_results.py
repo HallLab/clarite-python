@@ -5,10 +5,6 @@ from matplotlib.lines import Line2D
 import seaborn as sns
 import pandas as pd
 
-from clarite._version import get_versions
-
-clarite_version = get_versions()
-
 
 def top_results(
     ewas_result: pd.DataFrame,
