@@ -2,7 +2,7 @@
 name = "clarite"
 version = "1.3.0"
 description = "CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures"
-authors = ["John McGuigan <jrm5100@psu.edu>"]
+authors = ["Hall Lab <mah546@psu.edu>"]
 license = "BSD-3-Clause"
 readme = "README.rst"
 repository = "https://github.com/HallLab/clarite-python/"
@@ -45,6 +45,9 @@ black = "^21.6b0"
 
 [tool.poetry.extras]
 docs = ["sphinx", "numpydoc", "sphinx_rtd_theme", "sphinx-copybutton", "ipython", "sphinx-click"]
+
+[tool.poetry.scripts]
+clarite-cli = 'clarite.cli:entry_point'
 
 [build-system]
 requires = ["poetry>=0.12"]
