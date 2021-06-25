@@ -4,6 +4,7 @@ from typing import Optional, List, Union
 
 import click
 import pandas as pd
+from pandas_genomics import GenotypeDtype
 
 
 def print_wrap(func):
@@ -94,6 +95,11 @@ def _get_dtypes(data: pd.DataFrame):
     # Start with all as unknown
     dtypes = pd.Series("unknown", index=data.columns)
 
+    # Set genotype arrays
+    gt_cols = data.apply(lambda col: GenotypeDtype.is_dtype(col))
+    gt_cols = gt_cols[gt_cols].index
+    dtypes.loc[gt_cols] = "genotypes"
+
     # Set binary and categorical
     data_catbin = data.loc[:, data.dtypes == "category"]
     if len(data_catbin.columns) > 0:
@@ -132,7 +138,9 @@ def _get_dtypes(data: pd.DataFrame):
 def _get_dtype(data: pd.Series):
     """Return the CLARITE dtype of a pandas series"""
     # Set binary and categorical
-    if data.dtype.name == "category":
+    if GenotypeDtype.is_dtype(data):
+        return "genotypes"
+    elif data.dtype.name == "category":
         num_categories = len(data.cat.categories)
         if num_categories == 1:
             return "constant"

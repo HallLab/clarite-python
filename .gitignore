@@ -3,6 +3,8 @@
 /docs/notebooks/.ipynb_checkpoints
 /docs/source/modules
 
+poetry.lock
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
