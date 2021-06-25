@@ -1488,7 +1488,7 @@ This can then be passed into the EWAS function
 
 .. parsed-literal::
 
-    Running EWAS on a continuous variable
+    Running on a continuous variable
     
     ####### Regressing 280 Continuous Variables #######
     
@@ -1901,7 +1901,7 @@ Run Replication EWAS
 
 .. parsed-literal::
 
-    Running EWAS on a continuous variable
+    Running on a continuous variable
     
     ####### Regressing 85 Continuous Variables #######
     

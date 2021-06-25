@@ -3,12 +3,7 @@ from typing import List, Optional, Type, Union, Any
 import click
 
 from clarite.modules.analyze import regression
-
-builtin_regression_kinds = {
-    "glm": regression.GLMRegression,
-    "weighted_glm": regression.WeightedGLMRegression,
-    "r_survey": regression.RSurveyRegression,
-}
+from clarite.modules.analyze.regression import builtin_regression_kinds
 
 
 def ewas(
@@ -48,7 +43,7 @@ def ewas(
     Examples
     --------
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
-    Running EWAS on a continuous variable
+    Running on a continuous variable
     """
     # Copy data to avoid modifying the original, in case it is changed
     data = data.copy(deep=True)

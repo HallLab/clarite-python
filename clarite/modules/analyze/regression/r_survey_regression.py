@@ -44,6 +44,7 @@ class RSurveyRegression(Regression):
         self,
         data: pd.DataFrame,
         outcome_variable: str,
+        regression_variables: List[str],
         covariates: Optional[List[str]],
         survey_design_spec: Optional[SurveyDesignSpec] = None,
         min_n: int = 200,
@@ -54,7 +55,10 @@ class RSurveyRegression(Regression):
         # This takes in minimal regression params (data, outcome_variable, covariates) and
         # initializes additional parameters (outcome dtype, regression variables, error, and warnings)
         super().__init__(
-            data=data, outcome_variable=outcome_variable, covariates=covariates
+            data=data,
+            outcome_variable=outcome_variable,
+            regression_variables=regression_variables,
+            covariates=covariates,
         )
 
         # Custom init involving kwargs passed to this regression

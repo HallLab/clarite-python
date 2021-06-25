@@ -120,11 +120,12 @@ def test_fpc(data_fpc, design_str, standardize):
         raise ValueError(f"design_str unknown: '{design_str}'")
 
     # Get results
-    python_result = clarite.analyze.ewas(
-        outcome="y",
-        covariates=[],
+    python_result = clarite.analyze.association_study(
         data=df,
+        outcomes="y",
+        covariates=[],
         survey_design_spec=design,
+        regression_kind="weighted_glm",
         min_n=1,
         standardize_data=standardize,
     )

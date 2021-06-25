@@ -18,6 +18,8 @@ class Regression(metaclass=ABCMeta):
         Data used in the analysis
     outcome_variable: str
         The variable to be used as the output (y) of the regression(s)
+    regression_variables: List[str]
+        Variables to be regressed
     covariates: List[str], optional
         The variables to be used as covariates in each regression.
         Any variables in the DataFrames not listed as covariates are regressed.
@@ -33,6 +35,7 @@ class Regression(metaclass=ABCMeta):
         self,
         data: pd.DataFrame,
         outcome_variable: str,
+        regression_variables: List[str],
         covariates: Optional[List[str]] = None,
     ):
         # Print a warning if there are any empty categories and remove them
@@ -56,7 +59,7 @@ class Regression(metaclass=ABCMeta):
         # Validate parameters
         self.outcome_dtype = None
         self.regression_variables = dict()  # Mapping dtype to the variable names
-        self._validate_regression_params()
+        self._validate_regression_params(regression_variables)
         # Store defaults/placeholders (mapping each regressed variable to the value
         self.results = (
             list()
@@ -77,7 +80,7 @@ class Regression(metaclass=ABCMeta):
             + ("-" * 25)
         )
 
-    def _validate_regression_params(self):
+    def _validate_regression_params(self, regression_variables):
         """
         Validate standard regression parameters- data, outcome_variable, and covariates.  Store relevant information.
         """
@@ -99,11 +102,7 @@ class Regression(metaclass=ABCMeta):
 
         # Collect lists of regression variables
         types = _get_dtypes(self.data)
-        rv_types = {
-            v: t
-            for v, t in types.iteritems()
-            if v not in self.covariates and v != self.outcome_variable
-        }
+        rv_types = {v: t for v, t in types.iteritems() if v in regression_variables}
         rv_count = 0
         for dtype in ["binary", "categorical", "continuous"]:
             self.regression_variables[dtype] = [

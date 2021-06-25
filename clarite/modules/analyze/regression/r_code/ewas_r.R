@@ -501,18 +501,18 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
 
   # Check weights
   if(is.null(weights)){
-    print("Running EWAS without a survey design adjustment")
+    print("Running without a survey design adjustment")
     use_survey <- FALSE
   } else if(class(weights) == "character"){
     single_weight <- TRUE
     if(!(weights %in% names(d))){
       stop(paste(weights, "was specified as the weight, but was not found in the dataframe", sep=" "))
     }
-    print("Running EWAS with a single weight used for all variables")
+    print("Running with a single weight used for all variables")
     use_survey <- TRUE
   } else if(class(weights) == "list"){
     single_weight <- FALSE
-    print("Running EWAS with specific weights assigned for each variable")
+    print("Running with specific weights assigned for each variable")
     use_survey <- TRUE
   } else {
     stop("weights must be a string or a list")

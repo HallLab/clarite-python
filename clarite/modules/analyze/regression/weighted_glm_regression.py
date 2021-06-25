@@ -46,6 +46,8 @@ class WeightedGLMRegression(GLMRegression):
         The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable:
         The variable to be used as the output (y) of the regression
+    regression_variables:
+        List of regression variables to be used as input
     covariates:
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     survey_design_spec:
@@ -71,6 +73,7 @@ class WeightedGLMRegression(GLMRegression):
         self,
         data: pd.DataFrame,
         outcome_variable: str,
+        regression_variables: List[str],
         covariates: Optional[List[str]],
         survey_design_spec: Optional[SurveyDesignSpec] = None,
         min_n: int = 200,
@@ -86,6 +89,7 @@ class WeightedGLMRegression(GLMRegression):
         super().__init__(
             data=data,
             outcome_variable=outcome_variable,
+            regression_variables=regression_variables,
             covariates=covariates,
             min_n=min_n,
             report_categorical_betas=report_categorical_betas,
