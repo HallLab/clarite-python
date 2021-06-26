@@ -125,17 +125,16 @@ def test_fpc(data_fpc, design_str, standardize):
         outcomes="y",
         covariates=[],
         survey_design_spec=design,
-        regression_kind="weighted_glm",
         min_n=1,
         standardize_data=standardize,
     )
-    r_result = clarite.analyze.ewas(
-        outcome="y",
-        covariates=[],
+    r_result = clarite.analyze.association_study(
         data=df,
+        outcomes="y",
+        covariates=[],
         survey_design_spec=design,
-        min_n=1,
         regression_kind="r_survey",
+        min_n=1,
         standardize_data=standardize,
     )
     # Compare
@@ -213,55 +212,61 @@ def test_api(design_str, standardize):
     # Run analysis and comparison
     python_result = pd.concat(
         [
-            clarite.analyze.ewas(
-                outcome="api00",
+            clarite.analyze.association_study(
+                data=df,
+                outcomes="api00",
                 covariates=["meals", "mobility"],
-                data=df,
                 survey_design_spec=design,
                 min_n=1,
+                standardize_data=standardize,
             ),
-            clarite.analyze.ewas(
-                outcome="api00",
+            clarite.analyze.association_study(
+                data=df,
+                outcomes="api00",
                 covariates=["ell", "mobility"],
-                data=df,
                 survey_design_spec=design,
                 min_n=1,
+                standardize_data=standardize,
             ),
-            clarite.analyze.ewas(
-                outcome="api00",
-                covariates=["ell", "meals"],
+            clarite.analyze.association_study(
                 data=df,
+                outcomes="api00",
+                covariates=["ell", "meals"],
                 survey_design_spec=design,
                 min_n=1,
+                standardize_data=standardize,
             ),
         ],
         axis=0,
     )
     r_result = pd.concat(
         [
-            clarite.analyze.ewas(
-                outcome="api00",
+            clarite.analyze.association_study(
+                data=df,
+                outcomes="api00",
                 covariates=["meals", "mobility"],
-                data=df,
                 survey_design_spec=design,
-                min_n=1,
                 regression_kind="r_survey",
+                min_n=1,
+                standardize_data=standardize,
             ),
-            clarite.analyze.ewas(
-                outcome="api00",
+            clarite.analyze.association_study(
+                data=df,
+                outcomes="api00",
                 covariates=["ell", "mobility"],
-                data=df,
                 survey_design_spec=design,
-                min_n=1,
                 regression_kind="r_survey",
+                min_n=1,
+                standardize_data=standardize,
             ),
-            clarite.analyze.ewas(
-                outcome="api00",
-                covariates=["ell", "meals"],
+            clarite.analyze.association_study(
                 data=df,
+                outcomes="api00",
+                covariates=["ell", "meals"],
                 survey_design_spec=design,
-                min_n=1,
                 regression_kind="r_survey",
+                min_n=1,
+                standardize_data=standardize,
             ),
         ],
         axis=0,

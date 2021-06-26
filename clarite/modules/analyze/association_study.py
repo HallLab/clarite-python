@@ -4,7 +4,11 @@ import click
 import pandas as pd
 
 from clarite.modules.analyze import regression
-from clarite.modules.analyze.regression import builtin_regression_kinds
+from clarite.modules.analyze.regression import (
+    builtin_regression_kinds,
+    WeightedGLMRegression,
+    GLMRegression,
+)
 
 
 def association_study(
@@ -12,7 +16,7 @@ def association_study(
     outcomes: Union[str, List[str]],
     regression_variables: Optional[Union[str, List[str]]] = None,
     covariates: Optional[Union[str, List[str]]] = None,
-    regression_kind: Union[str, Type[regression.Regression]] = "glm",
+    regression_kind: Optional[Union[str, Type[regression.Regression]]] = None,
     encoding: Optional[str] = None,
     weighted_encoding_info: Optional[pd.DataFrame] = None,
     **kwargs,
@@ -34,9 +38,10 @@ def association_study(
         If None, use all variables in `data` that aren't an outcome or a covariate
     covariates: str, List[str], or None (default)
         The variable (str) or variables (List) to be used as covariates in each regression.
-    regression_kind: str or subclass of Regression, 'glm' by default
+    regression_kind: None, str or subclass of Regression
         This can be 'glm', 'weighted_glm', or 'r_survey' for built-in Regression types,
-        or a custom subclass of Regression
+        or a custom subclass of Regression.  If None, it is set to 'glm' if a survey design is not specified
+        and 'weighted_glm' if it is.
     encoding: Optional[str], default None
         Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
     weighted_encoding_info: Optional pd.DataFrame, default None
@@ -74,22 +79,31 @@ def association_study(
 
     # Ensure outcome, covariates, and regression variables are strings
     if isinstance(outcomes, str):
-        outcome = [
+        outcomes = [
             outcomes,
         ]
     if isinstance(covariates, str):
         covariates = [
-            outcome,
+            covariates,
         ]
     if isinstance(regression_variables, str):
         regression_variables = [
             regression_variables,
         ]
     elif regression_variables is None:
-        regression_variables = list(set(data.columns) - set(outcome) - set(covariates))
+        regression_variables = list(set(data.columns) - set(outcomes) - set(covariates))
 
     # Parse regression kind
-    if isinstance(regression_kind, str):
+    if regression_kind is None:
+        if "survey_design_spec" in kwargs:
+            if kwargs["survey_design_spec"] is None:
+                regression_cls = GLMRegression
+                del kwargs["survey_design_spec"]
+            else:
+                regression_cls = WeightedGLMRegression
+        else:
+            regression_cls = GLMRegression
+    elif isinstance(regression_kind, str):
         regression_cls = builtin_regression_kinds.get(regression_kind, None)
         if regression_cls is None:
             raise ValueError(
