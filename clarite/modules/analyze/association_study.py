@@ -77,7 +77,7 @@ def association_study(
         else:
             raise ValueError(f"Unknown 'encoding': {encoding}")
 
-    # Ensure outcome, covariates, and regression variables are strings
+    # Ensure outcome, covariates, and regression variables are lists
     if isinstance(outcomes, str):
         outcomes = [
             outcomes,

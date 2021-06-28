@@ -116,8 +116,8 @@ def test_interactions_nhanes_ageXgender(data_NHANES):
 
     # No Betas
     loaded_result = load_r_interaction_results(RESULT_PATH / "nhanes_ageXgender.csv")
-    python_result = clarite.analyze.interaction_test(
-        outcome_variable="HI_CHOL",
+    python_result = clarite.analyze.interaction_study(
+        outcomes="HI_CHOL",
         covariates=["race"],
         data=df,
         interactions=[("agecat", "RIAGENDR")],
@@ -129,8 +129,8 @@ def test_interactions_nhanes_ageXgender(data_NHANES):
     loaded_result = load_r_interaction_results(
         RESULT_PATH / "nhanes_ageXgender_withbetas.csv"
     )
-    python_result = clarite.analyze.interaction_test(
-        outcome_variable="HI_CHOL",
+    python_result = clarite.analyze.interaction_study(
+        outcomes="HI_CHOL",
         covariates=["race"],
         data=df,
         interactions=[("agecat", "RIAGENDR")],
@@ -151,8 +151,8 @@ def test_interactions_nhanes_weightXrace(data_NHANES):
 
     # No Betas
     loaded_result = load_r_interaction_results(RESULT_PATH / "nhanes_weightXrace.csv")
-    python_result = clarite.analyze.interaction_test(
-        outcome_variable="HI_CHOL",
+    python_result = clarite.analyze.interaction_study(
+        outcomes="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         interactions=[("WTMEC2YR", "race")],
@@ -164,8 +164,8 @@ def test_interactions_nhanes_weightXrace(data_NHANES):
     loaded_result = load_r_interaction_results(
         RESULT_PATH / "nhanes_weightXrace_withbetas.csv"
     )
-    python_result = clarite.analyze.interaction_test(
-        outcome_variable="HI_CHOL",
+    python_result = clarite.analyze.interaction_study(
+        outcomes="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         interactions=[("WTMEC2YR", "race")],
@@ -184,8 +184,8 @@ def test_interactions_nhanes_pairwise(data_NHANES):
 
     # No Betas
     loaded_result = load_r_interaction_results(RESULT_PATH / "nhanes_pairwise.csv")
-    python_result_nobeta = clarite.analyze.interaction_test(
-        outcome_variable="HI_CHOL",
+    python_result_nobeta = clarite.analyze.interaction_study(
+        outcomes="HI_CHOL",
         covariates=[],
         data=df,
         interactions=None,
@@ -197,8 +197,8 @@ def test_interactions_nhanes_pairwise(data_NHANES):
     loaded_result = load_r_interaction_results(
         RESULT_PATH / "nhanes_pairwise_withbetas.csv"
     )
-    python_result = clarite.analyze.interaction_test(
-        outcome_variable="HI_CHOL",
+    python_result = clarite.analyze.interaction_study(
+        outcomes="HI_CHOL",
         covariates=[],
         data=df,
         interactions=None,
