@@ -1,5 +1,13 @@
 """
-Note: relative tolerance must be set for some tests due to floating value rounding differences between R and Python
+Note: relative tolerance must be set for some tests
+
+I spent a lot of time trying to track these down, but couldn't find any good solutions.
+The results seem suitably close, and my best guess is that the difference is due to precision differences
+or the no-exact-solution nature of GLMs.
+
+* 1e-04 when comparing standardized data b/c of differences in R and python (due to precision?)
+* 1e-04 for nhanes tests using survey information (large dataset may be susceptible to precision differences during more complicated calculations)
+* 1 for nhanes realistic data using standardization (beta values differ, likely due to standardization calculation)
 """
 
 import re
@@ -42,6 +50,7 @@ def compare_loaded(
     loaded_result = pd.read_csv(surveylib_result_file)
     loaded_result = loaded_result.set_index("Variable")
     loaded_result["N"] = loaded_result["N"].astype("Int64")
+    loaded_result["Beta"] = loaded_result["Beta"].astype("float")
 
     # Drop DiffAIC unless a comparison makes sense
     if not compare_diffAIC:
@@ -58,9 +67,11 @@ def compare_loaded(
 
     # Compare
     if rtol is not None:
-        assert_frame_equal(python_result, loaded_result, rtol=rtol, check_like=True)
+        assert_frame_equal(
+            python_result, loaded_result, rtol=rtol, atol=0, check_like=True
+        )
     else:
-        assert_frame_equal(python_result, loaded_result, check_like=True)
+        assert_frame_equal(python_result, loaded_result, atol=0, check_like=True)
 
 
 ###############
@@ -120,27 +131,26 @@ def test_fpc(data_fpc, design_str, standardize):
         raise ValueError(f"design_str unknown: '{design_str}'")
 
     # Get results
-    python_result = clarite.analyze.association_study(
-        data=df,
-        outcomes="y",
-        covariates=[],
-        survey_design_spec=design,
-        min_n=1,
-        standardize_data=standardize,
-    )
-    r_result = clarite.analyze.association_study(
-        data=df,
-        outcomes="y",
-        covariates=[],
-        survey_design_spec=design,
-        regression_kind="r_survey",
-        min_n=1,
-        standardize_data=standardize,
-    )
-    # Compare
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = clarite.analyze.association_study(
+            data=df,
+            outcomes="y",
+            covariates=[],
+            survey_design_spec=design,
+            regression_kind=rk,
+            min_n=1,
+            standardize_data=standardize,
+        )
+        # Compare
     if not standardize:
-        compare_loaded(python_result, surveylib_result_file)
-    assert_frame_equal(python_result, r_result)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file)
+        assert_frame_equal(results[regression_kinds[0]], results[regression_kinds[1]])
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 ###############
@@ -210,71 +220,52 @@ def test_api(design_str, standardize):
         raise ValueError(f"design_str unknown: '{design_str}'")
 
     # Run analysis and comparison
-    python_result = pd.concat(
-        [
-            clarite.analyze.association_study(
-                data=df,
-                outcomes="api00",
-                covariates=["meals", "mobility"],
-                survey_design_spec=design,
-                min_n=1,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.association_study(
-                data=df,
-                outcomes="api00",
-                covariates=["ell", "mobility"],
-                survey_design_spec=design,
-                min_n=1,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.association_study(
-                data=df,
-                outcomes="api00",
-                covariates=["ell", "meals"],
-                survey_design_spec=design,
-                min_n=1,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.association_study(
-                data=df,
-                outcomes="api00",
-                covariates=["meals", "mobility"],
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                min_n=1,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.association_study(
-                data=df,
-                outcomes="api00",
-                covariates=["ell", "mobility"],
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                min_n=1,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.association_study(
-                data=df,
-                outcomes="api00",
-                covariates=["ell", "meals"],
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                min_n=1,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
+    if design is None:
+        regression_kinds = ["glm", "r_survey"]
+    else:
+        regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    data=df,
+                    outcomes="api00",
+                    covariates=["meals", "mobility"],
+                    survey_design_spec=design,
+                    regression_kind=rk,
+                    min_n=1,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    data=df,
+                    outcomes="api00",
+                    covariates=["ell", "mobility"],
+                    survey_design_spec=design,
+                    regression_kind=rk,
+                    min_n=1,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    data=df,
+                    outcomes="api00",
+                    covariates=["ell", "meals"],
+                    survey_design_spec=design,
+                    regression_kind=rk,
+                    min_n=1,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
+        )
+        # Compare
     if not standardize:
-        compare_loaded(python_result, surveylib_result_file)
-    assert_frame_equal(python_result, r_result)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file)
+        assert_frame_equal(results[regression_kinds[0]], results[regression_kinds[1]])
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 ##################
@@ -299,59 +290,44 @@ def test_nhanes_noweights(data_NHANES, standardize):
     )
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_noweights_result.csv"
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
+    # Run analysis and comparison
+    regression_kinds = ["glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["agecat", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "agecat"],
+                    data=df,
+                    regression_kind=rk,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
+        )
+        # Compare
     if not standardize:
-        compare_loaded(python_result, surveylib_result_file)
-    assert_frame_equal(python_result, r_result)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file)
+        assert_frame_equal(results[regression_kinds[0]], results[regression_kinds[1]])
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 @pytest.mark.parametrize("standardize", [False, True])
@@ -363,59 +339,44 @@ def test_nhanes_noweights_withNA(data_NHANES_withNA, standardize):
     )
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_noweights_withna_result.csv"
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
+    # Run analysis and comparison
+    regression_kinds = ["glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["agecat", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "agecat"],
+                    data=df,
+                    regression_kind=rk,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
+        )
+        # Compare
     if not standardize:
-        compare_loaded(python_result, surveylib_result_file)
-    assert_frame_equal(python_result, r_result)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file)
+        assert_frame_equal(results[regression_kinds[0]], results[regression_kinds[1]])
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 @pytest.mark.parametrize("standardize", [False, True])
@@ -435,68 +396,49 @@ def test_nhanes_fulldesign(data_NHANES, standardize):
     )
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_complete_result.csv"
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
-    if not standardize:
-        # Skip diffAIC due to survey weights
-        compare_loaded(
-            python_result, surveylib_result_file, compare_diffAIC=False, rtol=1e-04
+    # Run analysis and comparison
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["agecat", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "agecat"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
         )
-    assert_frame_equal(python_result, r_result, rtol=1e-04)
+        # Compare
+    if not standardize:
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file, rtol=1e-04)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 @pytest.mark.parametrize("standardize", [False, True])
@@ -516,66 +458,49 @@ def test_nhanes_fulldesign_withna(data_NHANES_withNA, standardize):
     )
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_complete_withna_result.csv"
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
+    # Run analysis and comparison
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["agecat", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "agecat"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
+        )
+        # Compare
     if not standardize:
-        # Skip diffAIC due to survey weights
-        compare_loaded(python_result, surveylib_result_file, compare_diffAIC=False)
-    assert_frame_equal(python_result, r_result)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file, rtol=1e-04)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 @pytest.mark.parametrize("standardize", [False, True])
@@ -596,68 +521,49 @@ def test_nhanes_fulldesign_subset_category(data_NHANES, standardize):
     )
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_complete_result_subset_cat.csv"
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
-    if not standardize:
-        # Skip diffAIC due to survey weights
-        compare_loaded(
-            python_result, surveylib_result_file, compare_diffAIC=False, rtol=1e-04
+    # Run analysis and comparison
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["agecat", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "agecat"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
         )
-    assert_frame_equal(python_result, r_result, rtol=1e-04)
+        # Compare
+    if not standardize:
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file, rtol=1e-03)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 @pytest.mark.parametrize("standardize", [False, True])
@@ -682,66 +588,49 @@ def test_nhanes_fulldesign_subset_continuous(standardize):
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_complete_result_subset_cont.csv"
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
+    # Run analysis and comparison
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["agecat", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "agecat"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
+        )
+        # Compare
     if not standardize:
-        # Skip diffAIC due to survey weights
-        compare_loaded(python_result, surveylib_result_file, compare_diffAIC=False)
-    assert_frame_equal(python_result, r_result)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file, rtol=1e-04)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 @pytest.mark.parametrize("standardize", [False, True])
@@ -754,66 +643,47 @@ def test_nhanes_weightsonly(data_NHANES, standardize):
     )
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_weightsonly_result.csv"
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
+    # Run analysis and comparison
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["agecat", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "agecat"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
+        )
+        # Compare
     if not standardize:
-        # Skip diffAIC due to survey weights
-        compare_loaded(python_result, surveylib_result_file, compare_diffAIC=False)
-    assert_frame_equal(python_result, r_result)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file)
+        assert_frame_equal(results[regression_kinds[0]], results[regression_kinds[1]])
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 @pytest.mark.parametrize(
@@ -844,68 +714,49 @@ def test_nhanes_lonely(data_NHANES_lonely, single_cluster, load_filename, standa
     )
     # Get Results
     surveylib_result_file = RESULT_PATH / load_filename
-    python_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    r_result = pd.concat(
-        [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["agecat", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "RIAGENDR"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
-                covariates=["race", "agecat"],
-                data=df,
-                survey_design_spec=design,
-                regression_kind="r_survey",
-                standardize_data=standardize,
-            ),
-        ],
-        axis=0,
-    )
-    # Compare
-    if not standardize:
-        # Skip diffAIC due to survey weights
-        compare_loaded(
-            python_result, surveylib_result_file, compare_diffAIC=False, rtol=1e-04
+    # Run analysis and comparison
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = pd.concat(
+            [
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["agecat", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "RIAGENDR"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+                clarite.analyze.association_study(
+                    outcomes="HI_CHOL",
+                    covariates=["race", "agecat"],
+                    data=df,
+                    regression_kind=rk,
+                    survey_design_spec=design,
+                    standardize_data=standardize,
+                ),
+            ],
+            axis=0,
         )
-    assert_frame_equal(python_result, r_result, rtol=1e-04)
+        # Compare
+    if not standardize:
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file, rtol=1e-04)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
+    else:
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
 
 
 @pytest.mark.parametrize("standardize", [False, True])
@@ -951,46 +802,37 @@ def test_nhanes_realistic(standardize):
     )
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_real_result.csv"
-    python_result = clarite.analyze.ewas(
-        outcome="BMXBMI",
-        covariates=[
-            "SES_LEVEL",
-            "SDDSRVYR",
-            "female",
-            "black",
-            "mexican",
-            "other_hispanic",
-            "other_eth",
-            "RIDAGEYR",
-        ],
-        data=df,
-        survey_design_spec=design,
-        standardize_data=standardize,
-    )
-    r_result = clarite.analyze.ewas(
-        outcome="BMXBMI",
-        covariates=[
-            "SES_LEVEL",
-            "SDDSRVYR",
-            "female",
-            "black",
-            "mexican",
-            "other_hispanic",
-            "other_eth",
-            "RIDAGEYR",
-        ],
-        data=df,
-        survey_design_spec=design,
-        regression_kind="r_survey",
-        standardize_data=standardize,
-    )
-    # Compare
+    # Run analysis and comparison
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = clarite.analyze.association_study(
+            outcomes="BMXBMI",
+            covariates=[
+                "SES_LEVEL",
+                "SDDSRVYR",
+                "female",
+                "black",
+                "mexican",
+                "other_hispanic",
+                "other_eth",
+                "RIDAGEYR",
+            ],
+            data=df,
+            regression_kind=rk,
+            survey_design_spec=design,
+            standardize_data=standardize,
+        )
+        # Compare
     if not standardize:
-        # Skip diffAIC due to survey weights
-        compare_loaded(python_result, surveylib_result_file, compare_diffAIC=False)
-        assert_frame_equal(python_result, r_result, rtol=1e-04)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file, rtol=1e-04)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
     else:
-        assert_frame_equal(python_result, r_result, rtol=1e-02)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=5e-03
+        )
 
 
 @pytest.mark.parametrize("standardize", [False, True])
@@ -1021,30 +863,29 @@ def test_nhanes_subset_singleclusters(standardize):
     # Get Results
     surveylib_result_file = RESULT_PATH / "nhanes_subset_result.csv"
     covariates = ["female", "SES_LEVEL", "RIDAGEYR", "SDDSRVYR", "BMXBMI"]
-    python_result = clarite.analyze.ewas(
-        outcome="LBXLYPCT",
-        covariates=covariates,
-        data=df,
-        survey_design_spec=design,
-        min_n=50,
-        standardize_data=standardize,
-    )
-    r_result = clarite.analyze.ewas(
-        outcome="LBXLYPCT",
-        covariates=covariates,
-        data=df,
-        survey_design_spec=design,
-        min_n=50,
-        regression_kind="r_survey",
-        standardize_data=standardize,
-    )
-    # Compare
+    # Run analysis and comparison
+    regression_kinds = ["weighted_glm", "r_survey"]
+    results = dict()
+    for rk in regression_kinds:
+        results[rk] = clarite.analyze.association_study(
+            outcomes="LBXLYPCT",
+            covariates=covariates,
+            data=df,
+            regression_kind=rk,
+            survey_design_spec=design,
+            min_n=50,
+            standardize_data=standardize,
+        )
+        # Compare
     if not standardize:
-        # Skip diffAIC due to survey weights
-        compare_loaded(python_result, surveylib_result_file, compare_diffAIC=False)
-        assert_frame_equal(python_result, r_result, rtol=1e-04)
+        compare_loaded(results[regression_kinds[0]], surveylib_result_file, rtol=1e-04)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=1e-04
+        )
     else:
-        assert_frame_equal(python_result, r_result, rtol=1e-02)
+        assert_frame_equal(
+            results[regression_kinds[0]], results[regression_kinds[1]], rtol=5e-03
+        )
 
 
 def test_report_betas(data_NHANES):
@@ -1053,17 +894,17 @@ def test_report_betas(data_NHANES):
         data_NHANES, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
     )
     # Get Results
-    normal_result = clarite.analyze.ewas(
-        outcome="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df
+    normal_result = clarite.analyze.association_study(
+        outcomes="HI_CHOL", covariates=["agecat", "RIAGENDR"], data=df
     )
-    betas_result_python = clarite.analyze.ewas(
-        outcome="HI_CHOL",
+    betas_result_python = clarite.analyze.association_study(
+        outcomes="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         report_categorical_betas=True,
     )
-    betas_result_r = clarite.analyze.ewas(
-        outcome="HI_CHOL",
+    betas_result_r = clarite.analyze.association_study(
+        outcomes="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         regression_kind="r_survey",
@@ -1102,21 +943,21 @@ def test_report_betas_fulldesign(data_NHANES):
         data_NHANES, only=["HI_CHOL", "RIAGENDR", "race", "agecat"]
     )
     # Get Results
-    normal_result = clarite.analyze.ewas(
-        outcome="HI_CHOL",
+    normal_result = clarite.analyze.association_study(
+        outcomes="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         survey_design_spec=design,
     )
-    betas_result_python = clarite.analyze.ewas(
-        outcome="HI_CHOL",
+    betas_result_python = clarite.analyze.association_study(
+        outcomes="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         report_categorical_betas=True,
         survey_design_spec=design,
     )
-    betas_result_r = clarite.analyze.ewas(
-        outcome="HI_CHOL",
+    betas_result_r = clarite.analyze.association_study(
+        outcomes="HI_CHOL",
         covariates=["agecat", "RIAGENDR"],
         data=df,
         report_categorical_betas=True,

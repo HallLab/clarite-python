@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import List, Optional
 
+import numpy as np
 import pandas as pd
 
 from clarite.internal.utilities import requires, _get_dtypes

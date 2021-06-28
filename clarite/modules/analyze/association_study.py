@@ -93,14 +93,17 @@ def association_study(
     elif regression_variables is None:
         regression_variables = list(set(data.columns) - set(outcomes) - set(covariates))
 
+    # Delete the survey_design_spec kwarg if it is None
+    # This would be fine, but kwarg parsing for different clases means possibly passing it to an init that isn't expecting it
+    if "survey_design_spec" in kwargs:
+        if kwargs["survey_design_spec"] is None:
+            del kwargs["survey_design_spec"]
+
     # Parse regression kind
     if regression_kind is None:
+        # Match the original api, which is glm or weighted_glm based on whether a design is passes
         if "survey_design_spec" in kwargs:
-            if kwargs["survey_design_spec"] is None:
-                regression_cls = GLMRegression
-                del kwargs["survey_design_spec"]
-            else:
-                regression_cls = WeightedGLMRegression
+            regression_cls = WeightedGLMRegression
         else:
             regression_cls = GLMRegression
     elif isinstance(regression_kind, str):

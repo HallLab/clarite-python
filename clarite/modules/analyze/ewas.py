@@ -75,10 +75,22 @@ def ewas(
             f"A valid string or a subclass of Regression is required."
         )
 
+    # regression variables are anything that isn't an outcome or covariate
+    regression_variables = set(data.columns) - set(
+        [
+            outcome,
+        ]
+        + covariates
+    )
+
     # Initialize the regression and print details
     print(kwargs)
     regression = regression_cls(
-        data=data, outcome_variable=outcome, covariates=covariates, **kwargs
+        data=data,
+        outcome_variable=outcome,
+        covariates=covariates,
+        regression_variables=regression_variables,
+        **kwargs,
     )
     print(regression)
 
