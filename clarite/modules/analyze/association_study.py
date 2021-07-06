@@ -2,6 +2,7 @@ from typing import Optional, Union, Type, List
 
 import click
 import pandas as pd
+from pandas_genomics import GenotypeDtype
 
 from clarite.modules.analyze import regression
 from clarite.modules.analyze.regression import (
@@ -17,7 +18,7 @@ def association_study(
     regression_variables: Optional[Union[str, List[str]]] = None,
     covariates: Optional[Union[str, List[str]]] = None,
     regression_kind: Optional[Union[str, Type[regression.Regression]]] = None,
-    encoding: Optional[str] = None,
+    encoding: str = "additive",
     weighted_encoding_info: Optional[pd.DataFrame] = None,
     **kwargs,
 ):
@@ -42,7 +43,7 @@ def association_study(
         This can be 'glm', 'weighted_glm', or 'r_survey' for built-in Regression types,
         or a custom subclass of Regression.  If None, it is set to 'glm' if a survey design is not specified
         and 'weighted_glm' if it is.
-    encoding: Optional[str], default None
+    encoding: str, default "additive"
         Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
     weighted_encoding_info: Optional pd.DataFrame, default None
         If weighted encoding is used, this must be provided.  See Pandas-Genomics documentation on weighted encodings.
@@ -58,7 +59,12 @@ def association_study(
     data = data.copy(deep=True)
 
     # Encode any genotype data
-    if encoding is not None:
+    has_genotypes = False
+    for dt in data.dtypes:
+        if GenotypeDtype.is_dtype(dt):
+            has_genotypes = True
+            break
+    if has_genotypes:
         if encoding == "additive":
             data = data.genomics.encode_additive()
         elif encoding == "dominant":
@@ -75,7 +81,7 @@ def association_study(
             else:
                 data = data.genomics.encode_weighted(weighted_encoding_info)
         else:
-            raise ValueError(f"Unknown 'encoding': {encoding}")
+            raise ValueError(f"Genotypes provided with unknown 'encoding': {encoding}")
 
     # Ensure outcome, covariates, and regression variables are lists
     if isinstance(outcomes, str):
@@ -86,6 +92,8 @@ def association_study(
         covariates = [
             covariates,
         ]
+    elif covariates is None:
+        covariates = []
     if isinstance(regression_variables, str):
         regression_variables = [
             regression_variables,

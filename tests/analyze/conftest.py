@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from pandas_genomics import scalars, sim
+
 import clarite
 import pytest
 
@@ -39,3 +41,22 @@ def data_NHANES_lonely():
     df = clarite.modify.make_binary(df, only=["HI_CHOL", "RIAGENDR"])
     df = clarite.modify.make_categorical(df, only=["race", "agecat"])
     return df
+
+
+@pytest.fixture()
+def genotype_case_control():
+    var1 = scalars.Variant(chromosome="1", position=123456, id="rs1", ref="T", alt="A")
+    var2 = scalars.Variant(chromosome="10", position=30123, id="rs2", ref="A", alt="C")
+    model = sim.BAMS.from_model(
+        eff1=sim.SNPEffectEncodings.ADDITIVE,
+        eff2=sim.SNPEffectEncodings.ADDITIVE,
+        snp1=var1,
+        snp2=var2,
+    )
+    genotypes = model.generate_case_control()
+    for i in range(2, 30):
+        var = scalars.Variant(ref="A", alt="C")
+        genotypes[f"var{i}"] = sim.generate_random_gt(
+            var, alt_allele_freq=[0.01 * i], n=2000
+        )
+    return genotypes
