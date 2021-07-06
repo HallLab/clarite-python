@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 import click
+from pandas_genomics import GenotypeDtype
 
 from .regression import InteractionRegression
 
@@ -11,7 +12,7 @@ def interaction_study(
     outcomes: Union[str, List[str]],
     interactions: Optional[Union[List[Tuple[str, str]], str]] = None,
     covariates: Optional[Union[str, List[str]]] = None,
-    encoding: Optional[str] = None,
+    encoding: str = "additive",
     weighted_encoding_info: Optional[pd.DataFrame] = None,
     report_betas: bool = False,
     min_n: int = 200,
@@ -37,7 +38,7 @@ def interaction_study(
         List of tuples: Test specific interactions of valid variables
     covariates: str, List[str], or None (default)
         The variable (str) or variables (List) to be used as covariates in each regression.
-    encoding: Optional[str], default None
+    encoding: str, default "additive""
         Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
     weighted_encoding_info: Optional pd.DataFrame, default None
         If weighted encoding is used, this must be provided.  See Pandas-Genomics documentation on weighted encodings.
@@ -60,7 +61,12 @@ def interaction_study(
     data = data.copy(deep=True)
 
     # Encode any genotype data
-    if encoding is not None:
+    has_genotypes = False
+    for dt in data.dtypes:
+        if GenotypeDtype.is_dtype(dt):
+            has_genotypes = True
+            break
+    if has_genotypes:
         if encoding == "additive":
             data = data.genomics.encode_additive()
         elif encoding == "dominant":
@@ -77,7 +83,7 @@ def interaction_study(
             else:
                 data = data.genomics.encode_weighted(weighted_encoding_info)
         else:
-            raise ValueError(f"Unknown 'encoding': {encoding}")
+            raise ValueError(f"Genotypes provided with unknown 'encoding': {encoding}")
 
     # Ensure outcome, covariates, and regression variables are lists
     if isinstance(outcomes, str):
@@ -88,7 +94,8 @@ def interaction_study(
         covariates = [
             covariates,
         ]
-    regression_variables = list(set(data.columns) - set(outcomes) - set(covariates))
+    elif covariates is None:
+        covariates = []
 
     # Run each regression
     results = []
