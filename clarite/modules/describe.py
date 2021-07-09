@@ -59,7 +59,7 @@ def correlations(data: pd.DataFrame, threshold: float = 0.75):
     correlation = data.corr()
     # Keep only the upper triangle to avoid listing both a-b and b-a correlations
     correlation = correlation.where(
-        np.triu(np.ones(correlation.shape), k=1).astype(np.bool)
+        np.triu(np.ones(correlation.shape), k=1).astype(bool)
     )
     # Stack and rename into the desired format
     correlation = (

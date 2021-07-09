@@ -120,20 +120,20 @@ def distributions(
             # Plot non-NA values and record the number of those separately (otherwise they can cause issues with generating a KDE)
             ax = plt.subplot2grid((nrows, ncols), (row_idx, col_idx))
             if str(data.dtypes[variable]) == "category":  # binary and categorical
-                sns.countplot(data.loc[~data[variable].isna(), variable], ax=ax)
+                sns.countplot(x=data.loc[~data[variable].isna(), variable], ax=ax)
             else:
                 if continuous_kind == "count":
                     sns.distplot(
-                        data.loc[~data[variable].isna(), variable],
+                        x=data.loc[~data[variable].isna(), variable],
                         kde=False,
                         norm_hist=False,
                         hist_kws={"alpha": 1},
                         ax=ax,
                     )
                 elif continuous_kind == "box":
-                    sns.boxplot(data.loc[~data[variable].isna(), variable], ax=ax)
+                    sns.boxplot(x=data.loc[~data[variable].isna(), variable], ax=ax)
                 elif continuous_kind == "violin":
-                    sns.violinplot(data.loc[~data[variable].isna(), variable], ax=ax)
+                    sns.violinplot(x=data.loc[~data[variable].isna(), variable], ax=ax)
                 elif continuous_kind == "qq":
                     # QQ plots have to be sub-sampled otherwise there are too many points and the pdf is blank
                     d = data.loc[~data[variable].isna(), variable]

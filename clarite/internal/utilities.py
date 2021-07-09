@@ -88,9 +88,11 @@ def _validate_skip_only(
 
 def _get_dtypes(data: pd.DataFrame):
     """Return a Series of CLARITE dtypes indexed by variable name"""
-    # Ensure that 'data' is a DataFrame and not a Series
-    if type(data) != pd.DataFrame:
-        raise ValueError("The passed 'data' is not a Pandas DataFrame")
+    # Ensure that 'data' is a DataFrame or Series (which is converted to a DataFrame)
+    if isinstance(data, pd.Series):
+        data = pd.DataFrame(data)
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("The passed 'data' is not a Pandas DataFrame or Series")
 
     # Start with all as unknown
     dtypes = pd.Series("unknown", index=data.columns)
@@ -203,15 +205,13 @@ def _remove_empty_categories(
         dtypes = data.loc[:, columns].dtypes
         catvars = [v for v in dtypes[dtypes == "category"].index]
         for var in catvars:
-            counts = data[var].value_counts()
-            keep_cats = list(counts[counts > 0].index)
-            if len(keep_cats) < len(counts):
-                removed_cats[var] = set(counts.index) - set(keep_cats)
-                data[var].cat.set_categories(
-                    new_categories=keep_cats,
-                    ordered=data[var].cat.ordered,
-                    inplace=True,
-                )
+            existing_cats = data[var].cat.categories
+            if data[var].cat.ordered:
+                print()
+            data[var] = data[var].cat.remove_unused_categories()
+            removed_categories = set(existing_cats) - set(data[var].cat.categories)
+            if len(removed_categories) > 0:
+                removed_cats[var] = removed_categories
         return removed_cats
     elif type(data) == pd.Series:
         assert skip is None

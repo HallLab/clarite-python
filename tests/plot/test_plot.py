@@ -88,10 +88,11 @@ def test_top_results(
 
 
 @pytest.mark.parametrize(
-    "column,bins", [("URXUPT", None), ("URXUPT", 100), ("SES_LEVEL", None)]
+    "column,kwargs",
+    [("URXUPT", dict()), ("URXUPT", {"bins": 200}), ("SES_LEVEL", dict())],
 )
-def test_histogram(dataNHANESReal, column, bins):
-    clarite.plot.histogram(data=dataNHANESReal, column=column, bins=bins)
+def test_histogram(dataNHANESReal, column, kwargs):
+    clarite.plot.histogram(data=dataNHANESReal, column=column, **kwargs)
     plt.show()
 
 
