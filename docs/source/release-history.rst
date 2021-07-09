@@ -2,6 +2,15 @@
 Release History
 ===============
 
+v2.0.0 (2021-07-09)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Analysis functions have been generalized into `association_study` and `interaction_study` functions
+* Support added for genotype data using Pandas-Genomics
+
+
 v1.3.0 (2021-06-24)
 -------------------
 

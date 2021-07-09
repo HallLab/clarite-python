@@ -45,6 +45,9 @@ def ewas(
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
     Running on a continuous variable
     """
+    raise DeprecationWarning(
+        "This function will be depreciated in favor of clarite.analyze.association_study"
+    )
     # Copy data to avoid modifying the original, in case it is changed
     data = data.copy(deep=True)
 

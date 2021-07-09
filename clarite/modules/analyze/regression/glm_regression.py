@@ -214,6 +214,9 @@ class GLMRegression(Regression):
         # Add "Outcome" and set the index
         result["Outcome"] = self.outcome_variable
         if self.report_categorical_betas:
+            # If there were no categorical variables (probably a mistake to set this option) the "Category" column will be missing.
+            if "Category" not in result.columns:
+                result["Category"] = None
             result = result.set_index(["Variable", "Outcome", "Category"]).sort_values(
                 ["pvalue", "Beta_pvalue"]
             )

@@ -60,6 +60,7 @@ def genotype_case_control_add_add_main():
         genotypes[f"var{i}"] = sim.generate_random_gt(
             var, alt_allele_freq=[0.01 * i], n=2000
         )
+    genotypes.index.name = "ID"
     return genotypes
 
 
@@ -76,11 +77,12 @@ def genotype_case_control_rec_rec_onlyinteraction():
         main2=0,
         interaction=1.0,
     )
-    genotypes = model.generate_case_control(n_cases=5000, n_controls=2000, snr=0.01)
+    genotypes = model.generate_case_control(snr=0.1)
     # Add random gt
     for i in range(2, 50):
         var = scalars.Variant(ref="A", alt="C")
         genotypes[f"var{i}"] = sim.generate_random_gt(
-            var, alt_allele_freq=[0.01 * i], n=7000
+            var, alt_allele_freq=[0.01 * i], n=2000
         )
+    genotypes.index.name = "ID"
     return genotypes
