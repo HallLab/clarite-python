@@ -21,7 +21,7 @@ PY_DATA_PATH = Path(__file__).parent.parent / "py_test_output"
     ],
 )
 @pytest.mark.parametrize(
-    "ewas_result_list,bonferroni,fdr,label_vars",
+    "result_list,bonferroni,fdr,label_vars",
     [
         (["resultNHANESReal"], None, None, None),
         (["resultNHANESReal", "resultNHANESsmall"], None, None, None),
@@ -29,8 +29,8 @@ PY_DATA_PATH = Path(__file__).parent.parent / "py_test_output"
         (["resultNHANESReal_multi"], None, None, ["LBXBEC"]),
     ],
 )
-def test_manhattan(ewas_result_list, bonferroni, fdr, label_vars, categories, request):
-    dfs = {name: request.getfixturevalue(name) for name in ewas_result_list}
+def test_manhattan(result_list, bonferroni, fdr, label_vars, categories, request):
+    dfs = {name: request.getfixturevalue(name) for name in result_list}
     clarite.plot.manhattan(
         dfs=dfs,
         bonferroni=bonferroni,
@@ -88,10 +88,11 @@ def test_top_results(
 
 
 @pytest.mark.parametrize(
-    "column,bins", [("URXUPT", None), ("URXUPT", 100), ("SES_LEVEL", None)]
+    "column,kwargs",
+    [("URXUPT", dict()), ("URXUPT", {"bins": 200}), ("SES_LEVEL", dict())],
 )
-def test_histogram(dataNHANESReal, column, bins):
-    clarite.plot.histogram(data=dataNHANESReal, column=column, bins=bins)
+def test_histogram(dataNHANESReal, column, kwargs):
+    clarite.plot.histogram(data=dataNHANESReal, column=column, **kwargs)
     plt.show()
 
 

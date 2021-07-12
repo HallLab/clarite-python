@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import List, Optional
 
+import numpy as np
 import pandas as pd
 
 from clarite.internal.utilities import requires, _get_dtypes
@@ -44,6 +45,7 @@ class RSurveyRegression(Regression):
         self,
         data: pd.DataFrame,
         outcome_variable: str,
+        regression_variables: List[str],
         covariates: Optional[List[str]],
         survey_design_spec: Optional[SurveyDesignSpec] = None,
         min_n: int = 200,
@@ -54,7 +56,10 @@ class RSurveyRegression(Regression):
         # This takes in minimal regression params (data, outcome_variable, covariates) and
         # initializes additional parameters (outcome dtype, regression variables, error, and warnings)
         super().__init__(
-            data=data, outcome_variable=outcome_variable, covariates=covariates
+            data=data,
+            outcome_variable=outcome_variable,
+            regression_variables=regression_variables,
+            covariates=covariates,
         )
 
         # Custom init involving kwargs passed to this regression
@@ -127,6 +132,9 @@ class RSurveyRegression(Regression):
             )
 
         if self.report_categorical_betas:
+            # If there were no categorical variables (probably a mistake to set this option) the "Category" column will be missing.
+            if "Category" not in self.result.columns:
+                self.result["Category"] = None
             result = self.result.set_index(
                 ["Variable", "Outcome", "Category"]
             ).sort_values(["pvalue", "Beta_pvalue"])

@@ -57,10 +57,14 @@ class InteractionRegression(GLMRegression):
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
         # initializes additional parameters (outcome dtype, regression variables, error, and warnings)
+        regression_variables = list(
+            set(data.columns) - {outcome_variable} - set(covariates)
+        )
         super().__init__(
             data=data,
             outcome_variable=outcome_variable,
             covariates=covariates,
+            regression_variables=regression_variables,
             min_n=min_n,
         )
 

@@ -4,6 +4,8 @@ from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from clarite.internal.utilities import _get_dtypes
+
 
 def histogram(
     data,
@@ -14,7 +16,7 @@ def histogram(
     **kwargs,
 ):
     """
-    Plot a histogram of the values in the given column.  Takes kwargs for seaborn's distplot.
+    Plot a histogram of the values in the given column.
 
     Parameters
     ----------
@@ -29,7 +31,7 @@ def histogram(
     figure: matplotlib Figure or None, default None
         Pass in an existing figure to plot to that instead of creating a new one (ignoring figsize)
     **kwargs:
-        Other keyword arguments to pass to the distplot function of Seaborn
+        Other keyword arguments to pass to the histplot or catplot function of Seaborn
 
     Returns
     -------
@@ -53,4 +55,12 @@ def histogram(
     else:
         ax = figure.subplots()
     ax.set_title(title)
-    sns.distplot(data.loc[~data[column].isna(), column], ax=ax, **kwargs)
+    # Determine type, which determines which plot function to use
+    print(kwargs)
+    datatype = _get_dtypes(data[column])[column]
+    if datatype == "continuous":
+        sns.histplot(x=data.loc[~data[column].isna(), column], ax=ax, **kwargs)
+    elif datatype == "categorical":
+        sns.countplot(x=data[column], ax=ax, **kwargs)
+    else:
+        raise ValueError(f"Can't plot a histogram with data of type {datatype}.")

@@ -354,7 +354,7 @@ regress <- function(data, y, var_name, covariates, min_n, allowed_nonvarying, re
     numeric_cols <- sapply(data, is.numeric)  # Exclude factors
     binary_cols <- sapply(data, function(s){all(s==0 | s==1 | is.na(s))})  # Exclude binary encoded as 0/1/missing
     scale_cols <- allowed_to_scale_cols & numeric_cols & !binary_cols
-    data[scale_cols] <- lapply(data[scale_cols], scale)
+    data[scale_cols] <- scale(data[scale_cols])
   }
 
   # Run Regression for the single variable
@@ -501,18 +501,18 @@ ewas <- function(d, bin_vars=NULL, cat_vars=NULL, cont_vars=NULL, y,
 
   # Check weights
   if(is.null(weights)){
-    print("Running EWAS without a survey design adjustment")
+    print("Running without a survey design adjustment")
     use_survey <- FALSE
   } else if(class(weights) == "character"){
     single_weight <- TRUE
     if(!(weights %in% names(d))){
       stop(paste(weights, "was specified as the weight, but was not found in the dataframe", sep=" "))
     }
-    print("Running EWAS with a single weight used for all variables")
+    print("Running with a single weight used for all variables")
     use_survey <- TRUE
   } else if(class(weights) == "list"){
     single_weight <- FALSE
-    print("Running EWAS with specific weights assigned for each variable")
+    print("Running with specific weights assigned for each variable")
     use_survey <- TRUE
   } else {
     stop("weights must be a string or a list")

@@ -69,8 +69,8 @@ def resultNHANESReal():
         fpc=None,
         nest=True,
     )
-    calculated_result = clarite.analyze.ewas(
-        outcome="BMXBMI",
+    calculated_result = clarite.analyze.association_study(
+        outcomes="BMXBMI",
         covariates=[
             "SES_LEVEL",
             "SDDSRVYR",
@@ -118,20 +118,20 @@ def resultNHANESsmall():
     df = clarite.modify.colfilter(df, only=["HI_CHOL", "RIAGENDR", "race", "agecat"])
     python_result = pd.concat(
         [
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
+            clarite.analyze.association_study(
+                outcomes="HI_CHOL",
                 covariates=["agecat", "RIAGENDR"],
                 data=df,
                 survey_design_spec=design,
             ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
+            clarite.analyze.association_study(
+                outcomes="HI_CHOL",
                 covariates=["race", "RIAGENDR"],
                 data=df,
                 survey_design_spec=design,
             ),
-            clarite.analyze.ewas(
-                outcome="HI_CHOL",
+            clarite.analyze.association_study(
+                outcomes="HI_CHOL",
                 covariates=["race", "agecat"],
                 data=df,
                 survey_design_spec=design,

@@ -41,6 +41,8 @@ class GLMRegression(Regression):
         The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
     outcome_variable:
         The variable to be used as the output (y) of the regression
+    regression_variables:
+        List of regression variables to be used as input
     covariates:
         The variables to be used as covariates.  Any variables in the DataFrames not listed as covariates are regressed.
     min_n:
@@ -61,6 +63,7 @@ class GLMRegression(Regression):
         self,
         data: pd.DataFrame,
         outcome_variable: str,
+        regression_variables: List[str],
         covariates: Optional[List[str]] = None,
         min_n: int = 200,
         report_categorical_betas: bool = False,
@@ -71,6 +74,7 @@ class GLMRegression(Regression):
         ----------
         data - pd.DataFrame
         outcome_variable - name of the outcome variable
+        regression_variables - names of the regression variables
         covariates - other variables to include in the regression formula
 
         Kwargs
@@ -82,7 +86,10 @@ class GLMRegression(Regression):
         # This takes in minimal regression params (data, outcome_variable, covariates) and
         # initializes additional parameters (outcome dtype, regression variables, error, and warnings)
         super().__init__(
-            data=data, outcome_variable=outcome_variable, covariates=covariates
+            data=data,
+            outcome_variable=outcome_variable,
+            regression_variables=regression_variables,
+            covariates=covariates,
         )
 
         # Custom init involving kwargs passed to this regression
@@ -207,6 +214,9 @@ class GLMRegression(Regression):
         # Add "Outcome" and set the index
         result["Outcome"] = self.outcome_variable
         if self.report_categorical_betas:
+            # If there were no categorical variables (probably a mistake to set this option) the "Category" column will be missing.
+            if "Category" not in result.columns:
+                result["Category"] = None
             result = result.set_index(["Variable", "Outcome", "Category"]).sort_values(
                 ["pvalue", "Beta_pvalue"]
             )

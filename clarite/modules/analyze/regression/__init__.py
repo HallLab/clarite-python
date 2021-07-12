@@ -35,10 +35,18 @@ from .base import Regression
 
 from .interaction_regression import InteractionRegression
 
+builtin_regression_kinds = {
+    "glm": GLMRegression,
+    "weighted_glm": WeightedGLMRegression,
+    "r_survey": RSurveyRegression,
+}
+
+
 __all__ = [
     GLMRegression,
     RSurveyRegression,
     WeightedGLMRegression,
     Regression,
     InteractionRegression,
+    builtin_regression_kinds,
 ]

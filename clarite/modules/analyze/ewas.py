@@ -3,12 +3,7 @@ from typing import List, Optional, Type, Union, Any
 import click
 
 from clarite.modules.analyze import regression
-
-builtin_regression_kinds = {
-    "glm": regression.GLMRegression,
-    "weighted_glm": regression.WeightedGLMRegression,
-    "r_survey": regression.RSurveyRegression,
-}
+from clarite.modules.analyze.regression import builtin_regression_kinds
 
 
 def ewas(
@@ -48,8 +43,11 @@ def ewas(
     Examples
     --------
     >>> ewas_discovery = clarite.analyze.ewas("logBMI", covariates, nhanes_discovery)
-    Running EWAS on a continuous variable
+    Running on a continuous variable
     """
+    raise DeprecationWarning(
+        "This function will be depreciated in favor of clarite.analyze.association_study"
+    )
     # Copy data to avoid modifying the original, in case it is changed
     data = data.copy(deep=True)
 
@@ -80,10 +78,22 @@ def ewas(
             f"A valid string or a subclass of Regression is required."
         )
 
+    # regression variables are anything that isn't an outcome or covariate
+    regression_variables = set(data.columns) - set(
+        [
+            outcome,
+        ]
+        + covariates
+    )
+
     # Initialize the regression and print details
     print(kwargs)
     regression = regression_cls(
-        data=data, outcome_variable=outcome, covariates=covariates, **kwargs
+        data=data,
+        outcome_variable=outcome,
+        covariates=covariates,
+        regression_variables=regression_variables,
+        **kwargs,
     )
     print(regression)
 
