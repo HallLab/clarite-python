@@ -41,10 +41,29 @@ CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures
 * Free software: 3-clause BSD license
 * Documentation: https://www.hall-lab.org/clarite-python/.
 
+Examples
+--------
+
+**Run an EWAS in a few lines of code**
+
+.. image:: docs/source/_static/code/quick_ewas.png
+
+|
+
+**More realistically, perform some QC first:**
+
+.. image:: docs/source/_static/code/filters.png
+
+|
+
+**Genotype data is supported via Pandas-Genomics**
+
+.. image:: docs/source/_static/code/gwas.png
+
 Installation
 ------------
 
-In order to use the *survey_r* regression_kind in the *ewas* function, R must be installed along with the *survey* library.
+In order to use the *r_survey* regression_kind in the *ewas* function, R must be installed along with the *survey* library.
 
 1. Install R and ensure it is accessible from the command line.  You may need to add its location to the PATH environmental variable.
 2. Use *install.packages* in R to install the *survey* library.
