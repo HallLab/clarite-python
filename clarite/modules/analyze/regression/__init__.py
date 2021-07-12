@@ -43,10 +43,10 @@ builtin_regression_kinds = {
 
 
 __all__ = [
-    GLMRegression,
-    RSurveyRegression,
-    WeightedGLMRegression,
-    Regression,
-    InteractionRegression,
-    builtin_regression_kinds,
+    "GLMRegression",
+    "RSurveyRegression",
+    "WeightedGLMRegressio"n",
+    "Regression",
+    "InteractionRegression",
+    "builtin_regression_kinds",
 ]

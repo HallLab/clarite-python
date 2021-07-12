@@ -20,11 +20,11 @@ from .utils import add_corrected_pvalues
 from . import regression
 
 __all__ = [
-    association_study,
-    ewas,
-    interaction_study,
-    add_corrected_pvalues,
-    regression,
+    "association_study",
+    "ewas",
+    "interaction_study",
+    "add_corrected_pvalues",
+    "regression",
 ]
 
 # Constants
@@ -42,6 +42,6 @@ result_columns = [
 ]
 corrected_pvalue_columns = ["pvalue_bonferroni", "pvalue_fdr"]
 
-__all__.append(required_result_columns)
-__all__.append(result_columns)
-__all__.append(corrected_pvalue_columns)
+__all__.append("required_result_columns")
+__all__.append("result_columns")
+__all__.append("corrected_pvalue_columns")

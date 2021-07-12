@@ -22,10 +22,10 @@ from .manhattan import manhattan, manhattan_fdr, manhattan_bonferroni
 from .top_results import top_results
 
 __all__ = [
-    distributions,
-    histogram,
-    manhattan,
-    manhattan_fdr,
-    manhattan_bonferroni,
-    top_results,
+    "distributions",
+    "histogram",
+    "manhattan",
+    "manhattan_fdr",
+    "manhattan_bonferroni",
+    "top_results",
 ]
