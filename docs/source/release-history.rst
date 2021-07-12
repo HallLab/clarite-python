@@ -2,6 +2,11 @@
 Release History
 ===============
 
+v2.0.1 (2021-07-12)
+-------------------
+
+Change "weighted" encoding to "edge" encoding and support newer version of pandas-genomics
+
 v2.0.0 (2021-07-09)
 -------------------
 
