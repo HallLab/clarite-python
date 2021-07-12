@@ -47,18 +47,21 @@ Examples
 **Run an EWAS in a few lines of code**
 
 .. image:: docs/source/_static/code/quick_ewas.png
+   :width: 400
 
 |
 
 **More realistically, perform some QC first:**
 
 .. image:: docs/source/_static/code/filters.png
+   :width: 400
 
 |
 
 **Genotype data is supported via Pandas-Genomics**
 
 .. image:: docs/source/_static/code/gwas.png
+   :width: 400
 
 Installation
 ------------
