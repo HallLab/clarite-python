@@ -2,6 +2,11 @@
 Release History
 ===============
 
+v2.0.2 (2021-07-13)
+-------------------
+
+Bump pandas-genomics version, make it less specific
+
 v2.0.1 (2021-07-12)
 -------------------
 
