@@ -58,19 +58,19 @@ def distributions(
     >>> import clarite
     >>> clarite.plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test")
 
-    .. image:: ../../_static/plot/distributions_count.png
+    .. image:: ../_static/plot/distributions_count.png
 
     >>> clarite.plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='box')
 
-    .. image:: ../../_static/plot/distributions_box.png
+    .. image:: ../_static/plot/distributions_box.png
 
     >>> clarite.plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='violin')
 
-    .. image:: ../../_static/plot/distributions_violin.png
+    .. image:: ../_static/plot/distributions_violin.png
 
     >>> clarite.plot.distributions(df[['female', 'occupation', 'LBX074']], filename="test", continuous_kind='qq')
 
-    .. image:: ../../_static/plot/distributions_qq.png
+    .. image:: ../_static/plot/distributions_qq.png
 
     """
     # Limit variables

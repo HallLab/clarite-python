@@ -19,7 +19,7 @@ def association_study(
     covariates: Optional[Union[str, List[str]]] = None,
     regression_kind: Optional[Union[str, Type[regression.Regression]]] = None,
     encoding: str = "additive",
-    weighted_encoding_info: Optional[pd.DataFrame] = None,
+    edge_encoding_info: Optional[pd.DataFrame] = None,
     **kwargs,
 ):
     """
@@ -45,8 +45,8 @@ def association_study(
         and 'weighted_glm' if it is.
     encoding: str, default "additive"
         Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
-    weighted_encoding_info: Optional pd.DataFrame, default None
-        If weighted encoding is used, this must be provided.  See Pandas-Genomics documentation on weighted encodings.
+    edge_encoding_info: Optional pd.DataFrame, default None
+        If edge encoding is used, this must be provided.  See Pandas-Genomics documentation on edge encodings.
     kwargs: Keyword arguments specific to the Regression being used
 
     Returns
@@ -73,13 +73,13 @@ def association_study(
             data = data.genomics.encode_recessive()
         elif encoding == "codominant":
             data = data.genomics.encode_codominant()
-        elif encoding == "weighted":
-            if weighted_encoding_info is None:
+        elif encoding == "edge":
+            if edge_encoding_info is None:
                 raise ValueError(
-                    "'weighted_encoding_info' must be provided when using weighted encoding"
+                    "'edge_encoding_info' must be provided when using edge encoding"
                 )
             else:
-                data = data.genomics.encode_weighted(weighted_encoding_info)
+                data = data.genomics.encode_edge(edge_encoding_info)
         else:
             raise ValueError(f"Genotypes provided with unknown 'encoding': {encoding}")
 

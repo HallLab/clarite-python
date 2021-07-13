@@ -8,8 +8,8 @@ Base Class
 .. autoclass:: Regression
 
 
-clarite.analyze.ewas
---------------------
+clarite.analyze.association_study
+---------------------------------
 
 The `regression_kind` parameter can be set to use one of three regression classes, or a custom subclass of `Regression`
 can be created.
@@ -21,8 +21,8 @@ can be created.
 .. autoclass:: RSurveyRegression
 
 
-clarite.analyze.interactions
-----------------------------
+clarite.analyze.interaction_study
+---------------------------------
 
 .. autoclass:: InteractionRegression
 
@@ -43,10 +43,10 @@ builtin_regression_kinds = {
 
 
 __all__ = [
-    GLMRegression,
-    RSurveyRegression,
-    WeightedGLMRegression,
-    Regression,
-    InteractionRegression,
-    builtin_regression_kinds,
+    "GLMRegression",
+    "RSurveyRegression",
+    "WeightedGLMRegression",
+    "Regression",
+    "InteractionRegression",
+    "builtin_regression_kinds",
 ]

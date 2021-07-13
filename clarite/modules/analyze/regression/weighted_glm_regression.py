@@ -21,15 +21,6 @@ class WeightedGLMRegression(GLMRegression):
     The statistical adjustments (primarily the covariance calculation) are designed to match results when running with
     the R `survey` library.
 
-    Regression Methods
-    ------------------
-    Binary variables
-        Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
-    Categorical variables
-        The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
-    Continuous variables
-        A GLM is used to obtain Beta, SE, and pvalue results.
-
     Notes
     -----
     * The family used is Gaussian for continuous outcomes or binomial(logit) for binary outcomes.
@@ -39,6 +30,15 @@ class WeightedGLMRegression(GLMRegression):
       specifies `drop_unweighted` as True (in which case those rows are dropped)
     * Categorical variables run with a survey design will not report Diff_AIC as it may not be possible to calculate
       it accurately
+
+    *Regression Methods*
+
+    Binary variables
+        Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
+    Categorical variables
+        The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
+    Continuous variables
+        A GLM is used to obtain Beta, SE, and pvalue results.
 
     Parameters
     ----------

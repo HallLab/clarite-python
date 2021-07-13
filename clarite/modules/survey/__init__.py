@@ -5,10 +5,7 @@ Survey
 
 Complex survey design
 
-  .. autosummary::
-     :toctree: modules/survey
-
-     SurveyDesignSpec
+    .. autoclass:: SurveyDesignSpec
 
 """
 

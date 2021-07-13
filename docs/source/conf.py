@@ -17,9 +17,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../clarite"))
 
 
 # -- General configuration ------------------------------------------------
@@ -34,7 +35,6 @@
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
-    "sphinx.ext.autosummary",
     "sphinx.ext.githubpages",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
@@ -49,6 +49,7 @@ extensions = [
 
 # AutoSectionLabel
 autosectionlabel_prefix_document = True
+suppress_warnings = ["autosectionlabel.*"]
 
 # Configuration options for plot_directive. See:
 # https://github.com/matplotlib/matplotlib/blob/f3ed922d935751e08494e5fb5311d3050a3b637b/lib/matplotlib/sphinxext/plot_directive.py#L81
@@ -56,7 +57,6 @@ plot_html_show_source_link = False
 plot_html_show_formats = False
 
 # Generate the API documentation when building
-autosummary_generate = True
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.

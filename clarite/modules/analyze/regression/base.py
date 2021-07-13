@@ -12,8 +12,8 @@ class Regression(metaclass=ABCMeta):
     """
     Abstract Base Class for Regression objects used in EWAS.
 
-    Minimum Parameters
-    ------------------
+    Parameters
+    ----------
     data: pd.DataFrame
         Data used in the analysis
     outcome_variable: str
@@ -25,10 +25,11 @@ class Regression(metaclass=ABCMeta):
         Any variables in the DataFrames not listed as covariates are regressed.
         Use `None` or an empty list when no covariates are being used.
 
-    Abstract Methods
-    ----------------
-    run() -> None
-    get_results() -> pd.DataFrame
+    Notes
+    -----
+    These are the abstract methods:
+    * run() -> None
+    * get_results() -> pd.DataFrame
     """
 
     def __init__(

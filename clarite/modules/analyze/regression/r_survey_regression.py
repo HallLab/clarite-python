@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import List, Optional
 
-import numpy as np
 import pandas as pd
 
 from clarite.internal.utilities import requires, _get_dtypes
@@ -12,33 +11,33 @@ from ...survey import SurveyDesignSpec
 
 class RSurveyRegression(Regression):
     """
-      Run regressions by calling R from Python
-      When a SurveyDesignSpec is provided, the R *survey* library is used.
-      Results should match those run with either GLMRegression or WeightedGLMRegression.
+    Run regressions by calling R from Python
+    When a SurveyDesignSpec is provided, the R *survey* library is used.
+    Results should match those run with either GLMRegression or WeightedGLMRegression.
 
-      Parameters
-      ----------
-      data:
+    Parameters
+    ----------
+    data:
         The data to be analyzed, including the outcome, covariates, and any variables to be regressed.
-      outcome_variable:
+    outcome_variable:
         The variable to be used as the output (y) of the regression
-      covariates:
+    covariates:
         The variables to be used as covariates. Any variables in the DataFrames not listed as covariates are regressed.
-      survey_design_spec:
-          A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
-          Use None if unweighted regression is desired.
-      min-n:
+    survey_design_spec:
+        A SurveyDesignSpec object is used to create SurveyDesign objects for each regression.
+        Use None if unweighted regression is desired.
+    min-n:
         Minimum number of complete-case observations (no NA values for outcome, covariates, variable, or weight)
         Defaults to 200
     report_betas: boolean
-      False by default.
+        False by default.
         If True, the results will contain one row for each categorical value (other than the reference category) and
         will include the beta value, standard error (SE), and beta pvalue for that specific category. The number of
         terms increases with the number of categories.
     standardize_data: boolean
         False by default.
-          If True, numeric data will be standardized using z-scores before regression.
-          This will affect the beta values and standard error, but not the pvalues.
+        If True, numeric data will be standardized using z-scores before regression.
+        This will affect the beta values and standard error, but not the pvalues.
     """
 
     def __init__(

@@ -20,20 +20,20 @@ class GLMRegression(Regression):
     Statsmodels GLM Regression.
     This class handles running a regression for each variable of interest and collecting results.
 
-    Regression Methods
-    ------------------
+    Notes
+    -----
+    * The family used is either Gaussian (continuous outcomes) or binomial(logit) for binary outcomes.
+    * Covariates variables that are constant produce warnings and are ignored
+    * The dataset is subset to drop missing values, and the same dataset is used for both models in the LRT
+
+    *Regression Methods*
+
     Binary variables
         Treated as continuous features, with values of 0 and 1 (the larger value in the original data is encoded as 1).
     Categorical variables
         The results of a likelihood ratio test are used to calculate a pvalue.  No Beta or SE values are reported.
     Continuous variables
         A GLM is used to obtain Beta, SE, and pvalue results.
-
-    Notes
-    -----
-    * The family used is either Gaussian (continuous outcomes) or binomial(logit) for binary outcomes.
-    * Covariates variables that are constant produce warnings and are ignored
-    * The dataset is subset to drop missing values, and the same dataset is used for both models in the LRT
 
     Parameters
     ----------

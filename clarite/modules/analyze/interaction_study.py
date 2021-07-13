@@ -13,7 +13,7 @@ def interaction_study(
     interactions: Optional[Union[List[Tuple[str, str]], str]] = None,
     covariates: Optional[Union[str, List[str]]] = None,
     encoding: str = "additive",
-    weighted_encoding_info: Optional[pd.DataFrame] = None,
+    edge_encoding_info: Optional[pd.DataFrame] = None,
     report_betas: bool = False,
     min_n: int = 200,
 ):
@@ -39,9 +39,9 @@ def interaction_study(
     covariates: str, List[str], or None (default)
         The variable (str) or variables (List) to be used as covariates in each regression.
     encoding: str, default "additive""
-        Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
-    weighted_encoding_info: Optional pd.DataFrame, default None
-        If weighted encoding is used, this must be provided.  See Pandas-Genomics documentation on weighted encodings.
+        Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'edge'}
+    edge_encoding_info: Optional pd.DataFrame, default None
+        If edge encoding is used, this must be provided.  See Pandas-Genomics documentation on edge encoding.
     report_betas: boolean
         False by default.
           If True, the results will contain one row for each interaction term and will include the beta value,
@@ -75,13 +75,13 @@ def interaction_study(
             data = data.genomics.encode_recessive()
         elif encoding == "codominant":
             data = data.genomics.encode_codominant()
-        elif encoding == "weighted":
-            if weighted_encoding_info is None:
+        elif encoding == "edge":
+            if edge_encoding_info is None:
                 raise ValueError(
-                    "'weighted_encoding_info' must be provided when using weighted encoding"
+                    "'edge_encoding_info' must be provided when using edge encoding"
                 )
             else:
-                data = data.genomics.encode_weighted(weighted_encoding_info)
+                data = data.genomics.encode_edge(edge_encoding_info)
         else:
             raise ValueError(f"Genotypes provided with unknown 'encoding': {encoding}")
 
