@@ -4,15 +4,12 @@ Describe
 
 Functions that are used to gather information about some data
 
-  .. autosummary::
-     :toctree: modules/describe
-
-     correlations
-     freq_table
-     get_types
-     percent_na
-     skewness
-     summarize
+     .. autofunction:: correlations
+     .. autofunction:: freq_table
+     .. autofunction:: get_types
+     .. autofunction:: percent_na
+     .. autofunction:: skewness
+     .. autofunction:: summarize
 
 """
 
@@ -215,7 +212,7 @@ def skewness(data: pd.DataFrame, dropna: bool = False):
     result: pd.DataFrame
         DataFrame listing three values for each continuous variable and NA for others: skew, zscore, and pvalue
         The test null hypothesis is that the skewness of the samples population is the same as the corresponding
-         normal distribution.  The pvalue is the two-sided pvalue for the hypothesis test
+        normal distribution.  The pvalue is the two-sided pvalue for the hypothesis test
 
     Examples
     --------

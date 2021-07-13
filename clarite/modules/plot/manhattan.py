@@ -333,7 +333,7 @@ def manhattan(
     --------
     >>> clarite.plot.manhattan({'discovery':disc_df, 'replication':repl_df}, categories=data_categories, title="EWAS Results")
 
-    .. image:: ../../_static/plot/manhattan.png
+    .. image:: ../_static/plot/manhattan.png
     """
     # Calculate the significance lines, if any
     cutoffs = []
@@ -445,7 +445,7 @@ def manhattan_bonferroni(
     >>> clarite.plot.manhattan_bonferroni({'discovery':disc_df, 'replication':repl_df},
      categories=data_categories, title="EWAS Results")
 
-    .. image:: ../../_static/plot/manhattan_bonferroni.png
+    .. image:: ../_static/plot/manhattan_bonferroni.png
     """
     # Ensure corrected values are present
     for name, df in dfs.items():
@@ -535,7 +535,7 @@ def manhattan_fdr(
     >>> clarite.plot.manhattan_fdr({'discovery':disc_df, 'replication':repl_df},
      categories=data_categories, title="EWAS Results")
 
-    .. image:: ../../_static/plot/manhattan_fdr.png
+    .. image:: ../_static/plot/manhattan_fdr.png
     """
     # Ensure corrected values are present
     for name, df in dfs.items():

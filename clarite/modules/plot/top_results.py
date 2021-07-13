@@ -49,7 +49,7 @@ def top_results(
     --------
     >>> clarite.plot.top_results(ewas_result)
 
-    .. image:: ../../_static/plot/top_results.png
+    .. image:: ../_static/plot/top_results.png
     """
     # TODO
     # Work with multiple outcomes (subplots)

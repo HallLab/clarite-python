@@ -43,7 +43,7 @@ def histogram(
     >>> title = f"Discovery: Skew of BMIMBX = {stats.skew(nhanes_discovery_cont['BMXBMI']):.6}"
     >>> clarite.plot.histogram(nhanes_discovery_cont, column="BMXBMI", title=title, bins=100)
 
-    .. image:: ../../_static/plot/histogram.png
+    .. image:: ../_static/plot/histogram.png
     """
     if title is None:
         title = f"Histogram for {column}"

@@ -4,11 +4,8 @@ Load
 
 Load data from different formats or sources
 
-  .. autosummary::
-     :toctree: modules/load
-
-     from_tsv
-     from_csv
+     .. autofunction:: from_tsv
+     .. autofunction:: from_csv
 """
 
 from typing import Optional, Union

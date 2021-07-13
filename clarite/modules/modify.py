@@ -4,24 +4,21 @@ Modify
 
 Functions used to filter and/or change some data, always taking in one set of data and returning one set of data.
 
-  .. autosummary::
-     :toctree: modules/modify
-
-     categorize
-     colfilter
-     colfilter_percent_zero
-     colfilter_min_n
-     colfilter_min_cat_n
-     make_binary
-     make_categorical
-     make_continuous
-     merge_observations
-     merge_variables
-     move_variables
-     recode_values
-     remove_outliers
-     rowfilter_incomplete_obs
-     transform
+    .. autofunction:: categorize
+    .. autofunction:: colfilter
+    .. autofunction:: colfilter_percent_zero
+    .. autofunction:: colfilter_min_n
+    .. autofunction:: colfilter_min_cat_n
+    .. autofunction:: make_binary
+    .. autofunction:: make_categorical
+    .. autofunction:: make_continuous
+    .. autofunction:: merge_observations
+    .. autofunction:: merge_variables
+    .. autofunction:: move_variables
+    .. autofunction:: recode_values
+    .. autofunction:: remove_outliers
+    .. autofunction:: rowfilter_incomplete_obs
+    .. autofunction:: transform
 
 """
 

@@ -35,7 +35,6 @@ sys.path.insert(0, os.path.abspath("../../clarite"))
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
-    "sphinx.ext.autosummary",
     "sphinx.ext.githubpages",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
@@ -58,7 +57,6 @@ plot_html_show_source_link = False
 plot_html_show_formats = False
 
 # Generate the API documentation when building
-autosummary_generate = True
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.

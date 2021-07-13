@@ -4,12 +4,9 @@ Analyze
 
 Functions used for analyses such as EWAS
 
-  .. autosummary::
-     :toctree: modules/analyze
-
-     association_study
-     interaction_study
-     add_corrected_pvalues
+  .. autofunction:: association_study
+  .. autofunction:: interaction_study
+  .. autofunction:: add_corrected_pvalues
 
 """
 

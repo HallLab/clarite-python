@@ -4,15 +4,12 @@ Plot
 
 Functions that generate plots
 
-  .. autosummary::
-     :toctree: modules/plot
-
-     histogram
-     distributions
-     manhattan
-     manhattan_fdr
-     manhattan_bonferroni
-     top_results
+     .. autofunction:: histogram
+     .. autofunction:: distributions
+     .. autofunction:: manhattan
+     .. autofunction:: manhattan_fdr
+     .. autofunction:: manhattan_bonferroni
+     .. autofunction:: top_results
 
 """
 
