@@ -143,7 +143,6 @@ def ewas(
         covariates=covariates,
         data=data,
         survey_design_spec=sd,
-        cov_method=covariance_calc,
         min_n=min_n,
     )
     # Save
@@ -281,7 +280,6 @@ def ewas_r(
         covariates=covariates,
         data=data,
         survey_design_spec=sd,
-        cov_method=covariance_calc,
         min_n=min_n,
     )
     # Save

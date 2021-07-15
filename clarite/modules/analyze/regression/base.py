@@ -169,10 +169,13 @@ class Regression(metaclass=ABCMeta):
                 for warning in warning_list:
                     click.echo(click.style(f"\t{warning}", fg="yellow"))
 
-    def _check_covariate_values(self, keep_row_mask) -> Tuple[List[str], List[str]]:
+    @staticmethod
+    def _check_covariate_values(
+        data, covariates, keep_row_mask
+    ) -> Tuple[List[str], List[str]]:
         """Remove covariates that do not vary, warning when this occurs"""
         warnings = []
-        unique_values = self.data.loc[keep_row_mask, self.covariates].nunique()
+        unique_values = data.loc[keep_row_mask, covariates].nunique()
         varying_covars = list(unique_values[unique_values > 1].index.values)
         non_varying_covars = list(unique_values[unique_values <= 1].index.values)
         if len(non_varying_covars) > 0:
@@ -180,9 +183,6 @@ class Regression(metaclass=ABCMeta):
                 f"non-varying covariates(s): {', '.join(non_varying_covars)}"
             )
         return varying_covars, warnings
-
-    def _encode_var_name(self, varname):
-        """Replace variable names"""
 
     @abstractmethod
     def run(self) -> None:
