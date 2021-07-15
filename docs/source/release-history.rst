@@ -2,6 +2,11 @@
 Release History
 ===============
 
+v2.1.0 (2021-07-15)
+-------------------
+
+Add multiprocessing to *association_study* and *interaction_study*
+
 v2.0.2 (2021-07-13)
 -------------------
 

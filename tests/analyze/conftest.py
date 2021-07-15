@@ -1,4 +1,5 @@
 from pathlib import Path
+import pandas as pd
 
 from pandas_genomics import scalars, sim
 
@@ -85,4 +86,34 @@ def genotype_case_control_rec_rec_onlyinteraction():
             var, alt_allele_freq=[0.01 * i], n=2000
         )
     genotypes.index.name = "ID"
+    return genotypes
+
+
+@pytest.fixture()
+def large_gwas_data():
+    # Generate model SNPs
+    bams = sim.BAMS.from_model(
+        sim.SNPEffectEncodings.ADDITIVE, sim.SNPEffectEncodings.ADDITIVE
+    )
+    genotypes = bams.generate_case_control(
+        n_cases=5000, n_controls=5000, maf1=0.3, maf2=0.3
+    )
+
+    # Add random SNPs
+    random_genotypes = pd.DataFrame(
+        {
+            f"var{i}": sim.generate_random_gt(
+                scalars.Variant(ref="A", alt="a"),
+                alt_allele_freq=0.3,
+                n=10000,
+                random_seed=i,
+            )
+            for i in range(2, 1000)
+        }
+    )
+    genotypes = pd.concat([genotypes, random_genotypes], axis=1)
+
+    # Clarite expects index to be named ID, this is just to avoid a warning
+    genotypes.index.name = "ID"
+
     return genotypes

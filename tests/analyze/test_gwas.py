@@ -1,3 +1,5 @@
+import pytest
+
 import clarite
 
 
@@ -22,3 +24,17 @@ def test_bams_interaction(genotype_case_control_rec_rec_onlyinteraction):
         data=genotype_case_control_rec_rec_onlyinteraction, outcomes="Outcome"
     )
     assert result_interaction.loc[("SNP1", "SNP2", "Outcome"), "LRT_pvalue"] <= 1e-5
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("process_num", [None, 1])
+def test_large_gwas(large_gwas_data, process_num):
+    """10k samples with 1k SNPs"""
+    # Run CLARITE GWAS
+    results = clarite.analyze.association_study(
+        data=large_gwas_data,
+        outcomes="Outcome",
+        encoding="additive",
+        process_num=process_num,
+    )
+    print(results.head())

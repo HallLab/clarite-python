@@ -1,4 +1,6 @@
+import multiprocessing
 import re
+from itertools import repeat
 from typing import Dict, List, Tuple, Optional
 
 import click
@@ -57,6 +59,8 @@ class GLMRegression(Regression):
         False by default.
           If True, numeric data will be standardized using z-scores before regression.
           This will affect the beta values and standard error, but not the pvalues.
+    process_num: Optional[int]
+        Number of processes to use when running the analysis, default is None (use the number of cores)
     """
 
     def __init__(
@@ -68,20 +72,8 @@ class GLMRegression(Regression):
         min_n: int = 200,
         report_categorical_betas: bool = False,
         standardize_data: bool = False,
+        process_num: Optional[int] = None,
     ):
-        """
-        Parameters
-        ----------
-        data - pd.DataFrame
-        outcome_variable - name of the outcome variable
-        regression_variables - names of the regression variables
-        covariates - other variables to include in the regression formula
-
-        Kwargs
-        ______
-        min_n - minimum number of observations (after discarding any with NA)
-        report_categorical_betas - whether or not to report betas for individual categories
-        """
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
         # initializes additional parameters (outcome dtype, regression variables, error, and warnings)
@@ -96,6 +88,7 @@ class GLMRegression(Regression):
         self.min_n = min_n
         self.report_categorical_betas = report_categorical_betas
         self.standardize_data = standardize_data
+        self.process_num = process_num
 
         # Ensure the data output type is compatible
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
@@ -175,27 +168,6 @@ class GLMRegression(Regression):
             "Weight": None,
         }
 
-    def _get_formulas(self, regression_variable, varying_covars) -> Tuple[str, str]:
-        # Restricted Formula, just outcome and covariates
-        formula_restricted = f"Q('{self.outcome_variable}') ~ 1"
-        if len(varying_covars) > 0:
-            formula_restricted += " + "
-            formula_restricted += " + ".join([f"Q('{v}')" for v in varying_covars])
-
-        # Full Formula, adding the regression variable to the restricted formula
-        formula = formula_restricted + f" + Q('{regression_variable}" "')"
-
-        return formula_restricted, formula
-
-    def _process_formula(self, formula, data) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Use patsy to process the formula with quoted variable names, but return with the original names.
-        """
-        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
-        y = fix_names(y)
-        X = fix_names(X)
-        return y, X
-
     def get_results(self) -> pd.DataFrame:
         """
         Get regression results if `run` has already been called
@@ -243,11 +215,14 @@ class GLMRegression(Regression):
 
         return result
 
-    def _run_continuous(self, data, regression_variable, formula) -> Dict:
+    @staticmethod
+    def _run_continuous(data, regression_variable, formula, family, use_t) -> Dict:
         result = dict()
         # Regress
-        y, X = self._process_formula(formula, data)
-        est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
+        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
+        y = fix_names(y)
+        X = fix_names(X)
+        est = sm.GLM(y, X, family=family).fit(use_t=use_t)
         # Save results if the regression converged
         if est.converged:
             result["Converged"] = True
@@ -258,11 +233,14 @@ class GLMRegression(Regression):
 
         return result
 
-    def _run_binary(self, data, regression_variable, formula) -> Dict:
+    @staticmethod
+    def _run_binary(data, regression_variable, formula, family, use_t) -> Dict:
         result = dict()
         # Regress
-        y, X = self._process_formula(formula, data)
-        est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
+        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
+        y = fix_names(y)
+        X = fix_names(X)
+        est = sm.GLM(y, X, family=family).fit(use_t=use_t)
         # Check convergence
         # Save results if the regression converged
         if est.converged:
@@ -288,13 +266,23 @@ class GLMRegression(Regression):
 
         return result
 
-    def _run_categorical(self, data, formula, formula_restricted) -> Dict:
+    @staticmethod
+    def _run_categorical(
+        data, formula, formula_restricted, family, use_t, report_categorical_betas
+    ) -> Dict:
         # Regress both models
-        y, X = self._process_formula(formula, data)
-        est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
-        y_restricted, X_restricted = self._process_formula(formula_restricted, data)
-        est_restricted = sm.GLM(y_restricted, X_restricted, family=self.family).fit(
-            use_t=True
+        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
+        y = fix_names(y)
+        X = fix_names(X)
+        est = sm.GLM(y, X, family=family).fit(use_t=use_t)
+
+        y_restricted, X_restricted = patsy.dmatrices(
+            formula_restricted, data, return_type="dataframe", NA_action="drop"
+        )
+        y_restricted = fix_names(y_restricted)
+        X_restricted = fix_names(X_restricted)
+        est_restricted = sm.GLM(y_restricted, X_restricted, family=family).fit(
+            use_t=use_t
         )
         # Check convergence
         if est.converged & est_restricted.converged:
@@ -302,7 +290,7 @@ class GLMRegression(Regression):
             lrdf = est_restricted.df_resid - est.df_resid
             lrstat = -2 * (est_restricted.llf - est.llf)
             lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
-            if self.report_categorical_betas:
+            if report_categorical_betas:
                 param_names = set(est.bse.index) - set(est_restricted.bse.index)
                 # The restricted model shouldn't have extra terms, unless there is some case we have overlooked
                 assert len(set(est_restricted.bse.index) - set(est.bse.index)) == 0
@@ -329,87 +317,41 @@ class GLMRegression(Regression):
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
         for rv_type, rv_list in self.regression_variables.items():
-            click.echo(
-                click.style(
-                    f"Running {len(rv_list):,} {rv_type} variables...", fg="green"
+            if len(rv_list) == 0:
+                click.echo(click.style(f"No {rv_type} variables to run...", fg="green"))
+                continue
+            else:
+                click.echo(
+                    click.style(
+                        f"Running {len(rv_list):,} {rv_type} variables...", fg="green"
+                    )
                 )
-            )
-            # TODO: Parallelize this loop
-            for rv in rv_list:
-                # Must define result to catch errors outside running individual variables
-                result = None
-                # Run in a try/except block to catch any errors specific to a regression variable
-                try:
-                    # Take a copy of the data (ignoring other RVs)
-                    keep_columns = [rv, self.outcome_variable] + self.covariates
-                    data = self.data[keep_columns]
 
-                    # Get complete case mask and filter by min_n
-                    complete_case_mask = (
-                        ~data[[rv, self.outcome_variable] + self.covariates]
-                        .isna()
-                        .any(axis=1)
-                    )
-                    N = complete_case_mask.sum()
-                    if N < self.min_n:
-                        raise ValueError(
-                            f"too few complete observations (min_n filter: {N} < {self.min_n})"
-                        )
+            with multiprocessing.Pool(processes=self.process_num) as pool:
+                run_result = pool.starmap(
+                    self._run_rv,
+                    zip(
+                        rv_list,
+                        repeat(rv_type),
+                        [
+                            self.data[[rv, self.outcome_variable] + self.covariates]
+                            for rv in rv_list
+                        ],
+                        repeat(self.outcome_variable),
+                        repeat(self.covariates),
+                        repeat(self.min_n),
+                        repeat(self.family),
+                        repeat(self.use_t),
+                        repeat(self.report_categorical_betas),
+                    ),
+                )
 
-                    # Check for covariates that do not vary (they get ignored)
-                    varying_covars, warnings = self._check_covariate_values(
-                        complete_case_mask
-                    )
-                    self.warnings[rv].extend(warnings)
-
-                    # Remove unused categories (warning when this occurs)
-                    removed_cats = _remove_empty_categories(data)
-                    if len(removed_cats) >= 1:
-                        for extra_cat_var, extra_cats in removed_cats.items():
-                            self.warnings[rv].append(
-                                f"'{str(extra_cat_var)}' had categories with no occurrences: "
-                                f"{', '.join([str(c) for c in extra_cats])} "
-                                f"after removing observations with missing values"
-                            )
-
-                    # Get the formulas
-                    formula_restricted, formula = self._get_formulas(rv, varying_covars)
-
-                    # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
-                    data = data.loc[complete_case_mask]
-
-                    # Run Regression
-                    if rv_type == "continuous":
-                        result = self.get_default_result_dict(rv)
-                        result["Variable_type"] = rv_type
-                        result["N"] = N
-                        result.update(self._run_continuous(data, rv, formula))
-                        self.results.append(result)
-                    elif (
-                        rv_type == "binary"
-                    ):  # Essentially same as continuous, except string used to key the results
-                        # Initialize result with placeholders
-                        result = self.get_default_result_dict(rv)
-                        result["Variable_type"] = rv_type
-                        result["N"] = N
-                        result.update(self._run_binary(data, rv, formula))
-                        self.results.append(result)
-                    elif rv_type == "categorical":
-                        for r in self._run_categorical(
-                            data, formula, formula_restricted
-                        ):
-                            # Initialize result with placeholders
-                            result = self.get_default_result_dict(rv)
-                            result["Variable_type"] = rv_type
-                            result["N"] = N
-                            result.update(r)
-                            self.results.append(result)
-
-                except Exception as e:
-                    self.errors[rv] = str(e)
-                    if result is None:
-                        result = self.get_default_result_dict(rv)
-                    self.results.append(result)
+            for rv, rv_result in zip(rv_list, run_result):
+                results, warnings, error = rv_result
+                self.results.extend(results)  # Merge lists into one list
+                self.warnings[rv] = warnings
+                if error is not None:
+                    self.errors[rv] = error
 
             click.echo(
                 click.style(
@@ -418,3 +360,102 @@ class GLMRegression(Regression):
                 )
             )
         self.run_complete = True
+
+    @classmethod
+    def _run_rv(
+        cls,
+        rv: str,
+        rv_type: str,
+        data: pd.DataFrame,
+        outcome_variable: str,
+        covariates: List[str],
+        min_n: int,
+        family: str,
+        use_t: bool,
+        report_categorical_betas: bool,
+    ) -> Tuple[List[dict], List[str], str]:  # results, warnings, errors
+        # Initialize return values
+        result_list = []
+        warnings_list = []
+        error = None
+
+        # Must define result to catch errors outside running individual variables
+        result = None
+
+        # Run in a try/except block to catch any errors specific to a regression variable
+        try:
+            # Get complete case mask and filter by min_n
+            complete_case_mask = ~data.isna().any(axis=1)
+            N = complete_case_mask.sum()
+            if N < min_n:
+                raise ValueError(
+                    f"too few complete observations (min_n filter: {N} < {min_n})"
+                )
+
+            # Check for covariates that do not vary (they get ignored)
+            varying_covars, warnings = cls._check_covariate_values(
+                data, covariates, complete_case_mask
+            )
+            warnings_list.extend(warnings)
+
+            # Remove unused categories (warning when this occurs)
+            removed_cats = _remove_empty_categories(data)
+            if len(removed_cats) >= 1:
+                for extra_cat_var, extra_cats in removed_cats.items():
+                    warnings_list.append(
+                        f"'{str(extra_cat_var)}' had categories with no occurrences: "
+                        f"{', '.join([str(c) for c in extra_cats])} "
+                        f"after removing observations with missing values"
+                    )
+
+            # Get the formulas
+            # Restricted Formula, just outcome and covariates
+            formula_restricted = f"Q('{outcome_variable}') ~ 1"
+            if len(varying_covars) > 0:
+                formula_restricted += " + "
+                formula_restricted += " + ".join([f"Q('{v}')" for v in varying_covars])
+
+            # Full Formula, adding the regression variable to the restricted formula
+            formula = formula_restricted + f" + Q('{rv}" "')"
+
+            # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
+            data = data.loc[complete_case_mask]
+
+            # Run Regression
+            if rv_type == "continuous":
+                result = cls.get_default_result_dict(rv)
+                result["Variable_type"] = rv_type
+                result["N"] = N
+                result.update(cls._run_continuous(data, rv, formula, family, use_t))
+                result_list.append(result)
+            elif (
+                rv_type == "binary"
+            ):  # Essentially same as continuous, except string used to key the results
+                # Initialize result with placeholders
+                result = cls.get_default_result_dict(rv)
+                result["Variable_type"] = rv_type
+                result["N"] = N
+                result.update(cls._run_binary(data, rv, formula, family, use_t))
+                result_list.append(result)
+            elif rv_type == "categorical":
+                for r in cls._run_categorical(
+                    data,
+                    formula,
+                    formula_restricted,
+                    family,
+                    use_t,
+                    report_categorical_betas,
+                ):
+                    # Initialize result with placeholders
+                    result = cls.get_default_result_dict(rv)
+                    result["Variable_type"] = rv_type
+                    result["N"] = N
+                    result.update(r)
+                    result_list.append(result)
+
+        except Exception as e:
+            error = str(e)
+            if result is None:
+                result_list = [cls.get_default_result_dict(rv)]
+
+        return result_list, warnings_list, error

@@ -1,14 +1,17 @@
-from itertools import combinations
-from typing import Dict, Tuple
+import multiprocessing
+from itertools import combinations, repeat
+from typing import Dict, Tuple, Optional, List
 
 import click
 import numpy as np
 import pandas as pd
+import patsy
 import scipy
 import statsmodels.api as sm
 
 from clarite.internal.utilities import _remove_empty_categories
 from . import GLMRegression
+from ..utils import fix_names
 
 
 class InteractionRegression(GLMRegression):
@@ -42,6 +45,8 @@ class InteractionRegression(GLMRegression):
         False by default.
           If True, the results will contain one row for each interaction term and will include the beta value
           for that term.  The number of terms increases with the number of categories in each interacting term.
+    process_num: Optional[int]
+        Number of processes to use when running the analysis, default is None (use the number of cores)
 
     """
 
@@ -53,6 +58,7 @@ class InteractionRegression(GLMRegression):
         min_n=200,
         interactions=None,
         report_betas=False,
+        process_num: Optional[int] = None,
     ):
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
@@ -71,6 +77,7 @@ class InteractionRegression(GLMRegression):
         # Custom init involving kwargs passed to this regression
         self.report_betas = report_betas
         self._process_interactions(interactions)
+        self.process_num = process_num
 
         # Use a list of results instead of the default dict
         self.results = []
@@ -131,18 +138,6 @@ class InteractionRegression(GLMRegression):
             "LRT_pvalue": np.nan,
         }
 
-    def _get_formulas(self, i1, i2, varying_covars) -> Tuple[str, str]:
-        # Restricted Formula - covariates and main effects
-        formula_restricted = f"Q('{self.outcome_variable}') ~ 1 + Q('{i1}') + Q('{i2}')"
-        if len(varying_covars) > 0:
-            formula_restricted += " + "
-            formula_restricted += " + ".join([f"Q('{v}')" for v in varying_covars])
-
-        # Full Formula - restricted plus interactions
-        formula = formula_restricted + f" + Q('{i1}'):Q('{i2}')"
-
-        return formula_restricted, formula
-
     def get_results(self) -> pd.DataFrame:
         """
         Get regression results if `run` has already been called
@@ -167,20 +162,32 @@ class InteractionRegression(GLMRegression):
                 ["LRT_pvalue"]
             )
 
-    def _run_interaction(self, data, formula, formula_restricted) -> Dict:
-        # Regress both models
-        y, X = self._process_formula(formula, data)
-        est = sm.GLM(y, X, family=self.family).fit(use_t=self.use_t)
-        y_restricted, X_restricted = self._process_formula(formula_restricted, data)
-        est_restricted = sm.GLM(y_restricted, X_restricted, family=self.family).fit(
-            use_t=True
+    @staticmethod
+    def _run_interaction_regression(
+        data, formula, formula_restricted, family, use_t, report_betas
+    ) -> Dict:
+        # Regress Full Model
+        y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
+        y = fix_names(y)
+        X = fix_names(X)
+        est = sm.GLM(y, X, family=family).fit(use_t=use_t)
+
+        # Regress Restricted Model
+        y_restricted, X_restricted = patsy.dmatrices(
+            formula_restricted, data, return_type="dataframe", NA_action="drop"
         )
+        y_restricted = fix_names(y_restricted)
+        X_restricted = fix_names(X_restricted)
+        est_restricted = sm.GLM(y_restricted, X_restricted, family=family).fit(
+            use_t=use_t
+        )
+
         # Check convergence
         if est.converged & est_restricted.converged:
             lrdf = est_restricted.df_resid - est.df_resid
             lrstat = -2 * (est_restricted.llf - est.llf)
             lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
-            if self.report_betas:
+            if report_betas:
                 # Get beta, SE, and pvalue from interaction terms
                 # Where interaction terms are those appearing in the full model and not in the reduced model
                 # Return all terms
@@ -205,71 +212,120 @@ class InteractionRegression(GLMRegression):
 
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
-        for idx, interaction in enumerate(self.interactions):
-            i1, i2 = interaction
-            interaction_num = idx + 1
-            if interaction_num % 100 == 0:
-                click.echo(
-                    click.style(
-                        f"Running {interaction_num:,} of {len(self.interactions):,} interactions...",
-                        fg="green",
-                    )
-                )
-            interaction_str = f"{i1}:{i2}"
-            # Run in a try/except block to catch any errors specific to a regression variable
-            try:
-                # Take a copy of the data (ignoring other RVs)
-                keep_columns = [i1, i2, self.outcome_variable] + self.covariates
-                data = self.data[keep_columns]
+        with multiprocessing.Pool(processes=self.process_num) as pool:
+            run_result = pool.starmap(
+                self._run_interaction,
+                zip(
+                    self.interactions,
+                    [
+                        self.data[
+                            list(interaction)
+                            + [
+                                self.outcome_variable,
+                            ]
+                            + self.covariates
+                        ]
+                        for interaction in self.interactions
+                    ],
+                    repeat(self.outcome_variable),
+                    repeat(self.covariates),
+                    repeat(self.min_n),
+                    repeat(self.family),
+                    repeat(self.use_t),
+                    repeat(self.report_betas),
+                ),
+            )
 
-                # Get complete case mask and filter by min_n
-                complete_case_mask = (
-                    ~data[[i1, i2, self.outcome_variable] + self.covariates]
-                    .isna()
-                    .any(axis=1)
-                )
-                N = complete_case_mask.sum()
-                if N < self.min_n:
-                    raise ValueError(
-                        f"too few complete observations (min_n filter: {N} < {self.min_n})"
-                    )
+        for interaction, interaction_result in zip(self.interactions, run_result):
+            interaction_str = ":".join(interaction)
+            results, warnings, error = interaction_result
+            self.results.extend(results)  # Merge lists into one list
+            self.warnings[interaction_str] = warnings
+            if error is not None:
+                self.errors[interaction_str] = error
 
-                # Check for covariates that do not vary (they get ignored)
-                varying_covars, warnings = self._check_covariate_values(
-                    complete_case_mask
-                )
-                self.warnings[interaction_str].extend(warnings)
-
-                # Remove unused categories (warning when this occurs)
-                removed_cats = _remove_empty_categories(data)
-                if len(removed_cats) >= 1:
-                    for extra_cat_var, extra_cats in removed_cats.items():
-                        self.warnings[interaction_str].append(
-                            f"'{str(extra_cat_var)}'"
-                            f" had categories with no occurrences: "
-                            f"{', '.join([str(c) for c in extra_cats])} "
-                            f"after removing observations with missing values"
-                        )
-
-                # Get the formulas
-                formula_restricted, formula = self._get_formulas(i1, i2, varying_covars)
-
-                # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
-                data = data.loc[complete_case_mask]
-
-                # Run Regression LRT Test
-                for regression_result in self._run_interaction(
-                    data, formula, formula_restricted
-                ):
-                    result = self._get_default_result_dict(i1, i2)
-                    result["N"] = N
-                    result.update(regression_result)
-                    self.results.append(result)
-
-            except Exception as e:
-                self.errors[interaction_str] = str(e)
-                result = self._get_default_result_dict(i1, i2)
-                result["N"] = N
-                self.results.append(result)
+        click.echo(
+            click.style(
+                f"\tFinished Running {len(self.interactions):,} interactions",
+                fg="green",
+            )
+        )
 
         self.run_complete = True
+
+    @classmethod
+    def _run_interaction(
+        cls,
+        interaction: Tuple[str, str],
+        data: pd.DataFrame,
+        outcome_variable: str,
+        covariates: List[str],
+        min_n: int,
+        family: str,
+        use_t: bool,
+        report_betas: bool,
+    ):
+        i1, i2 = interaction
+
+        # Initialize return values
+        result_list = []
+        warnings_list = []
+        error = None
+
+        # Must define result to catch errors outside running individual variables
+        result = None
+
+        # Run in a try/except block to catch any errors specific to a regression variable
+        try:
+            # Get complete case mask and filter by min_n
+            complete_case_mask = ~data.isna().any(axis=1)
+            N = complete_case_mask.sum()
+            if N < min_n:
+                raise ValueError(
+                    f"too few complete observations (min_n filter: {N} < {min_n})"
+                )
+
+            # Check for covariates that do not vary (they get ignored)
+            varying_covars, warnings = cls._check_covariate_values(
+                data, covariates, complete_case_mask
+            )
+            warnings_list.extend(warnings)
+
+            # Remove unused categories (warning when this occurs)
+            removed_cats = _remove_empty_categories(data)
+            if len(removed_cats) >= 1:
+                for extra_cat_var, extra_cats in removed_cats.items():
+                    warnings_list.append(
+                        f"'{str(extra_cat_var)}'"
+                        f" had categories with no occurrences: "
+                        f"{', '.join([str(c) for c in extra_cats])} "
+                        f"after removing observations with missing values"
+                    )
+
+            # Get the formulas
+            # Restricted Formula - covariates and main effects
+            formula_restricted = f"Q('{outcome_variable}') ~ 1 + Q('{i1}') + Q('{i2}')"
+            if len(varying_covars) > 0:
+                formula_restricted += " + "
+                formula_restricted += " + ".join([f"Q('{v}')" for v in varying_covars])
+            # Full Formula - restricted plus interactions
+            formula = formula_restricted + f" + Q('{i1}'):Q('{i2}')"
+
+            # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
+            data = data.loc[complete_case_mask]
+
+            # Run Regression LRT Test
+            for regression_result in cls._run_interaction_regression(
+                data, formula, formula_restricted, family, use_t, report_betas
+            ):
+                result = cls._get_default_result_dict(i1, i2)
+                result["N"] = N
+                result.update(regression_result)
+                result_list.append(result)
+
+        except Exception as e:
+            error = str(e)
+            if result is None:
+                result_list = [cls._get_default_result_dict(i1, i2)]
+
+        return result_list, warnings_list, error

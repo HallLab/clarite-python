@@ -10,8 +10,6 @@ class SurveyModel(object):
     -------
     design : Instance of class SurveyDesign
     model_class : Instance of class GLM
-    cov_method : str
-        Method for calculating covariance
     init_args : Dictionary of arguments
         when initializing the model
     fit_args : Dictionary of arguments
@@ -33,13 +31,10 @@ class SurveyModel(object):
         Standard error of cofficients
     """
 
-    def __init__(
-        self, design, model_class, cov_method="stata", init_args={}, fit_args={}
-    ):
+    def __init__(self, design, model_class, init_args={}, fit_args={}):
         # TODO: Take in original (full) data which may have more observations than the fitted data (due to NA dropouts)
         self.design = design
         self.model = model_class
-        self.cov_method = cov_method
         self.init_args = dict(init_args)
         self.fit_args = dict(fit_args)
 
@@ -231,12 +226,7 @@ class SurveyModel(object):
 
         if self.design.has_strata or self.design.has_cluster or self.design.has_weights:
             # Calculate stderr based on covariance
-            if self.cov_method == "jackknife":
-                self.vcov = self._jackknife_vcov(X, y)
-            elif self.cov_method == "stata":
-                self.vcov = self._stata_linearization_vcov(X, y)
-            else:
-                return ValueError(f"cov_method '{self.cov_method}' is not supported")
+            self.vcov = self._stata_linearization_vcov(X, y)
             if self.vcov.ndim == 2:
                 self.stderr = np.sqrt(np.diag(self.vcov))
             else:
