@@ -77,6 +77,8 @@ class InteractionRegression(GLMRegression):
         # Custom init involving kwargs passed to this regression
         self.report_betas = report_betas
         self._process_interactions(interactions)
+        if self.process_num is None:
+            process_num = multiprocessing.cpu_count()
         self.process_num = process_num
 
         # Use a list of results instead of the default dict
@@ -212,6 +214,13 @@ class InteractionRegression(GLMRegression):
 
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
+        # Log how many interactions are being run using how many processes
+        click.echo(
+            click.style(
+                f"Running {len(self.interactions):,} interactions using {self.process_num} processes...",
+                fg="green",
+            )
+        )
         with multiprocessing.Pool(processes=self.process_num) as pool:
             run_result = pool.starmap(
                 self._run_interaction,

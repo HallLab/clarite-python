@@ -96,6 +96,7 @@ class WeightedGLMRegression(GLMRegression):
             min_n=min_n,
             report_categorical_betas=report_categorical_betas,
             standardize_data=standardize_data,
+            process_num=process_num,
         )
 
         # Custom init involving kwargs passed to this regression
@@ -283,7 +284,8 @@ class WeightedGLMRegression(GLMRegression):
             else:
                 click.echo(
                     click.style(
-                        f"Running {len(rv_list):,} {rv_type} variables...", fg="green"
+                        f"Running {len(rv_list):,} {rv_type} variables using {self.process_num} processes...",
+                        fg="green",
                     )
                 )
 

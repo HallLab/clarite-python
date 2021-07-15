@@ -88,6 +88,8 @@ class GLMRegression(Regression):
         self.min_n = min_n
         self.report_categorical_betas = report_categorical_betas
         self.standardize_data = standardize_data
+        if self.process_num is None:
+            process_num = multiprocessing.cpu_count()
         self.process_num = process_num
 
         # Ensure the data output type is compatible
@@ -323,7 +325,8 @@ class GLMRegression(Regression):
             else:
                 click.echo(
                     click.style(
-                        f"Running {len(rv_list):,} {rv_type} variables...", fg="green"
+                        f"Running {len(rv_list):,} {rv_type} variables using {self.process_num} processes...",
+                        fg="green",
                     )
                 )
 
