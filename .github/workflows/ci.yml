@@ -72,8 +72,6 @@ jobs:
       #----------------------------------------------
       # Activate Env
       #----------------------------------------------
-      - name: Activate env
-        run: source .venv/bin/activate
 
       - name: Code Quality
         run: |
