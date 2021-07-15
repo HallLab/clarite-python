@@ -88,7 +88,7 @@ class GLMRegression(Regression):
         self.min_n = min_n
         self.report_categorical_betas = report_categorical_betas
         self.standardize_data = standardize_data
-        if self.process_num is None:
+        if process_num is None:
             process_num = multiprocessing.cpu_count()
         self.process_num = process_num
 

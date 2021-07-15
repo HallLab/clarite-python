@@ -77,7 +77,7 @@ class InteractionRegression(GLMRegression):
         # Custom init involving kwargs passed to this regression
         self.report_betas = report_betas
         self._process_interactions(interactions)
-        if self.process_num is None:
+        if process_num is None:
             process_num = multiprocessing.cpu_count()
         self.process_num = process_num
 
