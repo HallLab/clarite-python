@@ -1,6 +1,4 @@
 import pytest
-from pandas_genomics import sim, scalars
-import pandas as pd
 
 import clarite
 
@@ -39,3 +37,4 @@ def test_large_gwas(large_gwas_data, process_num):
         encoding="additive",
         process_num=process_num,
     )
+    print(results.head())

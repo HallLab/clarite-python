@@ -334,12 +334,8 @@ class GLMRegression(Regression):
                         rv_list,
                         repeat(rv_type),
                         [
-                            self.data[[rv, ov] + cvs]
-                            for rv, ov, cvs in zip(
-                                rv_list,
-                                repeat(self.outcome_variable),
-                                repeat(self.covariates),
-                            )
+                            self.data[[rv, self.outcome_variable] + self.covariates]
+                            for rv in rv_list
                         ],
                         repeat(self.outcome_variable),
                         repeat(self.covariates),
