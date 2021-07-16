@@ -62,7 +62,7 @@ class RSurveyRegression(Regression):
         )
 
         # Raise an error if any genotypes are present since they are unsupported
-        if len(self.regression_variables.get("genotypes"), []) > 0:
+        if len(self.regression_variables.get("genotypes", [])) > 0:
             raise ValueError("Genotypes are not supported in RSurveyRegression")
 
         # Custom init involving kwargs passed to this regression
