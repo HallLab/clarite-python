@@ -108,7 +108,7 @@ def large_gwas_data():
                 n=10000,
                 random_seed=i,
             )
-            for i in range(3, 10000)
+            for i in range(3, 1001)
         }
     )
     genotypes = pd.concat([genotypes, random_genotypes], axis=1)

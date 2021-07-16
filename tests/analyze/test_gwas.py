@@ -2,7 +2,6 @@ import pytest
 
 import pandas as pd
 import numpy as np
-from pandas._testing import assert_frame_equal
 
 import clarite
 from clarite.modules.survey import SurveyDesignSpec
@@ -33,8 +32,8 @@ def test_bams_interaction(genotype_case_control_rec_rec_onlyinteraction):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("process_num", [None, 1])
-def test_large_gwas(large_gwas_data, process_num):
-    """10k samples with 1k SNPs"""
+def test_largeish_gwas(large_gwas_data, process_num):
+    """10k samples with 1000 SNPs"""
     # Run CLARITE GWAS
     results = clarite.analyze.association_study(
         data=large_gwas_data,
