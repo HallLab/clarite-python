@@ -8,6 +8,7 @@ import pandas as pd
 import patsy
 import scipy
 import statsmodels.api as sm
+from pandas_genomics import GenotypeDtype
 
 from clarite.internal.utilities import _remove_empty_categories
 from . import GLMRegression
@@ -45,6 +46,10 @@ class InteractionRegression(GLMRegression):
         False by default.
           If True, the results will contain one row for each interaction term and will include the beta value
           for that term.  The number of terms increases with the number of categories in each interacting term.
+    encoding: str, default "additive"
+        Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
+    edge_encoding_info: Optional pd.DataFrame, default None
+        If edge encoding is used, this must be provided.  See Pandas-Genomics documentation on edge encodings.
     process_num: Optional[int]
         Number of processes to use when running the analysis, default is None (use the number of cores)
 
@@ -58,6 +63,8 @@ class InteractionRegression(GLMRegression):
         min_n=200,
         interactions=None,
         report_betas=False,
+        encoding: str = "additive",
+        edge_encoding_info: Optional[pd.DataFrame] = None,
         process_num: Optional[int] = None,
     ):
         # base class init
@@ -71,6 +78,8 @@ class InteractionRegression(GLMRegression):
             outcome_variable=outcome_variable,
             covariates=covariates,
             regression_variables=regression_variables,
+            encoding=encoding,
+            edge_encoding_info=edge_encoding_info,
             min_n=min_n,
         )
 
@@ -86,11 +95,9 @@ class InteractionRegression(GLMRegression):
 
     def _process_interactions(self, interactions):
         """Validate the interactions parameter and save it as a list of string tuples"""
-        regression_var_list = (
-            self.regression_variables["binary"]
-            + self.regression_variables["categorical"]
-            + self.regression_variables["continuous"]
-        )
+        regression_var_list = []
+        map(regression_var_list.extend, self.regression_variables.values())
+
         if len(regression_var_list) < 2:
             raise ValueError(
                 f"Not enough valid variables for running interactions: {len(regression_var_list)} variables"
@@ -212,6 +219,35 @@ class InteractionRegression(GLMRegression):
             # Did not converge - nothing to update
             yield dict()
 
+    def _get_interaction_specific_data(self, interaction: Tuple[str, str]):
+        """Select the data relevant to performing a regression on a given interaction, encoding genotypes if needed"""
+        data = self.data[
+            list(interaction)
+            + [
+                self.outcome_variable,
+            ]
+            + self.covariates
+        ].copy()
+
+        # Encode any genotype data
+        has_genotypes = False
+        for dt in data.dtypes:
+            if GenotypeDtype.is_dtype(dt):
+                has_genotypes = True
+                break
+        if has_genotypes:
+            if self.encoding == "additive":
+                data = data.genomics.encode_additive()
+            elif self.encoding == "dominant":
+                data = data.genomics.encode_dominant()
+            elif self.encoding == "recessive":
+                data = data.genomics.encode_recessive()
+            elif self.encoding == "codominant":
+                data = data.genomics.encode_codominant()
+            elif self.encoding == "edge":
+                data = data.genomics.encode_edge(self.edge_encoding_info)
+        return data
+
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
         # Log how many interactions are being run using how many processes
@@ -221,29 +257,40 @@ class InteractionRegression(GLMRegression):
                 fg="green",
             )
         )
-        with multiprocessing.Pool(processes=self.process_num) as pool:
-            run_result = pool.starmap(
-                self._run_interaction,
-                zip(
-                    self.interactions,
-                    [
-                        self.data[
-                            list(interaction)
-                            + [
-                                self.outcome_variable,
-                            ]
-                            + self.covariates
-                        ]
-                        for interaction in self.interactions
-                    ],
-                    repeat(self.outcome_variable),
-                    repeat(self.covariates),
-                    repeat(self.min_n),
-                    repeat(self.family),
-                    repeat(self.use_t),
-                    repeat(self.report_betas),
-                ),
-            )
+
+        if self.process_num == 1:
+            run_result = [
+                self._run_interaction(
+                    interaction,
+                    self._get_interaction_specific_data(interaction),
+                    self.outcome_variable,
+                    self.covariates,
+                    self.min_n,
+                    self.family,
+                    self.use_t,
+                    self.report_betas,
+                )
+                for interaction in self.interactions
+            ]
+
+        else:
+            with multiprocessing.Pool(processes=self.process_num) as pool:
+                run_result = pool.starmap(
+                    self._run_interaction,
+                    zip(
+                        self.interactions,
+                        [
+                            self._get_interaction_specific_data(interaction)
+                            for interaction in self.interactions
+                        ],
+                        repeat(self.outcome_variable),
+                        repeat(self.covariates),
+                        repeat(self.min_n),
+                        repeat(self.family),
+                        repeat(self.use_t),
+                        repeat(self.report_betas),
+                    ),
+                )
 
         for interaction, interaction_result in zip(self.interactions, run_result):
             interaction_str = ":".join(interaction)

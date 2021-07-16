@@ -16,7 +16,7 @@ def interaction_study(
     edge_encoding_info: Optional[pd.DataFrame] = None,
     report_betas: bool = False,
     min_n: int = 200,
-    process_num: Optional[int] = None
+    process_num: Optional[int] = None,
 ):
     """Perform LRT tests comparing a model with interaction terms to one without.
 
@@ -110,7 +110,7 @@ def interaction_study(
             min_n=min_n,
             interactions=interactions,
             report_betas=report_betas,
-            process_num=process_num
+            process_num=process_num,
         )
         print(regression)
 

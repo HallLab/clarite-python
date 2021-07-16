@@ -1,6 +1,11 @@
 import pytest
 
+import pandas as pd
+import numpy as np
+from pandas._testing import assert_frame_equal
+
 import clarite
+from clarite.modules.survey import SurveyDesignSpec
 
 
 def test_bams_main(genotype_case_control_add_add_main):
@@ -37,4 +42,25 @@ def test_large_gwas(large_gwas_data, process_num):
         encoding="additive",
         process_num=process_num,
     )
-    print(results.head())
+    # Run CLARITE GWAS with fake (all ones) weights to confirm the weighted regression handles genotypes correctly
+    results_weighted = clarite.analyze.association_study(
+        data=large_gwas_data,
+        outcomes="Outcome",
+        encoding="additive",
+        process_num=process_num,
+        survey_design_spec=SurveyDesignSpec(
+            survey_df=pd.DataFrame({"weights": np.ones(len(large_gwas_data))}),
+            weights="weights",
+        ),
+    )
+    # TODO: Add useful asserts rather than just making sure it runs
+
+
+@pytest.mark.xfail(strict=True)
+def test_gwas_r(large_gwas_data):
+    clarite.analyze.association_study(
+        data=large_gwas_data,
+        outcomes="Outcome",
+        encoding="additive",
+        survey_kind="r_survey",
+    )

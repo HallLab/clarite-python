@@ -9,9 +9,10 @@ import pandas as pd
 import patsy
 import scipy
 import statsmodels.api as sm
+from pandas_genomics import GenotypeDtype
 from scipy.stats import stats
 
-from clarite.internal.utilities import _remove_empty_categories
+from clarite.internal.utilities import _remove_empty_categories, _get_dtypes
 
 from .base import Regression
 from ..utils import fix_names, statsmodels_var_regex
@@ -59,9 +60,15 @@ class GLMRegression(Regression):
         False by default.
           If True, numeric data will be standardized using z-scores before regression.
           This will affect the beta values and standard error, but not the pvalues.
+    encoding: str, default "additive"
+        Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
+    edge_encoding_info: Optional pd.DataFrame, default None
+        If edge encoding is used, this must be provided.  See Pandas-Genomics documentation on edge encodings.
     process_num: Optional[int]
         Number of processes to use when running the analysis, default is None (use the number of cores)
     """
+
+    KNOWN_ENCODINGS = {"additive", "dominant", "recessive", "codominant", "edge"}
 
     def __init__(
         self,
@@ -72,6 +79,8 @@ class GLMRegression(Regression):
         min_n: int = 200,
         report_categorical_betas: bool = False,
         standardize_data: bool = False,
+        encoding: str = "additive",
+        edge_encoding_info: Optional[pd.DataFrame] = None,
         process_num: Optional[int] = None,
     ):
         # base class init
@@ -91,6 +100,15 @@ class GLMRegression(Regression):
         if process_num is None:
             process_num = multiprocessing.cpu_count()
         self.process_num = process_num
+        if encoding not in self.KNOWN_ENCODINGS:
+            raise ValueError(f"Genotypes provided with unknown 'encoding': {encoding}")
+        elif encoding == "edge" and edge_encoding_info is None:
+            raise ValueError(
+                "'edge_encoding_info' must be provided when using edge encoding"
+            )
+        else:
+            self.encoding = encoding
+            self.edge_encoding_info = edge_encoding_info
 
         # Ensure the data output type is compatible
         # Set 'self.family' and 'self.use_t' which are dependent on the outcome dtype
@@ -316,6 +334,28 @@ class GLMRegression(Regression):
                     "Diff_AIC": est.aic - est_restricted.aic,
                 }
 
+    def _get_rv_specific_data(self, rv: str):
+        """Select the data relevant to performing a regression on a given variable, encoding genotypes if needed"""
+        data = self.data[[rv, self.outcome_variable] + self.covariates].copy()
+        # Encode any genotype data
+        has_genotypes = False
+        for dt in data.dtypes:
+            if GenotypeDtype.is_dtype(dt):
+                has_genotypes = True
+                break
+        if has_genotypes:
+            if self.encoding == "additive":
+                data = data.genomics.encode_additive()
+            elif self.encoding == "dominant":
+                data = data.genomics.encode_dominant()
+            elif self.encoding == "recessive":
+                data = data.genomics.encode_recessive()
+            elif self.encoding == "codominant":
+                data = data.genomics.encode_codominant()
+            elif self.encoding == "edge":
+                data = data.genomics.encode_edge(self.edge_encoding_info)
+        return data
+
     def run(self):
         """Run a regression object, returning the results and logging any warnings/errors"""
         for rv_type, rv_list in self.regression_variables.items():
@@ -330,24 +370,37 @@ class GLMRegression(Regression):
                     )
                 )
 
-            with multiprocessing.Pool(processes=self.process_num) as pool:
-                run_result = pool.starmap(
-                    self._run_rv,
-                    zip(
-                        rv_list,
-                        repeat(rv_type),
-                        [
-                            self.data[[rv, self.outcome_variable] + self.covariates]
-                            for rv in rv_list
-                        ],
-                        repeat(self.outcome_variable),
-                        repeat(self.covariates),
-                        repeat(self.min_n),
-                        repeat(self.family),
-                        repeat(self.use_t),
-                        repeat(self.report_categorical_betas),
-                    ),
-                )
+            if self.process_num == 1:
+                run_result = [
+                    self._run_rv(
+                        rv,
+                        rv_type,
+                        self._get_rv_specific_data(rv),
+                        self.outcome_variable,
+                        self.covariates,
+                        self.min_n,
+                        self.family,
+                        self.use_t,
+                        self.report_categorical_betas,
+                    )
+                    for rv in rv_list
+                ]
+            else:
+                with multiprocessing.Pool(processes=self.process_num) as pool:
+                    run_result = pool.starmap(
+                        self._run_rv,
+                        zip(
+                            rv_list,
+                            repeat(rv_type),
+                            [self._get_rv_specific_data(rv) for rv in rv_list],
+                            repeat(self.outcome_variable),
+                            repeat(self.covariates),
+                            repeat(self.min_n),
+                            repeat(self.family),
+                            repeat(self.use_t),
+                            repeat(self.report_categorical_betas),
+                        ),
+                    )
 
             for rv, rv_result in zip(rv_list, run_result):
                 results, warnings, error = rv_result
@@ -423,6 +476,11 @@ class GLMRegression(Regression):
 
             # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
             data = data.loc[complete_case_mask]
+
+            # Update rv_type to the encoded type if it is a genotype
+            if rv_type == "genotypes":
+                """Need to update with encoded type"""
+                rv_type = _get_dtypes(data[rv])[rv]
 
             # Run Regression
             if rv_type == "continuous":

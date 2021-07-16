@@ -105,7 +105,7 @@ class Regression(metaclass=ABCMeta):
         types = _get_dtypes(self.data)
         rv_types = {v: t for v, t in types.iteritems() if v in regression_variables}
         rv_count = 0
-        for dtype in ["binary", "categorical", "continuous"]:
+        for dtype in ["binary", "categorical", "continuous", "genotypes"]:
             self.regression_variables[dtype] = [
                 v for v, t in rv_types.items() if t == dtype
             ]
