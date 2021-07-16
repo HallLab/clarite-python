@@ -96,7 +96,8 @@ class InteractionRegression(GLMRegression):
     def _process_interactions(self, interactions):
         """Validate the interactions parameter and save it as a list of string tuples"""
         regression_var_list = []
-        map(regression_var_list.extend, self.regression_variables.values())
+        for var_list in self.regression_variables.values():
+            regression_var_list.extend(var_list)
 
         if len(regression_var_list) < 2:
             raise ValueError(
