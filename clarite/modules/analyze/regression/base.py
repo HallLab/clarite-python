@@ -39,6 +39,8 @@ class Regression(metaclass=ABCMeta):
         regression_variables: List[str],
         covariates: Optional[List[str]] = None,
     ):
+        # Copy the data to avoid changing the original.  The copy will be modified in-place.
+        data = data.copy()
         # Print a warning if there are any empty categories and remove them
         # This is done to distinguish from those that become missing during analysis (and could be an issue)
         empty_categories = _remove_empty_categories(data)
@@ -105,7 +107,7 @@ class Regression(metaclass=ABCMeta):
         types = _get_dtypes(self.data)
         rv_types = {v: t for v, t in types.iteritems() if v in regression_variables}
         rv_count = 0
-        for dtype in ["binary", "categorical", "continuous"]:
+        for dtype in ["binary", "categorical", "continuous", "genotypes"]:
             self.regression_variables[dtype] = [
                 v for v, t in rv_types.items() if t == dtype
             ]

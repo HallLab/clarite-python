@@ -1,6 +1,10 @@
 import pytest
 
+import pandas as pd
+import numpy as np
+
 import clarite
+from clarite.modules.survey import SurveyDesignSpec
 
 
 def test_bams_main(genotype_case_control_add_add_main):
@@ -28,8 +32,8 @@ def test_bams_interaction(genotype_case_control_rec_rec_onlyinteraction):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("process_num", [None, 1])
-def test_large_gwas(large_gwas_data, process_num):
-    """10k samples with 1k SNPs"""
+def test_largeish_gwas(large_gwas_data, process_num):
+    """10k samples with 1000 SNPs"""
     # Run CLARITE GWAS
     results = clarite.analyze.association_study(
         data=large_gwas_data,
@@ -37,4 +41,25 @@ def test_large_gwas(large_gwas_data, process_num):
         encoding="additive",
         process_num=process_num,
     )
-    print(results.head())
+    # Run CLARITE GWAS with fake (all ones) weights to confirm the weighted regression handles genotypes correctly
+    results_weighted = clarite.analyze.association_study(
+        data=large_gwas_data,
+        outcomes="Outcome",
+        encoding="additive",
+        process_num=process_num,
+        survey_design_spec=SurveyDesignSpec(
+            survey_df=pd.DataFrame({"weights": np.ones(len(large_gwas_data))}),
+            weights="weights",
+        ),
+    )
+    # TODO: Add useful asserts rather than just making sure it runs
+
+
+@pytest.mark.xfail(strict=True)
+def test_gwas_r(large_gwas_data):
+    clarite.analyze.association_study(
+        data=large_gwas_data,
+        outcomes="Outcome",
+        encoding="additive",
+        survey_kind="r_survey",
+    )

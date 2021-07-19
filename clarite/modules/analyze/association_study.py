@@ -2,7 +2,6 @@ from typing import Optional, Union, Type, List
 
 import click
 import pandas as pd
-from pandas_genomics import GenotypeDtype
 
 from clarite.modules.analyze import regression
 from clarite.modules.analyze.regression import (
@@ -43,10 +42,6 @@ def association_study(
         This can be 'glm', 'weighted_glm', or 'r_survey' for built-in Regression types,
         or a custom subclass of Regression.  If None, it is set to 'glm' if a survey design is not specified
         and 'weighted_glm' if it is.
-    encoding: str, default "additive"
-        Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
-    edge_encoding_info: Optional pd.DataFrame, default None
-        If edge encoding is used, this must be provided.  See Pandas-Genomics documentation on edge encodings.
     kwargs: Keyword arguments specific to the Regression being used
 
     Returns
@@ -55,34 +50,6 @@ def association_study(
         Association Study results DataFrame with at least these columns: ['N', 'pvalue', 'error', 'warnings'].
         Indexed by the outcome variable and the variable being assessed in each regression
     """
-    # Copy data to avoid modifying the original, in case it is changed
-    data = data.copy(deep=True)
-
-    # Encode any genotype data
-    has_genotypes = False
-    for dt in data.dtypes:
-        if GenotypeDtype.is_dtype(dt):
-            has_genotypes = True
-            break
-    if has_genotypes:
-        if encoding == "additive":
-            data = data.genomics.encode_additive()
-        elif encoding == "dominant":
-            data = data.genomics.encode_dominant()
-        elif encoding == "recessive":
-            data = data.genomics.encode_recessive()
-        elif encoding == "codominant":
-            data = data.genomics.encode_codominant()
-        elif encoding == "edge":
-            if edge_encoding_info is None:
-                raise ValueError(
-                    "'edge_encoding_info' must be provided when using edge encoding"
-                )
-            else:
-                data = data.genomics.encode_edge(edge_encoding_info)
-        else:
-            raise ValueError(f"Genotypes provided with unknown 'encoding': {encoding}")
-
     # Ensure outcome, covariates, and regression variables are lists
     if isinstance(outcomes, str):
         outcomes = [

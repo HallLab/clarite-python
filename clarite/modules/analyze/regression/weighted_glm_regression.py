@@ -13,7 +13,7 @@ import statsmodels.api as sm
 from .glm_regression import GLMRegression
 from clarite.modules.survey import SurveyDesignSpec, SurveyModel
 from clarite.internal.calculations import regTermTest
-from clarite.internal.utilities import _remove_empty_categories
+from clarite.internal.utilities import _remove_empty_categories, _get_dtypes
 from ..utils import statsmodels_var_regex, fix_names
 
 
@@ -67,6 +67,10 @@ class WeightedGLMRegression(GLMRegression):
         False by default.
           If True, numeric data will be standardized using z-scores before regression.
           This will affect the beta values and standard error, but not the pvalues.
+    encoding: str, default "additive"
+        Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
+    edge_encoding_info: Optional pd.DataFrame, default None
+        If edge encoding is used, this must be provided.  See Pandas-Genomics documentation on edge encodings.
     process_num: Optional[int]
         Number of processes to use when running the analysis, default is None (use the number of cores)
     """
@@ -81,6 +85,8 @@ class WeightedGLMRegression(GLMRegression):
         min_n: int = 200,
         report_categorical_betas: bool = False,
         standardize_data: bool = False,
+        encoding: str = "additive",
+        edge_encoding_info: Optional[pd.DataFrame] = None,
         process_num: Optional[int] = None,
     ):
         # survey_design_spec should actually not be None, but is a keyword for convenience
@@ -96,6 +102,8 @@ class WeightedGLMRegression(GLMRegression):
             min_n=min_n,
             report_categorical_betas=report_categorical_betas,
             standardize_data=standardize_data,
+            encoding=encoding,
+            edge_encoding_info=edge_encoding_info,
             process_num=process_num,
         )
 
@@ -289,29 +297,40 @@ class WeightedGLMRegression(GLMRegression):
                     )
                 )
 
-            with multiprocessing.Pool(processes=self.process_num) as pool:
-                run_result = pool.starmap(
-                    self._run_weighted_rv,
-                    zip(
-                        rv_list,
-                        repeat(rv_type),
-                        [
-                            self.data[[rv, ov] + cvs]
-                            for rv, ov, cvs in zip(
-                                rv_list,
-                                repeat(self.outcome_variable),
-                                repeat(self.covariates),
-                            )
-                        ],
-                        repeat(self.outcome_variable),
-                        repeat(self.covariates),
-                        repeat(self.survey_design_spec),
-                        repeat(self.min_n),
-                        repeat(self.family),
-                        repeat(self.use_t),
-                        repeat(self.report_categorical_betas),
-                    ),
-                )
+            if self.process_num == 1:
+                run_result = [
+                    self._run_weighted_rv(
+                        rv,
+                        rv_type,
+                        self._get_rv_specific_data(rv),
+                        self.outcome_variable,
+                        self.covariates,
+                        self.survey_design_spec,
+                        self.min_n,
+                        self.family,
+                        self.use_t,
+                        self.report_categorical_betas,
+                    )
+                    for rv in rv_list
+                ]
+
+            else:
+                with multiprocessing.Pool(processes=self.process_num) as pool:
+                    run_result = pool.starmap(
+                        self._run_weighted_rv,
+                        zip(
+                            rv_list,
+                            repeat(rv_type),
+                            [self._get_rv_specific_data(rv) for rv in rv_list],
+                            repeat(self.outcome_variable),
+                            repeat(self.covariates),
+                            repeat(self.survey_design_spec),
+                            repeat(self.min_n),
+                            repeat(self.family),
+                            repeat(self.use_t),
+                            repeat(self.report_categorical_betas),
+                        ),
+                    )
 
             for rv, rv_result in zip(rv_list, run_result):
                 results, warnings, error = rv_result
@@ -410,6 +429,11 @@ class WeightedGLMRegression(GLMRegression):
 
             # Full Formula, adding the regression variable to the restricted formula
             formula = formula_restricted + f" + Q('{rv}" "')"
+
+            # Update rv_type to the encoded type if it is a genotype
+            if rv_type == "genotypes":
+                """Need to update with encoded type"""
+                rv_type = _get_dtypes(data[rv])[rv]
 
             # Run Regression
             if rv_type == "continuous":

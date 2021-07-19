@@ -2,6 +2,11 @@
 Release History
 ===============
 
+v2.2.0 (2021-07-19)
+-------------------
+
+Change the analysis so that encoding is performed later (to save memory usage)
+
 v2.1.1 (2021-07-16)
 -------------------
 
