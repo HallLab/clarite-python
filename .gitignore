@@ -87,6 +87,8 @@ target/
 
 # VS Code
 .vscode
+.venv 
+.python-version
 
 # Pipenv
 Pipfile

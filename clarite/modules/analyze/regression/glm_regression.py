@@ -1,7 +1,7 @@
 import multiprocessing
 import re
 from itertools import repeat
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import click
 import numpy as np
@@ -12,10 +12,10 @@ import statsmodels.api as sm
 from pandas_genomics import GenotypeDtype
 from scipy.stats import stats
 
-from clarite.internal.utilities import _remove_empty_categories, _get_dtypes
+from clarite.internal.utilities import _get_dtypes, _remove_empty_categories
 
-from .base import Regression
 from ..utils import fix_names, statsmodels_var_regex
+from .base import Regression
 
 
 class GLMRegression(Regression):
@@ -125,7 +125,9 @@ class GLMRegression(Regression):
         elif self.outcome_dtype == "binary":
             # Use the order according to the categorical
             counts = self.data[self.outcome_variable].value_counts().to_dict()
+
             categories = self.data[self.outcome_variable].cat.categories
+            categories = sorted(categories, reverse=True)  # Sort reverse to keep control as 0 and case as 1
             codes, categories = zip(*enumerate(categories))
             self.data[self.outcome_variable].replace(categories, codes, inplace=True)
             self.description += (
