@@ -1,5 +1,5 @@
 import re
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -148,4 +148,4 @@ def statsmodels_var_regex(variable_name) -> str:
     1) Categoricals may have the value encoded at the end (for example, Male[T.1.0])
     2) Symbols in the variable name must be accounted for: (, ), -, +, etc
     """
-    return fr"^{re.escape(variable_name)}(\[T\..*\])?$"
+    return rf"^{re.escape(variable_name)}(\[T\..*\])?$"

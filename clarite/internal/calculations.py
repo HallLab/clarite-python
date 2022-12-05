@@ -1,8 +1,8 @@
+import re
+
 import numpy as np
 from scipy import stats
 from scipy.optimize import brentq as root
-
-import re
 
 from clarite.modules.analyze.utils import statsmodels_var_regex
 
@@ -30,7 +30,7 @@ def regTermTest(full_model, restricted_model, ddf, X_names, var_name):
 
 def _pFsum(x, df, a, ddf):
     tr = a.mean()
-    tr2 = (a ** 2).mean() / tr ** 2
+    tr2 = (a**2).mean() / tr**2
     scale = tr * tr2
     ndf = len(a) / tr2
 
@@ -63,7 +63,7 @@ def _saddle(x, lam):
         return (lam / (1 - 2 * z * lam)).sum()
 
     def kpprime0(z):
-        return 2 * (lam ** 2 / (1 - 2 * z * lam) ** 2).sum()
+        return 2 * (lam**2 / (1 - 2 * z * lam) ** 2).sum()
 
     if any(lam < 0):
         lam_min = (1 / (2 * lam[lam < 0])).max() * 0.99999

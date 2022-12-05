@@ -127,7 +127,9 @@ class GLMRegression(Regression):
             counts = self.data[self.outcome_variable].value_counts().to_dict()
 
             categories = self.data[self.outcome_variable].cat.categories
-            categories = sorted(categories, reverse=True)  # Sort reverse to keep control as 0 and case as 1
+            # Sort reverse to keep control as 0 and case as 1
+            if categories[0] == "Case" and categories[1] == "Control":
+                categories = sorted(categories, reverse=True)
             codes, categories = zip(*enumerate(categories))
             self.data[self.outcome_variable].replace(categories, codes, inplace=True)
             self.description += (

@@ -987,15 +987,34 @@ def test_edge_encondig_logistic_regression():
     from pandas_genomics import sim
 
     # Additive Main Effect for SNP1 without interaction
-    train_add_main_effect45 = sim.BAMS.from_model(eff1=sim.SNPEffectEncodings.ADDITIVE, eff2=sim.SNPEffectEncodings.ADDITIVE,
-                                                  penetrance_base=0.45, main1=1, main2=0, interaction=0, random_seed=2021)
-    test_add_main_effect45 = sim.BAMS.from_model(eff1=sim.SNPEffectEncodings.ADDITIVE,
-                                                 eff2=sim.SNPEffectEncodings.ADDITIVE, penetrance_base=0.45, main1=1, main2=0, interaction=0)
-    train_add_me_pb045 = train_add_main_effect45.generate_case_control(n_cases=5000, n_controls=5000)
-    test_add_me_pb045 = test_add_main_effect45.generate_case_control(n_cases=5000, n_controls=5000)
-    edge_weights_add_me_pb045 = train_add_me_pb045.genomics.calculate_edge_encoding_values(data=train_add_me_pb045["Outcome"], outcome_variable="Outcome")
+    train = sim.BAMS.from_model(
+        eff1=sim.SNPEffectEncodings.ADDITIVE,
+        eff2=sim.SNPEffectEncodings.ADDITIVE,
+        penetrance_base=0.45,
+        main1=1,
+        main2=0,
+        interaction=0,
+        random_seed=2021,
+    )
+    test = sim.BAMS.from_model(
+        eff1=sim.SNPEffectEncodings.ADDITIVE,
+        eff2=sim.SNPEffectEncodings.ADDITIVE,
+        penetrance_base=0.45,
+        main1=1,
+        main2=0,
+        interaction=0,
+    )
+    train_add = train.generate_case_control(n_cases=5000, n_controls=5000)
+    test_add = test.generate_case_control(n_cases=5000, n_controls=5000)
+    edge_weights = train_add.genomics.calculate_edge_encoding_values(
+        data=train_add["Outcome"], outcome_variable="Outcome"
+    )
 
-    edge_results_add_me_pb045 = clarite.analyze.association_study(
-        data=test_add_me_pb045, outcomes="Outcome", encoding="edge", edge_encoding_info=edge_weights_add_me_pb045)
+    edge_results = clarite.analyze.association_study(
+        data=test_add,
+        outcomes="Outcome",
+        encoding="edge",
+        edge_encoding_info=edge_weights,
+    )
 
-    assert 2 == 2
+    assert edge_results["Variable_type"][0] == "continuous"
