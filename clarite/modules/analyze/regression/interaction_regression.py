@@ -1,6 +1,6 @@
 import multiprocessing
 from itertools import combinations, repeat
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, List, Optional, Tuple
 
 import click
 import numpy as np
@@ -11,8 +11,9 @@ import statsmodels.api as sm
 from pandas_genomics import GenotypeDtype
 
 from clarite.internal.utilities import _remove_empty_categories
-from . import GLMRegression
+
 from ..utils import fix_names
+from . import GLMRegression
 
 
 class InteractionRegression(GLMRegression):
@@ -348,16 +349,18 @@ class InteractionRegression(GLMRegression):
             )
             warnings_list.extend(warnings)
 
+            # GITHUB/ISSUES 116: Regression matrix with empty categories
+            # (Moved after to clear NAN)
             # Remove unused categories (warning when this occurs)
-            removed_cats = _remove_empty_categories(data)
-            if len(removed_cats) >= 1:
-                for extra_cat_var, extra_cats in removed_cats.items():
-                    warnings_list.append(
-                        f"'{str(extra_cat_var)}'"
-                        f" had categories with no occurrences: "
-                        f"{', '.join([str(c) for c in extra_cats])} "
-                        f"after removing observations with missing values"
-                    )
+            # removed_cats = _remove_empty_categories(data)
+            # if len(removed_cats) >= 1:
+            #     for extra_cat_var, extra_cats in removed_cats.items():
+            #         warnings_list.append(
+            #             f"'{str(extra_cat_var)}'"
+            #             f" had categories with no occurrences: "
+            #             f"{', '.join([str(c) for c in extra_cats])} "
+            #             f"after removing observations with missing values"
+            #         )
 
             # Get the formulas
             # Restricted Formula - covariates and main effects
@@ -370,6 +373,18 @@ class InteractionRegression(GLMRegression):
 
             # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
             data = data.loc[complete_case_mask]
+
+            # GITHUB/ISSUES 116: Regression matrix with empty categories
+            # Remove unused categories (warning when this occurs)
+            removed_cats = _remove_empty_categories(data)
+            if len(removed_cats) >= 1:
+                for extra_cat_var, extra_cats in removed_cats.items():
+                    warnings_list.append(
+                        f"'{str(extra_cat_var)}'"
+                        f" had categories with no occurrences: "
+                        f"{', '.join([str(c) for c in extra_cats])} "
+                        f"after removing observations with missing values"
+                    )
 
             # Run Regression LRT Test
             for regression_result in cls._run_interaction_regression(

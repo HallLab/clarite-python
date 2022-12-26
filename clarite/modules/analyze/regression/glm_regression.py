@@ -127,9 +127,12 @@ class GLMRegression(Regression):
             counts = self.data[self.outcome_variable].value_counts().to_dict()
 
             categories = self.data[self.outcome_variable].cat.categories
-            # Sort reverse to keep control as 0 and case as 1
+            # GITHUB/ISSUES 115: Keep control as 0 and case as 1
             if categories[0] == "Case" and categories[1] == "Control":
                 categories = sorted(categories, reverse=True)
+
+            # TODO: Allow only 0/1 or Control/Case entries | Other entries generate a warning
+
             codes, categories = zip(*enumerate(categories))
             self.data[self.outcome_variable].replace(categories, codes, inplace=True)
             self.description += (
@@ -458,15 +461,17 @@ class GLMRegression(Regression):
             )
             warnings_list.extend(warnings)
 
+            # GIT ISSUES 116: Regression matrix with empty categories
+            # (Moved after to clear NAN)
             # Remove unused categories (warning when this occurs)
-            removed_cats = _remove_empty_categories(data)
-            if len(removed_cats) >= 1:
-                for extra_cat_var, extra_cats in removed_cats.items():
-                    warnings_list.append(
-                        f"'{str(extra_cat_var)}' had categories with no occurrences: "
-                        f"{', '.join([str(c) for c in extra_cats])} "
-                        f"after removing observations with missing values"
-                    )
+            # removed_cats = _remove_empty_categories(data)
+            # if len(removed_cats) >= 1:
+            #     for extra_cat_var, extra_cats in removed_cats.items():
+            #         warnings_list.append(
+            #             f"'{str(extra_cat_var)}' had categories with no occurrences: "
+            #             f"{', '.join([str(c) for c in extra_cats])} "
+            #             f"after removing observations with missing values"
+            #         )
 
             # Get the formulas
             # Restricted Formula, just outcome and covariates
@@ -480,6 +485,17 @@ class GLMRegression(Regression):
 
             # Apply the complete_case_mask to the data to ensure categorical models use the same data in the LRT
             data = data.loc[complete_case_mask]
+
+            # GIT ISSUES 116: Regression matrix with empty categories
+            # Remove unused categories (warning when this occurs)
+            removed_cats = _remove_empty_categories(data)
+            if len(removed_cats) >= 1:
+                for extra_cat_var, extra_cats in removed_cats.items():
+                    warnings_list.append(
+                        f"'{str(extra_cat_var)}' had categories with no occurrences: "
+                        f"{', '.join([str(c) for c in extra_cats])} "
+                        f"after removing observations with missing values"
+                    )
 
             # Update rv_type to the encoded type if it is a genotype
             if rv_type == "genotypes":
