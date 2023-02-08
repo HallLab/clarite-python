@@ -1,4 +1,4 @@
-from typing import Optional, Union, Dict, Tuple
+from typing import Dict, Optional, Tuple, Union
 
 import click
 import numpy as np
@@ -605,6 +605,12 @@ class SurveyDesignSpec:
             self.cluster_values.loc[self.subset_array],
         )
         has_weights, weight_name, weight_values = self.get_weights(regression_variable)
+        # GITHUB ISSUE #118: Function self.get_weights(regression_variable) return None
+        if not has_weights:
+            has_weights, weight_values = (
+                False,
+                self.weight_values.loc[self.subset_array],
+            )
 
         # Filter out any incomplete cases
         strata_values = strata_values.loc[complete_case_idx]

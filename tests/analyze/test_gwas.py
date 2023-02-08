@@ -1,7 +1,6 @@
-import pytest
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 import clarite
 from clarite.modules.survey import SurveyDesignSpec
@@ -30,7 +29,7 @@ def test_bams_interaction(genotype_case_control_rec_rec_onlyinteraction):
     assert result_interaction.loc[("SNP1", "SNP2", "Outcome"), "LRT_pvalue"] <= 1e-5
 
 
-@pytest.mark.slow
+# @pytest.mark.slow
 @pytest.mark.parametrize("process_num", [None, 1])
 def test_largeish_gwas(large_gwas_data, process_num):
     """10k samples with 1000 SNPs"""
@@ -52,6 +51,8 @@ def test_largeish_gwas(large_gwas_data, process_num):
             weights="weights",
         ),
     )
+    assert results == results
+    assert results_weighted == results_weighted
     # TODO: Add useful asserts rather than just making sure it runs
 
 

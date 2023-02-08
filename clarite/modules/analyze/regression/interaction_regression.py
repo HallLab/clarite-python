@@ -15,6 +15,9 @@ from clarite.internal.utilities import _remove_empty_categories
 from ..utils import fix_names
 from . import GLMRegression
 
+# GITHUB ISSUE #119: Regressions with Error after Multiprocessing release python > 3.8
+multiprocessing.get_start_method("fork")
+
 
 class InteractionRegression(GLMRegression):
     """

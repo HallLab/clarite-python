@@ -1,20 +1,24 @@
 import multiprocessing
 import re
 from itertools import repeat
-from typing import Optional, Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import click
 import numpy as np
+import pandas as pd
 import patsy
 import scipy
-import pandas as pd
 import statsmodels.api as sm
 
-from .glm_regression import GLMRegression
-from clarite.modules.survey import SurveyDesignSpec, SurveyModel
 from clarite.internal.calculations import regTermTest
-from clarite.internal.utilities import _remove_empty_categories, _get_dtypes
-from ..utils import statsmodels_var_regex, fix_names
+from clarite.internal.utilities import _get_dtypes, _remove_empty_categories
+from clarite.modules.survey import SurveyDesignSpec, SurveyModel
+
+from ..utils import fix_names, statsmodels_var_regex
+from .glm_regression import GLMRegression
+
+# GITHUB ISSUE #119: Regressions with Error after Multiprocessing release python > 3.8
+multiprocessing.get_start_method("fork")
 
 
 class WeightedGLMRegression(GLMRegression):
@@ -385,7 +389,9 @@ class WeightedGLMRegression(GLMRegression):
                 ~data[[rv, outcome_variable] + covariates].isna().any(axis=1)
             )
             # If allowed (an error hasn't been raised) negate missing_weight_mask so True=keep to drop those
-            complete_case_mask = complete_case_mask & ~missing_weight_mask
+            # GITHUB ISSUE #117: Error type variable on Weight Regression with Clusters
+            if missing_weight_mask is not None:
+                complete_case_mask = complete_case_mask & ~missing_weight_mask
 
             # Count restricted rows
             restricted_rows = survey_design_spec.subset_array & complete_case_mask

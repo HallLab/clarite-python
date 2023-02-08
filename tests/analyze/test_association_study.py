@@ -996,22 +996,13 @@ def test_edge_encondig_logistic_regression():
         interaction=0,
         random_seed=2021,
     )
-    test = sim.BAMS.from_model(
-        eff1=sim.SNPEffectEncodings.ADDITIVE,
-        eff2=sim.SNPEffectEncodings.ADDITIVE,
-        penetrance_base=0.45,
-        main1=1,
-        main2=0,
-        interaction=0,
-    )
     train_add = train.generate_case_control(n_cases=5000, n_controls=5000)
-    test_add = test.generate_case_control(n_cases=5000, n_controls=5000)
     edge_weights = train_add.genomics.calculate_edge_encoding_values(
         data=train_add["Outcome"], outcome_variable="Outcome"
     )
 
     edge_results = clarite.analyze.association_study(
-        data=test_add,
+        data=train_add,
         outcomes="Outcome",
         encoding="edge",
         edge_encoding_info=edge_weights,

@@ -1,6 +1,6 @@
 from functools import wraps
 from importlib.util import find_spec
-from typing import Optional, List, Union
+from typing import List, Optional, Union
 
 import click
 import pandas as pd
@@ -208,7 +208,10 @@ def _remove_empty_categories(
             existing_cats = data[var].cat.categories
             if data[var].cat.ordered:
                 print()
-            data[var] = data[var].cat.remove_unused_categories()
+            # GITHUB ISSUE #120: SettingWithCopyWarning on Regression runs
+            # data[var] = data[var].cat.remove_unused_categories()
+            data.loc[:, var] = data[var].cat.remove_unused_categories()
+
             removed_categories = set(existing_cats) - set(data[var].cat.categories)
             if len(removed_categories) > 0:
                 removed_cats[var] = removed_categories

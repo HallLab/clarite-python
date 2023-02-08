@@ -17,6 +17,9 @@ from clarite.internal.utilities import _get_dtypes, _remove_empty_categories
 from ..utils import fix_names, statsmodels_var_regex
 from .base import Regression
 
+# GITHUB ISSUE #119: Regressions with Error after Multiprocessing release python > 3.8
+multiprocessing.get_start_method("fork")
+
 
 class GLMRegression(Regression):
     """
@@ -127,7 +130,7 @@ class GLMRegression(Regression):
             counts = self.data[self.outcome_variable].value_counts().to_dict()
 
             categories = self.data[self.outcome_variable].cat.categories
-            # GITHUB/ISSUES 115: Keep control as 0 and case as 1
+            # GITHUB ISSUES #115: Keep control as 0 and case as 1
             if categories[0] == "Case" and categories[1] == "Control":
                 categories = sorted(categories, reverse=True)
 
