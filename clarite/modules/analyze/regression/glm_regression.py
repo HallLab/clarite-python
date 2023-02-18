@@ -380,6 +380,9 @@ class GLMRegression(Regression):
                     )
                 )
 
+            # TODO: Error on multiprocess after update to Python > 3.8
+            self.process_num = 1
+
             if self.process_num == 1:
                 run_result = [
                     self._run_rv(

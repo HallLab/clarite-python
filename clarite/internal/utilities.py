@@ -6,6 +6,9 @@ import click
 import pandas as pd
 from pandas_genomics import GenotypeDtype
 
+# GITHUB ISSUE #120: SettingWithCopyWarning on Regression runs
+pd.set_option("mode.chained_assignment", None)
+
 
 def print_wrap(func):
     @wraps(func)
@@ -209,9 +212,8 @@ def _remove_empty_categories(
             if data[var].cat.ordered:
                 print()
             # GITHUB ISSUE #120: SettingWithCopyWarning on Regression runs
-            # data[var] = data[var].cat.remove_unused_categories()
-            data.loc[:, var] = data[var].cat.remove_unused_categories()
-
+            data[var] = data[var].cat.remove_unused_categories()
+            # data.loc[:, var] = data[var].cat.remove_unused_categories()
             removed_categories = set(existing_cats) - set(data[var].cat.categories)
             if len(removed_categories) > 0:
                 removed_cats[var] = removed_categories

@@ -2,6 +2,11 @@
 Release History
 ===============
 
+v2.3.1 (2023-01-10)
+-------------------
+
+Bug fixes (consult issues) and updating packages to Python 3.10
+
 v2.2.0 (2021-07-19)
 -------------------
 

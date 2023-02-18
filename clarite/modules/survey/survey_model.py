@@ -111,7 +111,7 @@ class SurveyModel(object):
         ).set_index("clust", append=True)
 
         # Get sum of d_hat within each cluster (rows = clusters, columns = variables)
-        jdata = d_hat.groupby(axis=0, level="clust").apply(sum)
+        jdata = d_hat.groupby(axis=0, level="clust", group_keys=False).apply(sum)
 
         if self.design.has_strata:
             # Add strata label to jdata (just updates the index labels)
@@ -136,7 +136,7 @@ class SurveyModel(object):
                     # This results in a value of 0 for the strata when there is only 1 cluster
                     return data - data.mean()
 
-            jdata = jdata.groupby(axis=0, level="strat").apply(
+            jdata = jdata.groupby(axis=0, level="strat", group_keys=False).apply(
                 lambda g: center_strata(g, self.design.single_cluster, d_hat.mean())
             )
 
