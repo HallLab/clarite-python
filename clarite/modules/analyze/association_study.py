@@ -1,13 +1,13 @@
-from typing import Optional, Union, Type, List
+from typing import List, Optional, Type, Union
 
 import click
 import pandas as pd
 
 from clarite.modules.analyze import regression
 from clarite.modules.analyze.regression import (
-    builtin_regression_kinds,
-    WeightedGLMRegression,
     GLMRegression,
+    WeightedGLMRegression,
+    builtin_regression_kinds,
 )
 
 
@@ -103,6 +103,8 @@ def association_study(
             outcome_variable=outcome,
             regression_variables=regression_variables,
             covariates=covariates,
+            encoding=encoding,
+            edge_encoding_info=edge_encoding_info,
             **kwargs,
         )
         print(regression)

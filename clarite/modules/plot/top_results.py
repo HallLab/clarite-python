@@ -1,9 +1,9 @@
 from typing import Optional, Tuple
 
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-import seaborn as sns
 import pandas as pd
+import seaborn as sns
+from matplotlib.lines import Line2D
 
 
 def top_results(
