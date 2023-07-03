@@ -18,7 +18,7 @@ from ..utils import fix_names, statsmodels_var_regex
 from .base import Regression
 
 # GITHUB ISSUE #119: Regressions with Error after Multiprocessing release python > 3.8
-multiprocessing.get_start_method("fork")
+# multiprocessing.get_start_method("fork")
 
 
 class GLMRegression(Regression):
@@ -129,7 +129,9 @@ class GLMRegression(Regression):
             # Use the order according to the categorical
             counts = self.data[self.outcome_variable].value_counts().to_dict()
 
-            categories = self.data[self.outcome_variable].cat.categories
+            # Add sorted
+            categories = sorted(self.data[self.outcome_variable].cat.categories)
+
             # GITHUB ISSUES #115: Keep control as 0 and case as 1
             if categories[0] == "Case" and categories[1] == "Control":
                 categories = sorted(categories, reverse=True)
@@ -138,6 +140,14 @@ class GLMRegression(Regression):
 
             codes, categories = zip(*enumerate(categories))
             self.data[self.outcome_variable].replace(categories, codes, inplace=True)
+
+            # After upgrade to Pandas >= 1.5 the replace stop to covert as float
+            # if stay as category, when create y will create to columns and will invert the
+            # beta signal.
+            self.data[self.outcome_variable] = self.data[self.outcome_variable].astype(
+                float
+            )
+
             self.description += (
                 f"Binary Outcome (family = Binomial): '{self.outcome_variable}'\n"
                 f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as 0\n"

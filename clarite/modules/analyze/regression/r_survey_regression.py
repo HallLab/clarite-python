@@ -3,10 +3,10 @@ from typing import List, Optional
 
 import pandas as pd
 
-from clarite.internal.utilities import requires, _get_dtypes
+from clarite.internal.utilities import _get_dtypes, requires
 
-from .base import Regression
 from ...survey import SurveyDesignSpec
+from .base import Regression
 
 
 class RSurveyRegression(Regression):
@@ -50,6 +50,8 @@ class RSurveyRegression(Regression):
         min_n: int = 200,
         report_categorical_betas: bool = False,
         standardize_data: bool = False,
+        encoding=None,  # TODO: Error on call
+        edge_encoding_info=None,  # TODO: Error on call
     ):
         # base class init
         # This takes in minimal regression params (data, outcome_variable, covariates) and
@@ -175,7 +177,8 @@ class RSurveyRegression(Regression):
         # Source R script to define the function
         import rpy2.robjects as ro
         from rpy2.robjects import pandas2ri
-        from .r_code.r_utilities import ewasresult2py, df_pandas2r
+
+        from .r_code.r_utilities import df_pandas2r, ewasresult2py
 
         r_code_folder = Path(__file__).parent / "r_code"
         filename = str(r_code_folder / "ewas_r.R")

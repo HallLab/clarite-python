@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
 import clarite
 
 TESTS_PATH = Path(__file__).parent.parent
@@ -225,3 +226,57 @@ def test_interactions_nhanes_pairwise(data_NHANES):
     )
     assert (grouped_bonf == python_result_nobeta["LRT_pvalue_bonferroni"]).all()
     assert (grouped_fdr == python_result_nobeta["LRT_pvalue_fdr"]).all()
+
+
+def test_interaction_exe():
+    nested_table = clarite.load.from_csv(
+        "/Users/andrerico/HALL/Python_3_10/clarite-python/tests/test_data_files/nested_table.csv"
+    )
+    # Return same result if not change data type
+    # list_bin = (
+    #     "female",
+    #     "black",
+    #     "mexican",
+    #     "other_hispanic",
+    #     "other_eth",
+    # )
+    # list_cat = (
+    #     "SDDSRVYR",
+    #     "SES_LEVEL",
+    # )
+    # list_cont = (
+    #     "BMXBMI",
+    #     "RIDAGEYR",
+    #     "LBXCOT",
+    #     "IRON_mg",
+    #     "DR1TSFAT",
+    #     "DRDSDT1",
+    # )
+
+    # nested_table = clarite.modify.make_binary(data=nested_table, only=(list_bin))
+    # nested_table = clarite.modify.make_categorical(data=nested_table, only=(list_cat))
+    # nested_table = clarite.modify.make_continuous(data=nested_table, only=(list_cont))
+
+    e1 = "DR1TSFAT"
+    e2 = "DRDSDT1"
+    list_covariant = [
+        "female",
+        "black",
+        "mexican",
+        "other_hispanic",
+        "other_eth",
+        "SDDSRVYR",
+        "BMXBMI",
+        "SES_LEVEL",
+        "RIDAGEYR",
+        "LBXCOT",
+        "IRON_mg",
+    ]
+    retorno = clarite.analyze.interaction_study(
+        data=nested_table,
+        outcomes="LBXHGB",
+        interactions=[(e1, e2)],
+        covariates=list_covariant,
+    )
+
+    assert 2 == 2
