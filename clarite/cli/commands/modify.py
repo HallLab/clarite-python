@@ -242,25 +242,15 @@ def rowfilter(data, output, column, vs, vi, vf, comparison):
         value = values[0]
     # Filter
     if comparison == "lt":
-        data.df = data.df.loc[
-            data.df[column] < value,
-        ]
+        data.df = data.df.loc[data.df[column] < value,]
     elif comparison == "lte":
-        data.df = data.df.loc[
-            data.df[column] <= value,
-        ]
+        data.df = data.df.loc[data.df[column] <= value,]
     elif comparison == "eq":
-        data.df = data.df.loc[
-            data.df[column] == value,
-        ]
+        data.df = data.df.loc[data.df[column] == value,]
     elif comparison == "gt":
-        data.df = data.df.loc[
-            data.df[column] >= value,
-        ]
+        data.df = data.df.loc[data.df[column] >= value,]
     elif comparison == "gte":
-        data.df = data.df.loc[
-            data.df[column] > value,
-        ]
+        data.df = data.df.loc[data.df[column] > value,]
     # Save
     save_clarite_data(data, output)
 

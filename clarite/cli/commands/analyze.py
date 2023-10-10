@@ -319,8 +319,6 @@ def get_significant(ewas_result, output, use_fdr, pvalue):
     else:
         col = "pvalue_bonferroni"
     _, data = ewas_result
-    data = data.loc[
-        data[col] <= pvalue,
-    ]
+    data = data.loc[data[col] <= pvalue,]
     # Save result
     save_clarite_ewas(data, output)

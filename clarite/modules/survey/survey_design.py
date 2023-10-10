@@ -63,7 +63,6 @@ class SurveyDesignSpec:
         single_cluster: Optional[str] = "fail",
         drop_unweighted: bool = False,
     ):
-
         # Validate index
         if isinstance(survey_df.index, pd.MultiIndex):
             raise ValueError("survey_df: DataFrame must not have a multiindex")
@@ -660,7 +659,6 @@ class SurveyDesign(object):
         clust_per_strat,
         strat_for_clust,
     ):
-
         # Store values
         self.has_strata = has_strata
         self.strat = strat

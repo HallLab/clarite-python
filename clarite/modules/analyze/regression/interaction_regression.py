@@ -1,6 +1,6 @@
 import multiprocessing
 from itertools import combinations, repeat
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 import click
 import numpy as np
@@ -16,7 +16,7 @@ from ..utils import fix_names
 from . import GLMRegression
 
 # GITHUB ISSUE #119: Regressions with Error after Multiprocessing release python > 3.8
-multiprocessing.get_start_method("fork")
+# multiprocessing.get_start_method("fork")
 
 
 class InteractionRegression(GLMRegression):
@@ -48,8 +48,8 @@ class InteractionRegression(GLMRegression):
         List of tuples: Test specific interactions of valid variables
     report_betas: boolean
         False by default.
-          If True, the results will contain one row for each interaction term and will include the beta value
-          for that term.  The number of terms increases with the number of categories in each interacting term.
+            If True, the results will contain one row for each interaction term and will include the beta value
+            for that term.  The number of terms increases with the number of categories in each interacting term.
     encoding: str, default "additive"
         Encoding method to use for any genotype data.  One of {'additive', 'dominant', 'recessive', 'codominant', or 'weighted'}
     edge_encoding_info: Optional pd.DataFrame, default None
@@ -109,7 +109,7 @@ class InteractionRegression(GLMRegression):
             )
         if interactions is None:
             self.interactions = [c for c in combinations(regression_var_list, r=2)]
-        elif type(interactions) == str:
+        elif type(interactions) is str:
             if interactions not in regression_var_list:
                 raise ValueError(
                     f"'{interactions}' was passed as the value for 'interactions' "
@@ -140,16 +140,30 @@ class InteractionRegression(GLMRegression):
         self.description += f"\nProcessing {len(self.interactions):,} interactions"
 
     @staticmethod
-    def _get_default_result_dict(i1, i2):
+    def _get_default_result_dict(i1, i2, outcome_variable):
         return {
+            "Outcome": outcome_variable,
             "Term1": i1,
             "Term2": i2,
+            "Parameter": str(i1 + ":" + i2),
             "Converged": False,
             "N": np.nan,
-            "Beta": np.nan,
-            "SE": np.nan,
-            "Beta_pvalue": np.nan,
             "LRT_pvalue": np.nan,
+            "Red_Var1_beta": np.nan,
+            "Red_Var1_SE": np.nan,
+            "Red_Var1_Pval": np.nan,
+            "Red_Var2_beta": np.nan,
+            "Red_Var2_SE": np.nan,
+            "Red_Var2_Pval": np.nan,
+            "Full_Var1_Var2_beta": np.nan,
+            "Full_Var1_Var2_SE": np.nan,
+            "Full_Var1_Var2_Pval": np.nan,
+            "Full_Var1_beta": np.nan,
+            "Full_Var1_SE": np.nan,
+            "Full_Var1_Pval": np.nan,
+            "Full_Var2_beta": np.nan,
+            "Full_Var2_SE": np.nan,
+            "Full_Var2_Pval": np.nan,
         }
 
     def get_results(self) -> pd.DataFrame:
@@ -169,8 +183,9 @@ class InteractionRegression(GLMRegression):
         result["Outcome"] = self.outcome_variable
         if self.report_betas:
             return result.set_index(
-                ["Term1", "Term2", "Outcome", "Parameter"]
-            ).sort_values(["LRT_pvalue", "Beta_pvalue"])
+                # ["Term1", "Term2", "Outcome", "Parameter"]
+                ["Term1", "Term2", "Outcome"]
+            ).sort_values(["LRT_pvalue", "Full_Var1_Var2_Pval"])
         else:
             return result.set_index(["Term1", "Term2", "Outcome"]).sort_values(
                 ["LRT_pvalue"]
@@ -178,8 +193,8 @@ class InteractionRegression(GLMRegression):
 
     @staticmethod
     def _run_interaction_regression(
-        data, formula, formula_restricted, family, use_t, report_betas
-    ) -> Dict:
+        data, formula, formula_restricted, family, use_t, report_betas, i1, i2
+    ) -> Generator[Dict, None, None]:
         # Regress Full Model
         y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
         y = fix_names(y)
@@ -201,25 +216,73 @@ class InteractionRegression(GLMRegression):
             lrdf = est_restricted.df_resid - est.df_resid
             lrstat = -2 * (est_restricted.llf - est.llf)
             lr_pvalue = scipy.stats.chi2.sf(lrstat, lrdf)
-            if report_betas:
-                # Get beta, SE, and pvalue from interaction terms
-                # Where interaction terms are those appearing in the full model and not in the reduced model
-                # Return all terms
-                param_names = set(est.bse.index) - set(est_restricted.bse.index)
-                # The restricted model shouldn't have extra terms, unless there is some case we have overlooked
-                assert len(set(est_restricted.bse.index) - set(est.bse.index)) == 0
-                for param_name in param_names:
-                    yield {
-                        "Converged": True,
-                        "Parameter": param_name,
-                        "Beta": est.params[param_name],
-                        "SE": est.bse[param_name],
-                        "Beta_pvalue": est.pvalues[param_name],
-                        "LRT_pvalue": lr_pvalue,
-                    }
+            # GITHUB/ISSUES 121: Handling LRT_Pvalue when lrstat and lrdf are
+            # both 0. When lrstat (the test statistic) and lrdf (degrees of
+            # freedom for the Likelihood Ratio Test) are both 0, it typically
+            # suggests that both models are equivalent in terms of fit. In
+            # other words, there is no significant difference between the two
+            # models.
+            #
+            # However when both lrstat and lrdf are 0, calc the survival
+            # function (sf) of a chi-squared distribution with 0 degrees of
+            # freedom results in NaN. This is because mathematically, it's
+            # undefined to perform this calculation under these circumstances.
+            #
+            # In such cases, it's important to handle this scenario separately
+            # in the result based on the specific requirements of the analysis
+            if lrdf == 0 and lrstat == 0:
+                # Both models are equal
+                yield {"Converged": False, "LRT_pvalue": lr_pvalue}
+            if np.isnan(lr_pvalue):
+                # There is an issue with the LRT calculation
+                yield {"Converged": False, "LRT_pvalue": lr_pvalue}
             else:
-                # Only return the LRT result
-                yield {"Converged": True, "LRT_pvalue": lr_pvalue}
+                if report_betas:
+                    # Get beta, SE, and pvalue from interaction terms
+                    # Where interaction terms are those appearing in the full
+                    # model and not in the reduced model return all terms
+                    param_names = set(est.bse.index) - set(est_restricted.bse.index)
+                    # The restricted model shouldn't have extra terms, unless
+                    # there is some case we have overlooked.
+                    assert len(set(est_restricted.bse.index) - set(est.bse.index)) == 0
+                    # GITHUB/ISSUES 122: Open to show Terms Betas Values
+                    for param_name in param_names:
+                        # Names defined to aling with PLATO
+                        # Split the input_string by ":"
+                        term_1, term_2 = param_name.split(":")
+                        yield {
+                            "Term1": term_1,
+                            "Term2": term_2,
+                            "Converged": True,
+                            "Parameter": param_name,
+                            # Betas in Reduced Model
+                            # Var1 --> Term 1
+                            "Red_Var1_beta": est_restricted.params[term_1],
+                            "Red_Var1_SE": est_restricted.bse[term_1],
+                            "Red_Var1_Pval": est_restricted.pvalues[term_1],
+                            # Var2 --> Term 2
+                            "Red_Var2_beta": est_restricted.params[term_2],
+                            "Red_Var2_SE": est_restricted.bse[term_2],
+                            "Red_Var2_Pval": est_restricted.pvalues[term_2],
+                            # Betas in Full Model
+                            # Var1 --> Term 1
+                            "Full_Var1_Var2_beta": est.params[param_name],
+                            "Full_Var1_Var2_SE": est.bse[param_name],
+                            "Full_Var1_Var2_Pval": est.pvalues[param_name],
+                            # Var1 --> Term 1
+                            "Full_Var1_beta": est.params[term_1],
+                            "Full_Var1_SE": est.bse[term_1],
+                            "Full_Var1_Pval": est.pvalues[term_1],
+                            # Var2 --> Term 2
+                            "Full_Var2_beta": est.params[term_2],
+                            "Full_Var2_SE": est.bse[term_2],
+                            "Full_Var2_Pval": est.pvalues[term_2],
+                            "LRT_pvalue": lr_pvalue,
+                        }
+                else:
+                    # Only return the LRT result
+                    yield {"Converged": True, "LRT_pvalue": lr_pvalue}
+
         else:
             # Did not converge - nothing to update
             yield dict()
@@ -394,16 +457,24 @@ class InteractionRegression(GLMRegression):
 
             # Run Regression LRT Test
             for regression_result in cls._run_interaction_regression(
-                data, formula, formula_restricted, family, use_t, report_betas
+                data,
+                formula,
+                formula_restricted,
+                family,
+                use_t,
+                report_betas,
+                i1,
+                i2,
             ):
-                result = cls._get_default_result_dict(i1, i2)
+                result = cls._get_default_result_dict(i1, i2, outcome_variable)
                 result["N"] = N
+                # TODO:
                 result.update(regression_result)
                 result_list.append(result)
 
         except Exception as e:
             error = str(e)
             if result is None:
-                result_list = [cls._get_default_result_dict(i1, i2)]
+                result_list = [cls._get_default_result_dict(i1, i2, outcome_variable)]
 
         return result_list, warnings_list, error

@@ -208,7 +208,6 @@ class SurveyModel(object):
         return vcov
 
     def fit(self, y, X, center_by="est"):
-
         assert y.index.equals(X.index)
         self.center_by = center_by
 

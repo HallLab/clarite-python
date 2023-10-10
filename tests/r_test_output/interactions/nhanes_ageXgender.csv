@@ -1,2 +1,2 @@
-"Term1","Term2","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue","Outcome"
-"agecat","RIAGENDR",TRUE,7846,"    NaN","    NaN",NA,1.06427428567699e-07,"HI_CHOL"
+Term1,Term2,Outcome,Parameter,Converged,N,LRT_pvalue,Red_Var1_beta,Red_Var1_SE,Red_Var1_Pval,Red_Var2_beta,Red_Var2_SE,Red_Var2_Pval,Full_Var1_Var2_beta,Full_Var1_Var2_SE,Full_Var1_Var2_Pval,Full_Var1_beta,Full_Var1_SE,Full_Var1_Pval,Full_Var2_beta,Full_Var2_SE,Full_Var2_Pval
+agecat,RIAGENDR,HI_CHOL,agecat:RIAGENDR,TRUE,7846,1.0642742856760E-07,,,,,,,,,,,,,,,

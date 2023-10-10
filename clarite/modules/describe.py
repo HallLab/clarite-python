@@ -66,9 +66,7 @@ def correlations(data: pd.DataFrame, threshold: float = 0.75):
         .reset_index()
     )
     # Remove those with correlation below threshold
-    correlation = correlation.loc[
-        correlation["correlation"].abs() >= threshold,
-    ]
+    correlation = correlation.loc[correlation["correlation"].abs() >= threshold,]
     # Sort by absolute value
     correlation = correlation.reindex(
         correlation["correlation"].abs().sort_values(ascending=False).index

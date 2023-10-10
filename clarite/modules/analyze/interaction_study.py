@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple, Union
 
-import pandas as pd
 import click
+import pandas as pd
 from pandas_genomics import GenotypeDtype
 
 from .regression import InteractionRegression
@@ -45,9 +45,9 @@ def interaction_study(
         If edge encoding is used, this must be provided.  See Pandas-Genomics documentation on edge encoding.
     report_betas: boolean
         False by default.
-          If True, the results will contain one row for each interaction term and will include the beta value,
-          standard error (SE), and beta pvalue for that specific interaction. The number of terms increases with
-          the number of categories in each interacting variable.
+            If True, the results will contain one row for each interaction term and will include the beta value,
+            standard error (SE), and beta pvalue for that specific interaction. The number of terms increases with
+            the number of categories in each interacting variable.
     min_n: int or None
         Minimum number of complete-case observations (no NA values for outcome, covariates, or variable)
         Defaults to 200
@@ -119,7 +119,7 @@ def interaction_study(
         result = regression.get_results()
 
         # Process Results
-        click.echo(f"Completed Interaction Study for {outcome}\n", color="green")
+        click.echo(f"Completed Interaction Study for {outcome}\n", color=True)
         results.append(result)
 
     if len(outcomes) == 1:
@@ -128,7 +128,10 @@ def interaction_study(
         result = pd.concat(results)
 
     # Sort across multiple outcomes
-    result = result.sort_values(["LRT_pvalue", "Beta_pvalue"])
+    if report_betas:
+        result = result.sort_values(["LRT_pvalue", "Full_Var1_Var2_Pval"])
+    else:
+        result = result.sort_values(["LRT_pvalue"])
 
-    click.echo("Completed association study", color="green")
+    click.echo("Completed association study", color=True)
     return result

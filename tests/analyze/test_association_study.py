@@ -983,7 +983,6 @@ def test_report_betas_fulldesign(data_NHANES):
 
 
 def test_edge_encondig_logistic_regression():
-
     from pandas_genomics import sim
 
     # Additive Main Effect for SNP1 without interaction

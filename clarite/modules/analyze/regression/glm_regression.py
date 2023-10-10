@@ -1,7 +1,7 @@
 import multiprocessing
 import re
 from itertools import repeat
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 import click
 import numpy as np
@@ -308,8 +308,14 @@ class GLMRegression(Regression):
 
     @staticmethod
     def _run_categorical(
-        data, formula, formula_restricted, family, use_t, report_categorical_betas
-    ) -> Dict:
+        data,
+        formula,
+        formula_restricted,
+        family,
+        use_t,
+        report_categorical_betas
+        # ) -> Dict:
+    ) -> Generator[dict, None, None]:
         # Regress both models
         y, X = patsy.dmatrices(formula, data, return_type="dataframe", NA_action="drop")
         y = fix_names(y)
@@ -555,4 +561,4 @@ class GLMRegression(Regression):
             if result is None:
                 result_list = [cls.get_default_result_dict(rv)]
 
-        return result_list, warnings_list, error
+        return result_list, warnings_list, error  # type: ignore

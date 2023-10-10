@@ -116,7 +116,7 @@ def manhattan(ewas_result, output, categories, bonferroni, fdr, other, nlabeled,
     # Load data
     name, data = ewas_result
     data_dict = {name: data}
-    for (name, data) in other:
+    for name, data in other:
         data_dict[name] = data
     # Load categories, if any
     if categories is not None:
@@ -187,7 +187,7 @@ def manhattan_bonferroni(
     # Load data
     name, data = ewas_result
     data_dict = {name: data}
-    for (name, data) in other:
+    for name, data in other:
         data_dict[name] = data
     # Load categories, if any
     if categories is not None:
@@ -255,7 +255,7 @@ def manhattan_fdr(ewas_result, output, categories, cutoff, other, nlabeled, labe
     # Load data
     name, data = ewas_result
     data_dict = {name: data}
-    for (name, data) in other:
+    for name, data in other:
         data_dict[name] = data
     # Load categories, if any
     if categories is not None:

@@ -1,4 +1,4 @@
-"Term1","Term2","Converged","N","Beta","SE","Beta_pvalue","LRT_pvalue","Outcome"
-"RIAGENDR","agecat",TRUE,7846,"    NaN","    NaN",NA,9.18778425031019e-08,"HI_CHOL"
-"race","agecat",TRUE,7846,"    NaN","    NaN",NA,0.598374388126561,"HI_CHOL"
-"RIAGENDR","race",TRUE,7846,"    NaN","    NaN",NA,0.00175509648518269,"HI_CHOL"
+Term1,Term2,Outcome,Parameter,Converged,N,LRT_pvalue,Red_Var1_beta,Red_Var1_SE,Red_Var1_Pval,Red_Var2_beta,Red_Var2_SE,Red_Var2_Pval,Full_Var1_Var2_beta,Full_Var1_Var2_SE,Full_Var1_Var2_Pval,Full_Var1_beta,Full_Var1_SE,Full_Var1_Pval,Full_Var2_beta,Full_Var2_SE,Full_Var2_Pval
+RIAGENDR,agecat,HI_CHOL,RIAGENDR:agecat,TRUE,7846,9.18778425E-08,,,,,,,,,,,,,,,
+RIAGENDR,race,HI_CHOL,RIAGENDR:race,TRUE,7846,0.001755096,,,,,,,,,,,,,,,
+race,agecat,HI_CHOL,race:agecat,TRUE,7846,0.598374388,,,,,,,,,,,,,,,

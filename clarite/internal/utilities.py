@@ -25,6 +25,7 @@ def print_wrap(func):
 
 def requires(package_name):
     """Decorator factory to ensure optional packages are imported before running"""
+
     # Define and return an appropriate decorator
     def decorator(func):
         # Check if package is importable

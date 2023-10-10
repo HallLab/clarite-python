@@ -248,7 +248,7 @@ def _plot_manhattan(
             )
         for df_idx, df_cutoffs in enumerate(cutoffs):
             ax = axes[df_idx]
-            for (label, value, color, line_style) in df_cutoffs:
+            for label, value, color, line_style in df_cutoffs:
                 ax.axhline(
                     y=-np.log10(value),
                     color=color,

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "clarite"
-version = "2.3.4"
+version = "2.3.5"
 description = "CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures"
 authors = ["Andre Rico <alr6366@psu.edu>"]
 license = "BSD-3-Clause"
@@ -49,6 +49,9 @@ docs = ["sphinx", "numpydoc", "sphinx_rtd_theme", "sphinx-copybutton", "ipython"
 
 [tool.poetry.scripts]
 clarite-cli = 'clarite.cli:entry_point'
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.5.1"
 
 [build-system]
 requires = ["poetry>=0.12"]

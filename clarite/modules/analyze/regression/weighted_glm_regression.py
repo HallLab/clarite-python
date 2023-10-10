@@ -368,7 +368,6 @@ class WeightedGLMRegression(GLMRegression):
         use_t: bool,
         report_categorical_betas: bool,
     ) -> Tuple[List[dict], List[str], str]:  # results, warnings, errors
-
         # Initialize return values
         result_list = []
         warnings_list = []
