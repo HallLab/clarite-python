@@ -44,10 +44,10 @@ def add_corrected_pvalues(
     if pvalue not in data.columns:
         raise ValueError(f"'{pvalue}' is not a column in the passed data")
     if groupby is not None:
-        if type(groupby) == str:
+        if isinstance(groupby, str):
             if (groupby not in data.columns) and (groupby not in data.index.names):
                 raise ValueError(f"'{groupby}' is not a column in the passed data")
-        elif type(groupby) == list:
+        elif isinstance(groupby, list):
             for g in groupby:
                 if (g not in data.columns) and (g not in data.index.names):
                     raise ValueError(f"'{g}' is not a column in the passed data")
@@ -96,13 +96,13 @@ def add_corrected_pvalues(
         # Expand results to duplicated rows
         data[bonf_name] = data[groupby].apply(
             lambda g: bonf_result.get(g, np.nan)
-            if type(g) == str
+            if isinstance(g, str)
             else bonf_result.get(tuple(g.values), np.nan),
             axis=1,
         )
         data[fdr_name] = data[groupby].apply(
             lambda g: bonf_result.get(g, np.nan)
-            if type(g) == str
+            if isinstance(g, str)
             else fdr_result.get(tuple(g.values), np.nan),
             axis=1,
         )

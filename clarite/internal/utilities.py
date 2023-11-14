@@ -54,13 +54,13 @@ def _validate_skip_only(
 ):
     """Validate use of the 'skip' and 'only' parameters, returning a boolean series for the columns where True = use the column"""
     # Ensure that 'data' is a DataFrame and not a Series
-    if type(data) != pd.DataFrame:
+    if not isinstance(data, pd.DataFrame):
         raise ValueError("The passed 'data' is not a Pandas DataFrame")
 
     # Convert string to a list
-    if type(skip) == str:
+    if isinstance(skip, str):
         skip = [skip]
-    if type(only) == str:
+    if isinstance(only, str):
         only = [only]
 
     if skip is not None and only is not None:
@@ -204,7 +204,7 @@ def _remove_empty_categories(
     Updates the data in-place and returns a dict of variables:removed categories
     """
     removed_cats = dict()
-    if type(data) == pd.DataFrame:
+    if isinstance(data, pd.DataFrame):
         columns = _validate_skip_only(data, skip, only)
         dtypes = data.loc[:, columns].dtypes
         catvars = [v for v in dtypes[dtypes == "category"].index]
@@ -219,7 +219,7 @@ def _remove_empty_categories(
             if len(removed_categories) > 0:
                 removed_cats[var] = removed_categories
         return removed_cats
-    elif type(data) == pd.Series:
+    elif isinstance(data, pd.Series):
         assert skip is None
         assert only is None
         counts = data.value_counts()
