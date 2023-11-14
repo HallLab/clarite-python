@@ -233,11 +233,19 @@ class InteractionRegression(GLMRegression):
             # in the result based on the specific requirements of the analysis
             if lrdf == 0 and lrstat == 0:
                 # Both models are equal
-                yield {"Converged": True, "LRT_pvalue": lr_pvalue, "Log": "Both models are equivalent in terms of fit"}
+                yield {
+                    "Converged": True,
+                    "LRT_pvalue": lr_pvalue,
+                    "Log": "Both models are equivalent in terms of fit",
+                }
             elif np.isnan(lr_pvalue):
                 # There is an issue with the LRT calculation
                 # TODO: Extend the logs returns
-                yield {"Converged": True, "LRT_pvalue": lr_pvalue, "Log": "Both models are equivalent in terms of fit"}
+                yield {
+                    "Converged": True,
+                    "LRT_pvalue": lr_pvalue,
+                    "Log": "Both models are equivalent in terms of fit",
+                }
             else:
                 if report_betas:
                     # Get beta, SE, and pvalue from interaction terms
@@ -280,7 +288,7 @@ class InteractionRegression(GLMRegression):
                             "Full_Var2_SE": est.bse[term_2],
                             "Full_Var2_Pval": est.pvalues[term_2],
                             "LRT_pvalue": lr_pvalue,
-                            "Log": ""
+                            "Log": "",
                         }
                 else:
                     # Only return the LRT result
@@ -289,7 +297,11 @@ class InteractionRegression(GLMRegression):
         else:
             # Did not converge - nothing to update
             # yield dict()
-            yield {"Converged": False, "LRT_pvalue": "NaN", "Log": "One or Both models NOT Converge"}
+            yield {
+                "Converged": False,
+                "LRT_pvalue": "NaN",
+                "Log": "One or Both models NOT Converge",
+            }
 
     def _get_interaction_specific_data(self, interaction: Tuple[str, str]):
         """Select the data relevant to performing a regression on a given interaction, encoding genotypes if needed"""
@@ -412,9 +424,7 @@ class InteractionRegression(GLMRegression):
             complete_case_mask = ~data.isna().any(axis=1)
             N = complete_case_mask.sum()
             if N == 0:
-                raise ValueError(
-                    f"No Overlap (min_n filter: {N} < {min_n})"
-                )
+                raise ValueError(f"No Overlap (min_n filter: {N} < {min_n})")
             if N < min_n:
                 raise ValueError(
                     f"too few complete observations (min_n filter: {N} < {min_n})"
