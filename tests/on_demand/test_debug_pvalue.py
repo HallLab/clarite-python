@@ -45,6 +45,7 @@ def test_interactions_debug():
         interactions=[(e1, e2)],
         covariates=list_covariant,
         report_betas=True,
+        min_n=8000,
     )
 
     print(df_inter)

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "clarite"
-version = "2.3.5"
+version = "2.3.6"
 description = "CLeaning to Analysis: Reproducibility-based Interface for Traits and Exposures"
 authors = ["Andre Rico <alr6366@psu.edu>"]
 license = "BSD-3-Clause"
