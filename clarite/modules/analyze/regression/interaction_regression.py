@@ -495,7 +495,7 @@ class InteractionRegression(GLMRegression):
             if result is None:
                 result_list = [cls._get_default_result_dict(i1, i2, outcome_variable)]
                 result_list[0]["Log"] = error
-                result_list[0]["Converged"] = "Not Apply"
+                result_list[0]["Converged"] = "NA"
                 result_list[0]["N"] = N
 
         return result_list, warnings_list, error
