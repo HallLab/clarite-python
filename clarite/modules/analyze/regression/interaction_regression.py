@@ -164,6 +164,7 @@ class InteractionRegression(GLMRegression):
             "Full_Var2_beta": np.nan,
             "Full_Var2_SE": np.nan,
             "Full_Var2_Pval": np.nan,
+            "Log": "",
         }
 
     def get_results(self) -> pd.DataFrame:
@@ -232,10 +233,19 @@ class InteractionRegression(GLMRegression):
             # in the result based on the specific requirements of the analysis
             if lrdf == 0 and lrstat == 0:
                 # Both models are equal
-                yield {"Converged": False, "LRT_pvalue": lr_pvalue}
-            if np.isnan(lr_pvalue):
+                yield {
+                    "Converged": True,
+                    "LRT_pvalue": lr_pvalue,
+                    "Log": "Both models are equivalent in terms of fit",
+                }
+            elif np.isnan(lr_pvalue):
                 # There is an issue with the LRT calculation
-                yield {"Converged": False, "LRT_pvalue": lr_pvalue}
+                # TODO: Extend the logs returns
+                yield {
+                    "Converged": True,
+                    "LRT_pvalue": lr_pvalue,
+                    "Log": "Both models are equivalent in terms of fit",
+                }
             else:
                 if report_betas:
                     # Get beta, SE, and pvalue from interaction terms
@@ -278,14 +288,20 @@ class InteractionRegression(GLMRegression):
                             "Full_Var2_SE": est.bse[term_2],
                             "Full_Var2_Pval": est.pvalues[term_2],
                             "LRT_pvalue": lr_pvalue,
+                            "Log": "",
                         }
                 else:
                     # Only return the LRT result
-                    yield {"Converged": True, "LRT_pvalue": lr_pvalue}
+                    yield {"Converged": True, "LRT_pvalue": lr_pvalue, "Log": ""}
 
         else:
             # Did not converge - nothing to update
-            yield dict()
+            # yield dict()
+            yield {
+                "Converged": False,
+                "LRT_pvalue": "NaN",
+                "Log": "One or Both models NOT Converge",
+            }
 
     def _get_interaction_specific_data(self, interaction: Tuple[str, str]):
         """Select the data relevant to performing a regression on a given interaction, encoding genotypes if needed"""
@@ -407,6 +423,8 @@ class InteractionRegression(GLMRegression):
             # Get complete case mask and filter by min_n
             complete_case_mask = ~data.isna().any(axis=1)
             N = complete_case_mask.sum()
+            if N == 0:
+                raise ValueError(f"No Overlap (min_n filter: {N} < {min_n})")
             if N < min_n:
                 raise ValueError(
                     f"too few complete observations (min_n filter: {N} < {min_n})"
@@ -476,5 +494,8 @@ class InteractionRegression(GLMRegression):
             error = str(e)
             if result is None:
                 result_list = [cls._get_default_result_dict(i1, i2, outcome_variable)]
+                result_list[0]["Log"] = error
+                result_list[0]["Converged"] = "NA"
+                result_list[0]["N"] = N
 
         return result_list, warnings_list, error

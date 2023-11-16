@@ -88,7 +88,7 @@ class Regression(metaclass=ABCMeta):
         Validate standard regression parameters- data, outcome_variable, and covariates.  Store relevant information.
         """
         # Covariates must be a list
-        if type(self.covariates) != list:
+        if not isinstance(self.covariates, list):
             raise ValueError("'covariates' must be specified as a list or set to None")
 
         # Make sure the index of each dataset is not a multiindex and give it a consistent name
