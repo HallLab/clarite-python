@@ -30,6 +30,10 @@ jobs:
           sudo apt update
           sudo apt install -y r-base
 
+      - name: Install system dependencies for rpy2
+        run: |
+          sudo apt install -y libtirpc-dev
+
       - name: Install survey R package
         run: |
           mkdir -p $R_LIBS_USER
