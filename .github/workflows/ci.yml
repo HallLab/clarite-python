@@ -1,81 +1,56 @@
-name: CI
+name: CLARITE CI (Python + R)
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-    branches:
-      - master
+    branches: [master]
 
 jobs:
-
-  CI_Pipeline:
+  test:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
 
     env:
       R_LIBS_USER: ./r-libs
 
     steps:
-      # - uses: actions/checkout@v1
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
 
-      - name: Make R lib folder if it doesn't exist
-        run: mkdir -p ${{ env.R_LIBS_USER }}
-
-      - name: Cache R packages
-        uses: actions/cache@v2
-        id: cache-r
-        with:
-          path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-renv-${{ hashFiles('**/survey/DESCRIPTION') }}
-
-      - name: Install R packages
-        shell: Rscript {0}
-        run: install.packages("survey")
-        if: steps.cache-r.outputs.cache-hit != 'true'
+      - name: Install R and survey package
+        run: |
+          sudo apt update
+          sudo apt install -y r-base
+          Rscript -e 'install.packages("survey", repos="https://cloud.r-project.org")'
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          # python-version: 3.7
-          python-version: '3.9'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install Poetry
-        # uses: snok/install-poetry@v1.1.6
         uses: snok/install-poetry@v1
         with:
           version: 1.5.1
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      #----------------------------------------------
-      #       load cached venv if cache exists
-      #----------------------------------------------
       - name: Load cached venv
         id: cached-poetry-dependencies
         uses: actions/cache@v2
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-      #----------------------------------------------
-      # install dependencies if cache does not exist
-      #----------------------------------------------
-      - name: Install dependencies
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies (if cache miss)
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
 
-      #----------------------------------------------
-      # install your root project, if required
-      #----------------------------------------------
       - name: Install library
         run: poetry install --no-interaction
-
-      #----------------------------------------------
-      # Activate Env
-      #----------------------------------------------
 
       - name: Code Quality
         run: |
@@ -83,17 +58,15 @@ jobs:
           black . --check
 
       - name: Test with pytest
-        run:  |
+        run: |
           source .venv/bin/activate
           pytest -n 2 --cov . --cov-report=xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           file: ./coverage.xml
           flags: unittests
-          env_vars: OS,PYTHON
           name: codecov-umbrella
           fail_ci_if_error: true
-          path_to_write_report: ./codecov_report.gz
           verbose: true
