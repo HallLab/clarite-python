@@ -20,11 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install R and survey package
+      # - name: Install R and survey package
+      #   run: |
+      #     sudo apt update
+      #     sudo apt install -y r-base
+      #     Rscript -e 'install.packages("survey", repos="https://cloud.r-project.org")'
+      - name: Install survey R package
         run: |
-          sudo apt update
-          sudo apt install -y r-base
-          Rscript -e 'install.packages("survey", repos="https://cloud.r-project.org")'
+          mkdir -p $R_LIBS_USER
+          Rscript -e 'install.packages("survey", repos = "https://cloud.r-project.org", lib = Sys.getenv("R_LIBS_USER"))'
 
       - name: Set up Python
         uses: actions/setup-python@v2
