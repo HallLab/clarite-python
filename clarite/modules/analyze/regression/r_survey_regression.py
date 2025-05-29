@@ -276,23 +276,23 @@ class RSurveyRegression(Regression):
             # Cluster IDs
             if self.survey_design_spec.has_cluster:
                 kwargs["ids"] = f"{self.survey_design_spec.cluster_name}"
-                data[
-                    self.survey_design_spec.cluster_name
-                ] = self.survey_design_spec.cluster_values
+                data[self.survey_design_spec.cluster_name] = (
+                    self.survey_design_spec.cluster_values
+                )
             else:
                 kwargs["ids"] = ro.NULL
             # Strata
             if self.survey_design_spec.has_strata:
                 kwargs["strata"] = f"{self.survey_design_spec.strata_name}"
-                data[
-                    self.survey_design_spec.strata_name
-                ] = self.survey_design_spec.strata_values
+                data[self.survey_design_spec.strata_name] = (
+                    self.survey_design_spec.strata_values
+                )
             # fpc
             if self.survey_design_spec.has_fpc:
                 kwargs["fpc"] = f"{self.survey_design_spec.fpc_name}"
-                data[
-                    self.survey_design_spec.fpc_name
-                ] = self.survey_design_spec.fpc_values_original
+                data[self.survey_design_spec.fpc_name] = (
+                    self.survey_design_spec.fpc_values_original
+                )
 
             # Single cluster setting
             ro.r(

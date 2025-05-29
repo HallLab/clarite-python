@@ -313,7 +313,7 @@ class GLMRegression(Regression):
         formula_restricted,
         family,
         use_t,
-        report_categorical_betas
+        report_categorical_betas,
         # ) -> Dict:
     ) -> Generator[dict, None, None]:
         # Regress both models

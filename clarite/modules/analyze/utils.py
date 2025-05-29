@@ -95,15 +95,19 @@ def add_corrected_pvalues(
         ).to_dict()
         # Expand results to duplicated rows
         data[bonf_name] = data[groupby].apply(
-            lambda g: bonf_result.get(g, np.nan)
-            if isinstance(g, str)
-            else bonf_result.get(tuple(g.values), np.nan),
+            lambda g: (
+                bonf_result.get(g, np.nan)
+                if isinstance(g, str)
+                else bonf_result.get(tuple(g.values), np.nan)
+            ),
             axis=1,
         )
         data[fdr_name] = data[groupby].apply(
-            lambda g: bonf_result.get(g, np.nan)
-            if isinstance(g, str)
-            else fdr_result.get(tuple(g.values), np.nan),
+            lambda g: (
+                bonf_result.get(g, np.nan)
+                if isinstance(g, str)
+                else fdr_result.get(tuple(g.values), np.nan)
+            ),
             axis=1,
         )
         # Sort

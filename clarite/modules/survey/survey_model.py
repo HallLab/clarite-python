@@ -155,9 +155,9 @@ class SurveyModel(object):
             np.float64
         )
         mh = np.sqrt(nh / (nh - 1))
-        mh[
-            mh == np.inf
-        ] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
+        mh[mh == np.inf] = (
+            1  # Replace infinity with 1.0 (due to single cluster where nh==1)
+        )
         fh = np.sqrt(
             1 - self.design.fpc
         )  # self.design.fpc has fpc value for each cluster (one row per cluster)
@@ -195,9 +195,9 @@ class SurveyModel(object):
             np.float64
         )
         mh = np.sqrt((nh - 1) / nh)
-        mh[
-            mh == np.inf
-        ] = 1  # Replace infinity with 1.0 (due to single cluster where nh==1)
+        mh[mh == np.inf] = (
+            1  # Replace infinity with 1.0 (due to single cluster where nh==1)
+        )
         fh = np.sqrt(1 - self.design.fpc)
         self.replicate_params *= mh[:, None] * fh[:, None]
 

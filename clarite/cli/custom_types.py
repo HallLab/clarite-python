@@ -74,13 +74,15 @@ class ClariteData:
         if self.df is None:
             return None
         dtypes = {
-            variable_name: {"type": str(dtype)}
-            if str(dtype) != "category"
-            else {
-                "type": str(dtype),
-                "categories": list(dtype.categories.values.tolist()),
-                "ordered": dtype.ordered,
-            }
+            variable_name: (
+                {"type": str(dtype)}
+                if str(dtype) != "category"
+                else {
+                    "type": str(dtype),
+                    "categories": list(dtype.categories.values.tolist()),
+                    "ordered": dtype.ordered,
+                }
+            )
             for variable_name, dtype in self.df.dtypes.iteritems()
         }
         return dtypes

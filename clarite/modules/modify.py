@@ -700,7 +700,7 @@ def remove_outliers(
     # Remove outliers
     # Note: This could be faster by performing calculations on the entire dataset at once, but in practice this should
     # be used on more of a limited basis, reviewing changes in each variable.
-    for col_name, process_col in columns.iteritems():
+    for col_name, process_col in columns.items():
         if not process_col:
             continue
         if method == "iqr":
@@ -804,12 +804,14 @@ def merge_observations(top: pd.DataFrame, bottom: pd.DataFrame):
     # Exclude cases where either variable was an object originally
     combined = combined.astype(
         {
-            col: "category"
-            if (dt == "object")
-            & (top.dtypes[col] != "object")
-            & (bottom.dtypes[col] != "object")
-            else dt
-            for col, dt in combined.dtypes.iteritems()
+            col: (
+                "category"
+                if (dt == "object")
+                & (top.dtypes[col] != "object")
+                & (bottom.dtypes[col] != "object")
+                else dt
+            )
+            for col, dt in combined.dtypes.items()
         }
     )
 

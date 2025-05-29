@@ -112,9 +112,9 @@ class SurveyDesignSpec:
         self.multi_weight: bool = (
             False  # If True, weight_values is a dict of weight name : Series
         )
-        self.weight_names: Optional[
-            Dict[str, str]
-        ] = None  # Dict of regression variable name : weight name
+        self.weight_names: Optional[Dict[str, str]] = (
+            None  # Dict of regression variable name : weight name
+        )
         self.weight_values: Optional[Union[pd.Series, Dict[str, pd.Series]]] = None
         # FPC
         self.has_fpc: bool = False
