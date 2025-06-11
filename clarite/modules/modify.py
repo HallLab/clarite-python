@@ -538,9 +538,16 @@ def make_continuous(
     columns = _validate_skip_only(data, skip, only)
 
     # Convert dtype, ignoring errors
-    data.loc[:, columns] = data.loc[:, columns].apply(
-        lambda col: pd.to_numeric(col, errors="ignore")
-    )
+    # data.loc[:, columns] = data.loc[:, columns].apply(
+    #     lambda col: pd.to_numeric(col, errors="ignore")
+    # )
+    def try_convert(col):
+        try:
+            return pd.to_numeric(col)
+        except Exception:
+            return col
+
+    data.loc[:, columns] = data.loc[:, columns].apply(try_convert)
 
     # Check if any variables could not be converted
     failed_conversion = data.loc[:, columns].dtypes.apply(
