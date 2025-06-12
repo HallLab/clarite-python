@@ -139,7 +139,8 @@ class GLMRegression(Regression):
             # TODO: Allow only 0/1 or Control/Case entries | Other entries generate a warning
 
             codes, categories = zip(*enumerate(categories))
-            self.data[self.outcome_variable].replace(categories, codes, inplace=True)
+            # self.data[self.outcome_variable].replace(categories, codes, inplace=True)
+            self.data[self.outcome_variable] = self.data[self.outcome_variable].replace(categories, codes)
 
             # After upgrade to Pandas >= 1.5 the replace stop to covert as float
             # if stay as category, when create y will create to columns and will invert the
@@ -153,7 +154,7 @@ class GLMRegression(Regression):
                 f"\t{counts[categories[0]]:,} occurrences of '{categories[0]}' coded as 0\n"
                 f"\t{counts[categories[1]]:,} occurrences of '{categories[1]}' coded as 1"
             )
-            self.family = sm.families.Binomial(link=sm.families.links.logit())
+            self.family = sm.families.Binomial(link=sm.families.links.Logit())
             self.use_t = False
         else:
             raise ValueError(
