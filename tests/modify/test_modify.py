@@ -215,6 +215,56 @@ def test_transform(plantTraits, capfd):
     return
 
 
+def test_int_transform_blom(capfd):
+    """INT with blom method produces standard-normal-distributed output"""
+    import numpy as np
+    from scipy.stats import norm
+
+    df = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0, 5.0], "cat": [True, False, True, False, True]})
+    result = modify.int_transform(df, method="blom", only=["x"])
+
+    # original categorical column unchanged
+    assert all(result["cat"] == df["cat"])
+
+    # output must be finite and sorted in same order as input
+    assert np.all(np.isfinite(result["x"]))
+    assert list(result["x"]) == sorted(result["x"])
+
+    # manually verify blom formula: c = 3/8, n = 5
+    c = 3 / 8
+    n = 5
+    expected = norm.ppf((np.array([1, 2, 3, 4, 5], dtype=float) - c) / (n - 2 * c + 1))
+    np.testing.assert_allclose(result["x"].values, expected)
+
+
+def test_int_transform_preserves_nan(capfd):
+    """NaN values must be preserved after INT"""
+    import numpy as np
+
+    df = pd.DataFrame({"x": [1.0, np.nan, 3.0, np.nan, 5.0]})
+    result = modify.int_transform(df, method="blom", only=["x"])
+
+    assert np.isnan(result["x"].iloc[1])
+    assert np.isnan(result["x"].iloc[3])
+    assert np.isfinite(result["x"].iloc[0])
+    assert np.isfinite(result["x"].iloc[2])
+    assert np.isfinite(result["x"].iloc[4])
+
+
+def test_int_transform_invalid_method(capfd):
+    """An unsupported method name must raise ValueError"""
+    df = pd.DataFrame({"x": [1.0, 2.0, 3.0]})
+    with pytest.raises(ValueError, match="not a valid method"):
+        modify.int_transform(df, method="invalid", only=["x"])
+
+
+def test_int_transform_rejects_non_continuous(capfd):
+    """INT must raise ValueError when applied to a non-continuous variable"""
+    df = pd.DataFrame({"cat": pd.Categorical(["a", "b", "a"])})
+    with pytest.raises(ValueError, match="INT may only be applied to continuous variables"):
+        modify.int_transform(df, only=["cat"])
+
+
 def test_categorize_many_string():
     """
     Ensure an error isn't thrown when attempting to make a string column continuous

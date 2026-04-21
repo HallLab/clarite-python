@@ -19,6 +19,7 @@ Functions used to filter and/or change some data, always taking in one set of da
     .. autofunction:: remove_outliers
     .. autofunction:: rowfilter_incomplete_obs
     .. autofunction:: transform
+    .. autofunction:: int_transform
 
 """
 
@@ -27,6 +28,7 @@ from typing import Optional, List, Union
 import click
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 from ..internal.utilities import (
     _validate_skip_only,
@@ -1004,6 +1006,85 @@ def transform(
             )
 
         click.echo(f"Transformed '{variable}' using '{transform_method}'")
+
+    return data
+
+
+INT_METHODS = {
+    "blom": 3 / 8,
+    "tukey": 1 / 3,
+    "van_der_waerden": 1,
+}
+
+
+@print_wrap
+def int_transform(
+    data: pd.DataFrame,
+    method: str = "blom",
+    skip: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, List[str]]] = None,
+):
+    """
+    Apply an Inverse Normal Transform (INT) to continuous variables
+
+    Ranks each value and maps it to a standard normal distribution using the
+    formula: Φ⁻¹((rank - c) / (n - 2c + 1)), where c depends on the method.
+    NaN values are ignored and preserved.
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        Data to be processed
+    method: str, optional (default "blom")
+        Ranking offset method. One of "blom" (c=3/8), "tukey" (c=1/3), or
+        "van_der_waerden" (c=1).
+    skip: str, list or None (default is None)
+        List of variables that will *not* be transformed
+    only: str, list or None (default is None)
+        List of variables that are the *only* ones to be transformed
+
+    Returns
+    -------
+    data: pd.DataFrame
+        DataFrame with variables that have been INT-transformed
+
+    Examples
+    --------
+    >>> import clarite
+    >>> df = clarite.modify.int_transform(df, method='blom', only=['BMXBMI'])
+    ================================================================================
+    Running int_transform
+    --------------------------------------------------------------------------------
+    Applied INT (blom) to 'BMXBMI'.
+    """
+    if method not in INT_METHODS:
+        raise ValueError(
+            f"'{method}' is not a valid method. Choose from: {list(INT_METHODS.keys())}"
+        )
+
+    c = INT_METHODS[method]
+    data = data.copy(deep=True)
+
+    columns = _validate_skip_only(data, skip, only)
+    transform_variables = list(data.loc[:, columns])
+
+    dtypes = _get_dtypes(data)
+    for variable in transform_variables:
+        dtype = dtypes.get(variable, None)
+        if dtype is None:
+            raise ValueError(f"The variable ('{variable}') was not found in the data")
+        elif dtype != "continuous":
+            raise ValueError(
+                f"The variable ('{variable}') was {dtype}: "
+                f"INT may only be applied to continuous variables"
+            )
+
+    for variable in transform_variables:
+        s = data[variable]
+        n = s.notna().sum()
+        ranked = s.rank(method="average", na_option="keep")
+        data[variable] = norm.ppf((ranked - c) / (n - 2 * c + 1))
+        click.echo(f"Applied INT ({method}) to '{variable}'")
 
     return data
 

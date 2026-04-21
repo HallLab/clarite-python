@@ -2,6 +2,22 @@
 Release History
 ===============
 
+v2.5.0 (2026-04-21)
+--------------------
+
+Enhancements
+^^^^^^^^^^^^
+* Added ``clarite.modify.int_transform``: applies a rank-based Inverse Normal
+  Transform (INT) to continuous variables. Supports three offset methods:
+  ``blom`` (default, c=3/8), ``tukey`` (c=1/3), and ``van_der_waerden`` (c=1).
+  NaN values are preserved. Available via both the Python API and the CLI.
+
+Tests
+^^^^^
+* Added four tests for ``int_transform`` covering: correct Blom output,
+  NaN preservation, invalid method validation, and rejection of
+  non-continuous variables.
+
 v2.3.1 (2023-01-10)
 -------------------
 

@@ -320,6 +320,23 @@ def transform_variable(data, output, transform_method, skip, only):
     save_clarite_data(data, output)
 
 
+@modify_cli.command(help="Apply an Inverse Normal Transform (INT) to continuous variables")
+@arg_data
+@arg_output
+@click.option(
+    "--method",
+    "-m",
+    default="blom",
+    type=click.Choice(["blom", "tukey", "van_der_waerden"]),
+    help="Ranking offset method (default: blom)",
+)
+@option_skip
+@option_only
+def int_transform(data, output, method, skip, only):
+    data.df = modify.int_transform(data=data.df, method=method, skip=skip, only=only)
+    save_clarite_data(data, output)
+
+
 @modify_cli.command(help="Remove extra categories from categorical datatypes")
 @arg_data
 @arg_output
